@@ -55,6 +55,10 @@ export default function LandingPortalPage() {
   useEffect(() => {
     async function checkExistingSession() {
       const supabase = createClient();
+      if (!supabase) {
+        setCheckLoading(false);
+        return;
+      }
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session) {
@@ -80,6 +84,11 @@ export default function LandingPortalPage() {
   async function handleGoogleLogin() {
     setLoading(true);
     const supabase = createClient();
+    if (!supabase) {
+      setLoading(false);
+      alert("Takeoff failed: Supabase client is not configured.");
+      return;
+    }
     
     // Trigger real Supabase OAuth redirect to Google
     const { error } = await supabase.auth.signInWithOAuth({

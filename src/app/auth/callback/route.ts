@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -8,22 +9,34 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
+    if (!supabase) {
+      return NextResponse.redirect(`${origin}/login?error=supabase_not_configured`);
+    }
+
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Sync user to our database
+      // Sync user to our database directly (prevents HTTP fetch deadlocks & cookie passing failures!)
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await fetch(`${origin}/api/auth/sync`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: user.id,
-            email: user.email,
-            name: user.user_metadata?.name ?? user.user_metadata?.full_name,
-            avatarUrl: user.user_metadata?.avatar_url,
-          }),
-        });
+      if (user && user.email) {
+        try {
+          await prisma.user.upsert({
+            where: { id: user.id },
+            update: {
+              name: user.user_metadata?.name ?? user.user_metadata?.full_name ?? undefined,
+              avatarUrl: user.user_metadata?.avatar_url ?? undefined,
+            },
+            create: {
+              id: user.id,
+              email: user.email,
+              name: user.user_metadata?.name ?? user.user_metadata?.full_name ?? null,
+              avatarUrl: user.user_metadata?.avatar_url ?? null,
+              coins: 0,
+            },
+          });
+        } catch (dbError) {
+          console.error("Direct database sync error in auth callback:", dbError);
+        }
       }
       return NextResponse.redirect(`${origin}${next}`);
     }

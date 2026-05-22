@@ -195,6 +195,10 @@ export default function OnboardingPage() {
       }
 
       const supabase = createClient();
+      if (!supabase) {
+        setAuthLoading(false);
+        return;
+      }
       const { data: { user }, error } = await supabase.auth.getUser();
 
       if (error || !user) {
