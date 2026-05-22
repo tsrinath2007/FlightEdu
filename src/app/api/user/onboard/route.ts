@@ -22,12 +22,12 @@ export async function POST(request: Request) {
       callDistraction: string;
     };
 
-    // Update the user details in our database
+    // Update or create the user details in our database (resilient to missing auth callback sync)
     let dbUser;
     try {
-      dbUser = await prisma.user.update({
+      dbUser = await prisma.user.upsert({
         where: { id: user.id },
-        data: {
+        update: {
           name: body.name,
           phone: body.phone,
           age: body.age,
@@ -37,11 +37,24 @@ export async function POST(request: Request) {
           callDistraction: body.callDistraction,
           onboarded: true,
         },
+        create: {
+          id: user.id,
+          email: user.email ?? body.email,
+          name: body.name,
+          phone: body.phone,
+          age: body.age,
+          studyTime: body.studyTime,
+          studyDuration: body.studyDuration,
+          distractibility: body.distractibility,
+          callDistraction: body.callDistraction,
+          onboarded: true,
+          coins: 0,
+        },
       });
     } catch (dbErr) {
-      console.warn("Database update failed (could be database sync/tenant restriction):", dbErr);
+      console.warn("Database upsert failed (could be database sync/tenant restriction):", dbErr);
       // Fallback: We still want to return a mock-success response if the database is paused or tenant user is restricted
-      dbUser = { id: user.id, name: body.name, email: body.email, onboarded: true };
+      dbUser = { id: user.id, name: body.name, email: body.email ?? user.email, onboarded: true };
     }
 
     return NextResponse.json({ success: true, user: dbUser });
