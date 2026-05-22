@@ -4,7 +4,13 @@ import { PrismaPg } from "@prisma/adapter-pg";
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 function createPrismaClient() {
-  const connectionString = process.env.DATABASE_URL!;
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    if (typeof window === "undefined") {
+      console.warn("⚠️ Warning: DATABASE_URL is not configured.");
+    }
+    return null as any;
+  }
   const adapter = new PrismaPg({ connectionString });
   return new PrismaClient({
     adapter,
