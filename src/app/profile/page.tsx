@@ -1,3 +1,694 @@
-export default function Page() {
-  return <main className="flex min-h-screen items-center justify-center bg-navy-900"><p className="text-white/50">Coming soon</p></main>;
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ArrowLeft,
+  User,
+  Mail,
+  Phone,
+  Shield,
+  Lock,
+  Trash2,
+  Coins,
+  Clock,
+  Compass,
+  Award,
+  Sparkles,
+  Check,
+  Loader2,
+  Smartphone,
+  CheckCircle2,
+  AlertTriangle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
+
+interface ProfileDetails {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  age: string;
+  studyTime: string;
+  studyDuration: string;
+  distractibility: string;
+  callDistraction: string;
+  coins: number;
+  onboarded: boolean;
+}
+
+function getAvatarUrl(seed: string) {
+  return `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+}
+
+export default function ProfilePage() {
+  const router = useRouter();
+  
+  const [loading, setLoading] = useState(true);
+  const [dbUser, setDbUser] = useState<ProfileDetails | null>(null);
+  const [isGoogleUser, setIsGoogleUser] = useState(false);
+  
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    phone: "",
+    age: "21",
+    studyTime: "",
+    studyDuration: "",
+    distractibility: "",
+    callDistraction: "",
+  });
+  
+  // Password Reset state
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  
+  // Delete account state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteInput, setDeleteInput] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+  
+  // Feedback messages
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    async function loadProfile() {
+      const supabase = createClient();
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/");
+        return;
+      }
+      
+      // Determine if signed in via Google OAuth
+      const isGoogle = user.app_metadata?.provider === "google" || user.identities?.some((id: any) => id.provider === "google");
+      setIsGoogleUser(!!isGoogle);
+
+      try {
+        const res = await fetch("/api/user/onboard");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user) {
+            setDbUser(data.user);
+            setEditForm({
+              name: data.user.name || "",
+              phone: data.user.phone || "",
+              age: data.user.age || "21",
+              studyTime: data.user.studyTime || "",
+              studyDuration: data.user.studyDuration || "",
+              distractibility: data.user.distractibility || "",
+              callDistraction: data.user.callDistraction || "",
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load user profile:", err);
+      }
+      setLoading(false);
+    }
+    loadProfile();
+  }, [router]);
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaveLoading(true);
+    setFeedback(null);
+
+    try {
+      const res = await fetch("/api/user/onboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...editForm,
+          email: dbUser?.email || "",
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setDbUser(data.user);
+        setIsEditing(false);
+        setFeedback({ type: "success", text: "Flight manifest details updated successfully!" });
+        setTimeout(() => setFeedback(null), 4000);
+      } else {
+        setFeedback({ type: "error", text: "Failed to update profile details. Please try again." });
+      }
+    } catch (err) {
+      setFeedback({ type: "error", text: "An unexpected error occurred." });
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      setPasswordMessage({ type: "error", text: "Passwords do not match." });
+      return;
+    }
+    if (password.length < 6) {
+      setPasswordMessage({ type: "error", text: "Password must be at least 6 characters." });
+      return;
+    }
+
+    setPasswordLoading(true);
+    setPasswordMessage(null);
+
+    const supabase = createClient();
+    if (!supabase) {
+      setPasswordMessage({ type: "error", text: "Authentication client error." });
+      setPasswordLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password });
+
+    if (error) {
+      setPasswordMessage({ type: "error", text: error.message });
+    } else {
+      setPasswordMessage({ type: "success", text: "Account password reset successfully!" });
+      setPassword("");
+      confirmPassword && setConfirmPassword("");
+      setTimeout(() => setPasswordMessage(null), 4000);
+    }
+    setPasswordLoading(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteInput !== "DELETE MY CABIN") {
+      return;
+    }
+
+    setDeleteLoading(true);
+    try {
+      const res = await fetch("/api/user/delete", {
+        method: "POST",
+      });
+
+      if (res.ok) {
+        // Signout client side
+        const supabase = createClient();
+        await supabase?.auth.signOut();
+        router.push("/login?message=account_deleted");
+      } else {
+        alert("Failed to delete account. Please try again.");
+        setDeleteLoading(false);
+      }
+    } catch (err) {
+      alert("Error occurred while deleting account.");
+      setDeleteLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-navy-950 text-white">
+        <Loader2 className="size-10 animate-spin text-electric-400" />
+        <p className="mt-4 text-white/50 text-sm">Preparing pilot terminal...</p>
+      </div>
+    );
+  }
+
+  return (
+    <main className="relative flex min-h-screen flex-col overflow-y-auto bg-navy-950 pb-32">
+      {/* Background elements */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f1e] via-[#0d1a35] to-[#0a1628]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[400px] opacity-15"
+          style={{
+            background: "radial-gradient(ellipse at center, #1e4d8c 0%, transparent 70%)",
+          }}
+        />
+      </div>
+
+      {/* Header */}
+      <header className="relative z-20 flex items-center justify-between px-5 pt-6 pb-4 max-w-4xl mx-auto w-full">
+        <Link href="/dashboard" className="flex items-center gap-2 text-white/60 hover:text-white transition">
+          <ArrowLeft className="size-4" />
+          <span className="text-sm font-medium">To Cockpit</span>
+        </Link>
+        <span className="font-display text-lg font-bold text-white tracking-wide">Pilot Terminal</span>
+        <div className="w-10" /> {/* Spacer */}
+      </header>
+
+      <div className="relative z-20 mx-auto w-full max-w-4xl px-4 flex-1">
+        {/* Feedback Banner */}
+        <AnimatePresence>
+          {feedback && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className={`mb-6 p-4 rounded-xl border flex items-center gap-3 backdrop-blur-md ${
+                feedback.type === "success"
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                  : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+              }`}
+            >
+              {feedback.type === "success" ? <CheckCircle2 className="size-5 shrink-0" /> : <AlertTriangle className="size-5 shrink-0" />}
+              <span className="text-sm font-medium">{feedback.text}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Profile Card & Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Main Account details (Left Panel) */}
+          <div className="md:col-span-1 space-y-6">
+            <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-md text-center">
+              <div className="relative mx-auto size-24 rounded-full border-2 border-electric-500/40 p-1 bg-navy-900/60 overflow-hidden">
+                <img
+                  src={getAvatarUrl(dbUser?.email || "pilot")}
+                  alt="avatar"
+                  className="size-full rounded-full"
+                />
+              </div>
+              <h2 className="mt-4 text-lg font-bold text-white truncate">{dbUser?.name || "Anonymous Pilot"}</h2>
+              <p className="text-xs text-white/40 truncate">{dbUser?.email || "no-email@flightedu.com"}</p>
+
+              <div className="mt-5 pt-5 border-t border-white/10 flex items-center justify-center gap-2.5">
+                <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 px-3 py-1 text-amber-300">
+                  <Coins className="size-4" />
+                  <span className="text-sm font-bold">{dbUser?.coins ?? 0} Coins</span>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-5 bg-white/5 border-white/10 backdrop-blur-md">
+              <h3 className="text-xs font-bold text-white/50 uppercase tracking-wider mb-3">Flight Coordinates</h3>
+              <div className="space-y-3.5">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-white/5 text-white/60">
+                    <User className="size-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-white/30">Display Name</p>
+                    <p className="text-sm font-medium text-white/80">{dbUser?.name || "Not entered"}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-white/5 text-white/60">
+                    <Mail className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-white/30">Auth Email</p>
+                    <p className="text-sm font-medium text-white/80 truncate">{dbUser?.email}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-white/5 text-white/60">
+                    <Phone className="size-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-white/30">Contact Protocol</p>
+                    <p className="text-sm font-medium text-white/80">{dbUser?.phone || "None configured"}</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Onboarding flight manifest details (Right Panel) */}
+          <div className="md:col-span-2 space-y-6">
+            <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-md relative overflow-hidden">
+              <div className="flex items-center justify-between border-b border-white/15 pb-4 mb-5">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Compass className="size-5 text-electric-400" />
+                    Flight Onboarding Manifest
+                  </h3>
+                  <p className="text-xs text-white/40 mt-0.5">Your study-time cabin configurations</p>
+                </div>
+                {!isEditing && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditing(true)}
+                    className="border-white/10 hover:bg-white/5 text-white/80"
+                  >
+                    Edit Manifest
+                  </Button>
+                )}
+              </div>
+
+              {isEditing ? (
+                <form onSubmit={handleUpdateProfile} className="space-y-4 text-white">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-white/60">Pilot Name</label>
+                      <input
+                        type="text"
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        className="w-full bg-navy-900 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-electric-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-white/60">Emergency Phone</label>
+                      <input
+                        type="text"
+                        value={editForm.phone}
+                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                        className="w-full bg-navy-900 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-electric-500 focus:outline-none"
+                        placeholder="+1 123-456-7890"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-white/60">Age Category</label>
+                      <select
+                        value={editForm.age}
+                        onChange={(e) => setEditForm({ ...editForm, age: e.target.value })}
+                        className="w-full bg-navy-900 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-electric-500 focus:outline-none"
+                      >
+                        <option value="Teen">13-19 (Teen)</option>
+                        <option value="Young Adult">20-25 (Young Adult)</option>
+                        <option value="Professional">26-35 (Professional)</option>
+                        <option value="Expert Scholar">36+ (Expert Scholar)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-white/60">Preferred Departure Slot</label>
+                      <input
+                        type="text"
+                        value={editForm.studyTime}
+                        onChange={(e) => setEditForm({ ...editForm, studyTime: e.target.value })}
+                        className="w-full bg-navy-900 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-electric-500 focus:outline-none"
+                        placeholder="e.g., Redeye flight, Early morning"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-white/60">Cruise Duration</label>
+                      <input
+                        type="text"
+                        value={editForm.studyDuration}
+                        onChange={(e) => setEditForm({ ...editForm, studyDuration: e.target.value })}
+                        className="w-full bg-navy-900 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-electric-500 focus:outline-none"
+                        placeholder="e.g., 90 minutes"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-white/60">Distraction Shield</label>
+                      <input
+                        type="text"
+                        value={editForm.distractibility}
+                        onChange={(e) => setEditForm({ ...editForm, distractibility: e.target.value })}
+                        className="w-full bg-navy-900 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-electric-500 focus:outline-none"
+                        placeholder="e.g., Zero tolerance"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-white/60">Zen Phone Protocol</label>
+                      <input
+                        type="text"
+                        value={editForm.callDistraction}
+                        onChange={(e) => setEditForm({ ...editForm, callDistraction: e.target.value })}
+                        className="w-full bg-navy-900 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-electric-500 focus:outline-none"
+                        placeholder="e.g., Strict auto-decline"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-3">
+                    <Button type="submit" disabled={saveLoading} className="bg-electric-500 hover:bg-electric-600 text-white font-semibold">
+                      {saveLoading ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
+                      Save Changes
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setIsEditing(false);
+                        setEditForm({
+                          name: dbUser?.name || "",
+                          phone: dbUser?.phone || "",
+                          age: dbUser?.age || "21",
+                          studyTime: dbUser?.studyTime || "",
+                          studyDuration: dbUser?.studyDuration || "",
+                          distractibility: dbUser?.distractibility || "",
+                          callDistraction: dbUser?.callDistraction || "",
+                        });
+                      }}
+                      className="text-white/60 hover:text-white hover:bg-white/5"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <Clock className="size-4 text-electric-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider">Onboarding Age Category</p>
+                        <p className="text-sm font-medium text-white/90">{dbUser?.age || "Not specified"}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Clock className="size-4 text-electric-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider">Departure Slot Preference</p>
+                        <p className="text-sm font-medium text-white/90">{dbUser?.studyTime || "Not specified"}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Compass className="size-4 text-electric-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider">Standard Flight Cruise Duration</p>
+                        <p className="text-sm font-medium text-white/90">{dbUser?.studyDuration || "Not specified"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <Shield className="size-4 text-electric-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider">Distraction Turbulence Shield</p>
+                        <p className="text-sm font-medium text-white/90">{dbUser?.distractibility || "Not specified"}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Smartphone className="size-4 text-electric-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider">Zen Phone Call Protocol</p>
+                        <p className="text-sm font-medium text-white/90">{dbUser?.callDistraction || "Not specified"}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* Password Reset (Middle Panel) */}
+            <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-md">
+              <h3 className="text-base font-bold text-white flex items-center gap-2 mb-2">
+                <Lock className="size-5 text-electric-400" />
+                Secure Flight Credentials
+              </h3>
+              <p className="text-xs text-white/40 mb-4">Reset your account login password</p>
+
+              {isGoogleUser ? (
+                <div className="p-4 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-300 flex items-start gap-3">
+                  <Shield className="size-5 shrink-0 mt-0.5" />
+                  <p className="text-xs leading-relaxed">
+                    <strong>OAuth Single Sign-On Active:</strong> You are logged in securely using Google OAuth. Password resets are handled directly inside your Google Account settings.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handlePasswordReset} className="space-y-4">
+                  {passwordMessage && (
+                    <div className={`p-3 rounded-lg border text-xs font-semibold ${
+                      passwordMessage.type === "success"
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                        : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+                    }`}>
+                      {passwordMessage.text}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-white/60">New Password</label>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full bg-navy-900 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-electric-500 focus:outline-none text-white"
+                        placeholder="At least 6 characters"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-white/60">Confirm Password</label>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full bg-navy-900 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-electric-500 focus:outline-none text-white"
+                        placeholder="At least 6 characters"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <Button type="submit" disabled={passwordLoading} className="bg-white/10 hover:bg-white/15 text-white font-semibold hover:border-white/20 border border-white/10">
+                    {passwordLoading ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
+                    Reset Password
+                  </Button>
+                </form>
+              )}
+            </Card>
+
+            {/* Danger Zone (Bottom Panel) */}
+            <Card className="p-6 bg-rose-950/15 border-rose-500/20 backdrop-blur-md">
+              <h3 className="text-base font-bold text-rose-300 flex items-center gap-2 mb-1.5">
+                <Trash2 className="size-5" />
+                Danger Zone
+              </h3>
+              <p className="text-xs text-rose-300/60 mb-4">
+                Permanently delete your FlightEdu pilot credential logs, flight metrics, and coins. This action is completely irreversible.
+              </p>
+              
+              <Button
+                variant="danger"
+                onClick={() => setShowDeleteModal(true)}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-semibold"
+              >
+                Delete Pilot Account
+              </Button>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !deleteLoading && setShowDeleteModal(false)}
+              className="absolute inset-0 bg-navy-950/80 backdrop-blur-sm"
+            />
+
+            {/* Modal Body */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative z-10 w-full max-w-md rounded-2xl border border-rose-500/30 bg-navy-900 p-6 shadow-2xl"
+            >
+              <div className="flex items-center gap-3 text-rose-400 mb-3">
+                <AlertTriangle className="size-6 shrink-0 animate-pulse" />
+                <h3 className="text-lg font-bold">Irreversible Cabin Deletion</h3>
+              </div>
+
+              <p className="text-sm text-white/70 leading-relaxed mb-4">
+                You are about to permanently scrap your FlightEdu profile. All flight logs, coin reserves, study analytics, and Supabase auth records will be wiped from our systems.
+              </p>
+
+              <div className="p-3 bg-white/5 rounded-xl border border-white/10 mb-4 text-center">
+                <p className="text-xs text-white/50">To confirm, type the phrase below in all-caps:</p>
+                <p className="text-sm font-mono font-bold text-white select-none mt-1 tracking-wider">DELETE MY CABIN</p>
+              </div>
+
+              <input
+                type="text"
+                value={deleteInput}
+                onChange={(e) => setDeleteInput(e.target.value)}
+                disabled={deleteLoading}
+                className="w-full bg-navy-950 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-rose-500 focus:outline-none text-white text-center font-mono font-bold tracking-wider mb-5"
+                placeholder="Type the confirmation phrase"
+              />
+
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={handleDeleteAccount}
+                  disabled={deleteInput !== "DELETE MY CABIN" || deleteLoading}
+                  className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold disabled:opacity-40"
+                >
+                  {deleteLoading ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
+                  Scrap Account
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setDeleteInput("");
+                  }}
+                  disabled={deleteLoading}
+                  className="flex-1 text-white/60 hover:text-white hover:bg-white/5"
+                >
+                  Abort
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom Nav bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 flex flex-col items-center gap-3 pb-8 pt-4">
+        <BottomNav />
+      </div>
+    </main>
+  );
+}
+
+function BottomNav() {
+  const items = [
+    { icon: "🏠", label: "Home", href: "/dashboard" },
+    { icon: "🗺️", label: "Map", href: "/map" },
+    { icon: "✈️", label: "Journey", href: "/journey" },
+    { icon: "🏆", label: "Ranks", href: "/leaderboard" },
+    { icon: "👤", label: "Profile", href: "/profile" },
+  ];
+
+  return (
+    <nav className="flex items-center gap-1 rounded-2xl bg-navy-800/80 backdrop-blur border border-white/10 px-2 py-1.5">
+      {items.map((item) => (
+        <Link
+          key={item.label}
+          href={item.href}
+          className="flex flex-col items-center gap-0.5 rounded-xl px-4 py-1.5 text-white/50 hover:bg-white/8 hover:text-white transition"
+        >
+          <span className="text-lg">{item.icon}</span>
+          <span className="text-[10px]">{item.label}</span>
+        </Link>
+      ))}
+    </nav>
+  );
 }
