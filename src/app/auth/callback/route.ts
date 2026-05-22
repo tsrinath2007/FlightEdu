@@ -18,9 +18,10 @@ export async function GET(request: Request) {
     if (!error) {
       // Sync user to our database directly (prevents HTTP fetch deadlocks & cookie passing failures!)
       const { data: { user } } = await supabase.auth.getUser();
+      let onboarded = false;
       if (user && user.email) {
         try {
-          await prisma.user.upsert({
+          const dbUser = await prisma.user.upsert({
             where: { id: user.id },
             update: {
               name: user.user_metadata?.name ?? user.user_metadata?.full_name ?? undefined,
@@ -34,11 +35,14 @@ export async function GET(request: Request) {
               coins: 0,
             },
           });
+          onboarded = dbUser?.onboarded ?? false;
         } catch (dbError) {
           console.error("Direct database sync error in auth callback:", dbError);
         }
       }
-      return NextResponse.redirect(`${origin}${next}`);
+      
+      const destination = searchParams.get("next") ?? (onboarded ? "/dashboard" : "/onboarding");
+      return NextResponse.redirect(`${origin}${destination}`);
     }
   }
 
