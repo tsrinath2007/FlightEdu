@@ -54,6 +54,16 @@ export default function LandingPortalPage() {
 
   useEffect(() => {
     async function checkExistingSession() {
+      // Fail-safe: If Supabase falls back to Site URL and appends ?code=..., forward it to /auth/callback immediately!
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get("code");
+        if (code) {
+          router.push(`/auth/callback?code=${code}`);
+          return;
+        }
+      }
+
       const supabase = createClient();
       if (!supabase) {
         setCheckLoading(false);
