@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  name           String?
+  avatarUrl      String?
+  coins          Int       @default(0)
+  totalHours     Float     @default(0)
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastStudyDate  DateTime?
+  unlockedMaps   String[]  @default([])
+  age            String?
+  phone          String?
+  studyTime      String?
+  studyDuration  String?
+  distractibility String?
+  callDistraction String?
+  onboarded      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  hostedSessions      Session[]            @relation("HostedSessions")
+  sessionParticipants SessionParticipant[]
+  transactions        Transaction[]
+  badges              UserBadge[]
+  leaderboardEntries  LeaderboardEntry[]
+}
+
+model Session {
+  id              String        @id @default(cuid())
+  hostId          String
+  origin          String
+  originCode      String
+  destination     String
+  destinationCode String
+  transportMode   TransportMode
+  duration        Int
+  mode            SessionMode   @default(CHILL)
+  status          SessionStatus @default(WAITING)
+  inviteCode      String        @unique @default(cuid())
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime      @default(now())
+
+  host         User                 @relation("HostedSessions", fields: [hostId], references: [id])
+  participants SessionParticipant[]
+}
+
+model SessionParticipant {
+  id             String    @id @default(cuid())
+  sessionId      String
+  userId         String
+  joinedAt       DateTime  @default(now())
+  leftAt         DateTime?
+  hoursCompleted Float     @default(0)
+  completed      Boolean   @default(false)
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([sessionId, userId])
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model LeaderboardEntry {
+  id         String   @id @default(cuid())
+  userId     String
+  weekStart  DateTime
+  totalHours Float    @default(0)
+  totalCoins Int      @default(0)
+  streakDays Int      @default(0)
+  rank       Int?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, weekStart])
+}
+
+model Badge {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String
+  icon        String
+  requirement String
+
+  userBadges UserBadge[]
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  badgeId  String
+  earnedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  badge Badge @relation(fields: [badgeId], references: [id])
+
+  @@unique([userId, badgeId])
+}
+
+enum TransportMode {
+  FLIGHT
+  BUS
+  TRAIN
+  CAR
+}
+
+enum SessionMode {
+  CHILL
+  HARDCORE
+}
+
+enum SessionStatus {
+  WAITING
+  BOARDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
