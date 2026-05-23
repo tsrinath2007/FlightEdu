@@ -27,6 +27,46 @@ export default function DashboardPage() {
   const { user, loading } = useUser();
   const [studiers, setStudiers] = useState(SAMPLE_STUDIERS.slice(0, 4));
   const [totalRooms] = useState(243);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string>("Pilot");
+
+  // Load custom user details and avatar on user changes
+  useEffect(() => {
+    if (!user) return;
+
+    // 1. Initial fallbacks
+    setDisplayName(user.user_metadata?.name ?? user.email?.split("@")[0] ?? "Pilot");
+
+    // 2. Load from localStorage cache
+    const savedAvatar = localStorage.getItem("flightedu_avatar");
+    if (savedAvatar) setAvatarPreview(savedAvatar);
+
+    const cachedOnboarding = localStorage.getItem("flightedu_onboarding");
+    if (cachedOnboarding) {
+      try {
+        const parsed = JSON.parse(cachedOnboarding);
+        if (parsed.name) setDisplayName(parsed.name);
+        if (parsed.avatarUrl) setAvatarPreview(parsed.avatarUrl);
+      } catch {}
+    }
+
+    // 3. Fetch fresh data from backend DB
+    fetch("/api/user/onboard")
+      .then((res) => {
+        if (res.ok) return res.json();
+        throw new Error("fail");
+      })
+      .then((data) => {
+        if (data.user) {
+          if (data.user.name) setDisplayName(data.user.name);
+          if (data.user.avatarUrl) {
+            setAvatarPreview(data.user.avatarUrl);
+            localStorage.setItem("flightedu_avatar", data.user.avatarUrl);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [user]);
 
   // Simulate live feed: add a new person every 8 seconds
   useEffect(() => {
@@ -62,12 +102,12 @@ export default function DashboardPage() {
           {!loading && user && (
             <div className="flex items-center gap-2">
               <img
-                src={getAvatarUrl(user.email ?? "user")}
+                src={avatarPreview || getAvatarUrl(user.email ?? "user")}
                 alt="avatar"
                 className="size-8 rounded-full border border-white/20 bg-white/10"
               />
               <span className="hidden text-sm font-medium text-white/80 sm:block">
-                {user.user_metadata?.name ?? user.email?.split("@")[0]}
+                {displayName}
               </span>
             </div>
           )}
