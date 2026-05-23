@@ -4,10 +4,11 @@ import { PrismaPg } from "@prisma/adapter-pg";
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 function createPrismaClient() {
-  const connectionString = process.env.DATABASE_URL;
+  // Prefer DIRECT_URL (port 5432, no pgbouncer) for the PrismaPg adapter
+  const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL;
   if (!connectionString) {
     if (typeof window === "undefined") {
-      console.warn("⚠️ Warning: DATABASE_URL is not configured.");
+      console.warn("⚠️ Warning: DATABASE_URL / DIRECT_URL is not configured.");
     }
     return null as any;
   }
