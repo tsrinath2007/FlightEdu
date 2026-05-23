@@ -17,6 +17,7 @@ model User {
   totalHours     Float     @default(0)
   currentStreak  Int       @default(0)
   longestStreak  Int       @default(0)
+  streakFreezes  Int       @default(2)   // Streak freeze protections (starts at 2, max 3)
   lastStudyDate  DateTime?
   unlockedMaps   String[]  @default([])
   age            String?
@@ -69,6 +70,7 @@ model SessionParticipant {
   hoursCompleted Float     @default(0)
   completed      Boolean   @default(false)
   isAccepted     Boolean   @default(true)
+  seat           String?   // Real-time seating alignment sync
 
   session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id])

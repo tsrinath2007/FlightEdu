@@ -211,6 +211,17 @@ export default function ProfilePage() {
         });
         // Also overwrite localStorage with the remote URL for future loads
         localStorage.setItem("flightedu_avatar", publicUrl);
+        
+        // Update flightedu_onboarding cache to prevent stale overrides on refresh
+        const cached = localStorage.getItem("flightedu_onboarding");
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            parsed.avatarUrl = publicUrl;
+            localStorage.setItem("flightedu_onboarding", JSON.stringify(parsed));
+          } catch {}
+        }
+        
         setDbUser((prev) => prev ? { ...prev, avatarUrl: publicUrl } : prev);
       } catch (err) {
         console.warn("Cloud upload failed, avatar saved locally:", err);

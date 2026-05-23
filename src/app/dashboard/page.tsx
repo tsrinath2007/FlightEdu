@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { Button } from "@/components/ui/button";
@@ -24,12 +25,15 @@ function getAvatarUrl(seed: string) {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { user, loading } = useUser();
   const [studiers, setStudiers] = useState(SAMPLE_STUDIERS.slice(0, 4));
   const [totalRooms] = useState(243);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string>("Pilot");
   const [userCoins, setUserCoins] = useState<number>(0);
+  const [userStreak, setUserStreak] = useState<number>(0);
+  const [userStreakFreezes, setUserStreakFreezes] = useState<number>(2);
   const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
   const [flightInvites, setFlightInvites] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -52,6 +56,8 @@ export default function DashboardPage() {
         if (parsed.name) setDisplayName(parsed.name);
         if (parsed.avatarUrl) setAvatarPreview(parsed.avatarUrl);
         if (parsed.coins !== undefined) setUserCoins(parsed.coins);
+        if (parsed.currentStreak !== undefined) setUserStreak(parsed.currentStreak);
+        if (parsed.streakFreezes !== undefined) setUserStreakFreezes(parsed.streakFreezes);
       } catch {}
     }
 
@@ -65,10 +71,13 @@ export default function DashboardPage() {
         if (data.user) {
           if (data.user.name) setDisplayName(data.user.name);
           if (data.user.coins !== undefined) setUserCoins(data.user.coins);
+          if (data.user.currentStreak !== undefined) setUserStreak(data.user.currentStreak);
+          if (data.user.streakFreezes !== undefined) setUserStreakFreezes(data.user.streakFreezes);
           if (data.user.avatarUrl) {
             setAvatarPreview(data.user.avatarUrl);
             localStorage.setItem("flightedu_avatar", data.user.avatarUrl);
           }
+          localStorage.setItem("flightedu_onboarding", JSON.stringify(data.user));
         }
       })
       .catch(() => {});
@@ -173,12 +182,28 @@ export default function DashboardPage() {
           <span className="font-display text-lg font-bold text-white tracking-wide">FlightEdu</span>
         </div>
 
-        <div className="flex items-center gap-3 md:gap-4 relative">
+        <div className="flex items-center gap-2 md:gap-3 relative">
           {/* Coins Display */}
           {!loading && user && (
-            <div className="flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 text-amber-400 font-bold text-xs tracking-wide shadow-[0_0_8px_rgba(245,158,11,0.15)] select-none">
+            <div className="flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/30 px-2 py-1 text-amber-400 font-bold text-[10px] sm:text-xs tracking-wide shadow-[0_0_8px_rgba(245,158,11,0.15)] select-none">
               <span>🪙</span>
               <span>{userCoins}</span>
+            </div>
+          )}
+
+          {/* Streak Display */}
+          {!loading && user && (
+            <div className="flex items-center gap-1 rounded-full bg-orange-500/10 border border-orange-500/30 px-2 py-1 text-orange-400 font-bold text-[10px] sm:text-xs tracking-wide shadow-[0_0_8px_rgba(249,115,22,0.15)] select-none" title="Current Daily Streak">
+              <span>🔥</span>
+              <span>{userStreak}d</span>
+            </div>
+          )}
+
+          {/* Streak Freezes Display */}
+          {!loading && user && (
+            <div className="flex items-center gap-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 px-2 py-1 text-cyan-400 font-bold text-[10px] sm:text-xs tracking-wide shadow-[0_0_8px_rgba(6,182,212,0.15)] select-none" title="Streak Freezes Available">
+              <span>🧊</span>
+              <span>{userStreakFreezes}</span>
             </div>
           )}
 
@@ -304,9 +329,12 @@ export default function DashboardPage() {
             );
           })()}
 
-          {/* User Details */}
+          {/* User Details (Redirects to Profile) */}
           {!loading && user && (
-            <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push("/profile")}
+              className="flex items-center gap-2 hover:opacity-80 transition cursor-pointer bg-transparent border-none p-0 text-left outline-none"
+            >
               <img
                 src={avatarPreview || getAvatarUrl(user.email ?? "user")}
                 alt="avatar"
@@ -315,7 +343,7 @@ export default function DashboardPage() {
               <span className="hidden text-sm font-medium text-white/80 sm:block">
                 {displayName}
               </span>
-            </div>
+            </button>
           )}
           
           <button

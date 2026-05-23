@@ -101,10 +101,83 @@ export async function GET() {
           avatarUrl: true,
           totalHours: true,
           currentStreak: true,
+          longestStreak: true,
+          streakFreezes: true,
+          lastStudyDate: true,
         },
       });
-      onboarded = dbUser?.onboarded ?? false;
-      fullUser = dbUser;
+
+      if (dbUser) {
+        onboarded = dbUser.onboarded;
+
+        // --- STREAK PROTECTION & FREEZE ENGINE ---
+        let currentStreak = dbUser.currentStreak;
+        let streakFreezes = dbUser.streakFreezes ?? 2;
+        let lastStudyDate = dbUser.lastStudyDate;
+        let dbUpdated = false;
+
+        if (lastStudyDate) {
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const lastDate = new Date(lastStudyDate);
+          const lastStudyDay = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate());
+
+          const diffTime = today.getTime() - lastStudyDay.getTime();
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+          if (diffDays > 1) {
+            // Streak is endangered / broken!
+            const daysToFreeze = diffDays - 1;
+            if (streakFreezes >= daysToFreeze) {
+              // We have enough streak freezes to cover the idle period up to yesterday!
+              streakFreezes -= daysToFreeze;
+              // Set last study date to yesterday to keep the streak alive for today
+              const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+              lastStudyDate = yesterday;
+            } else {
+              // Not enough freezes, streak is broken!
+              streakFreezes = 0;
+              currentStreak = 0;
+            }
+            dbUpdated = true;
+          }
+        }
+
+        if (dbUpdated) {
+          const updatedUser = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              currentStreak,
+              streakFreezes,
+              lastStudyDate,
+            },
+            select: {
+              onboarded: true,
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              gender: true,
+              pilotId: true,
+              age: true,
+              studyTime: true,
+              studyDuration: true,
+              distractibility: true,
+              callDistraction: true,
+              coins: true,
+              avatarUrl: true,
+              totalHours: true,
+              currentStreak: true,
+              longestStreak: true,
+              streakFreezes: true,
+              lastStudyDate: true,
+            },
+          });
+          fullUser = updatedUser;
+        } else {
+          fullUser = dbUser;
+        }
+      }
     } catch (dbErr) {
       console.warn("Database lookup failed, falling back to false:", dbErr);
     }

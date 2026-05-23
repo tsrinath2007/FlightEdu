@@ -165,7 +165,10 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     }
 
     try {
-      const res = await fetch(`/api/sessions/${sessionId}`);
+      // Add cache-busting timestamp to prevent client component fetch caching
+      const res = await fetch(`/api/sessions/${sessionId}?t=${Date.now()}`, {
+        cache: "no-store",
+      });
       if (res.ok) {
         const data = await res.json() as { session: FlightSession & { participants?: any[] } };
         setSession(data.session);
@@ -193,10 +196,14 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
           
           const mapped = filteredParticipants.map((p, idx) => {
             const u = p.user;
-            const seats = ["1A", "2D", "4C", "8F", "14D", "26B", "32J"];
-            // Avoid mapping to current user's seat
-            const availableSeats = seats.filter(s => s !== mySeat);
-            const seat = availableSeats[idx % availableSeats.length] || "8F";
+            
+            // Prioritize database-persisted seat, fallback to static seat assignment
+            let seat = p.seat;
+            if (!seat) {
+              const seats = ["1A", "2D", "4C", "8F", "14D", "26B", "32J"];
+              const availableSeats = seats.filter(s => s !== mySeat);
+              seat = availableSeats[idx % availableSeats.length] || "8F";
+            }
             
             return {
               seat,
@@ -277,6 +284,18 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
       alert("Failed to send invite");
     }
   };
+
+  const syncSeatToDatabase = useCallback(async (seatNum: string) => {
+    try {
+      await fetch(`/api/sessions/${sessionId}/seat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seatNumber: seatNum }),
+      });
+    } catch (e) {
+      console.warn("Failed to sync seat to database:", e);
+    }
+  }, [sessionId]);
 
   const handleKickParticipant = async (targetUserId: string) => {
     const confirmKick = confirm("Are you sure you want to remove this pilot from the cabin?");
@@ -371,12 +390,14 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     const localConfig = localStorage.getItem(`flight_config_${sessionId}`);
     if (localConfig) {
       try {
-        setConfig(JSON.parse(localConfig));
+        const parsed = JSON.parse(localConfig);
+        setConfig(parsed);
+        syncSeatToDatabase(parsed.seatNumber);
       } catch (e) {
         console.error("Config parse fail:", e);
       }
     } else {
-      setConfig({
+      const def = {
         sessionId,
         airline: {
           id: "airindia",
@@ -407,11 +428,13 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
         seatNumber: "12D",
         flightNumber: "AI 350",
         gateNumber: "T-03",
-      });
+      };
+      setConfig(def);
+      syncSeatToDatabase(def.seatNumber);
     }
 
     fetchParticipants();
-  }, [sessionId, fetchParticipants]);
+  }, [sessionId, fetchParticipants, syncSeatToDatabase]);
 
   // Dynamic Polling for Multiplayer Cabin Participants
   useEffect(() => {
@@ -535,6 +558,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
       setConfig(updatedConfig);
       localStorage.setItem(`flight_config_${sessionId}`, JSON.stringify(updatedConfig));
       setSelectedSeatDetails(null);
+      syncSeatToDatabase(seatId);
 
       try {
         const slide = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
@@ -621,10 +645,14 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     } catch {}
     // Also try DB sync with keepalive to prevent browser cancel on page navigation
     try {
+      const elapsedSeconds = totalDurationSeconds - secondsRemaining;
       await fetch("/api/user/coins", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ coinsEarned: Math.round(coinsEarned) }),
+        body: JSON.stringify({
+          coinsEarned: Math.round(coinsEarned),
+          secondsFocused: elapsedSeconds,
+        }),
         keepalive: true,
       });
     } catch (e) {

@@ -231,7 +231,7 @@ export default function JourneyPage() {
               </p>
               {options.map((opt) => {
                 const isSelected = selected?.mode === opt.mode;
-                const isDisabled = opt.mode === "TRAIN" || opt.mode === "CAR";
+                const isDisabled = opt.mode === "TRAIN" || opt.mode === "CAR" || opt.mode === "BUS";
                 return (
                   <div key={opt.mode} className="relative">
                     <motion.button
