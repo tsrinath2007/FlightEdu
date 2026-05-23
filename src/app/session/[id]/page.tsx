@@ -173,10 +173,12 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
         // If private, replace mock pilots with real ones
         if (data.session.isPrivate && data.session.participants) {
           const localUser = localStorage.getItem("flightedu_onboarding");
-          let myId = "";
-          try {
-            if (localUser) myId = JSON.parse(localUser).id || "";
-          } catch {}
+          let myId = currentUser?.id || "";
+          if (!myId && localUser) {
+            try {
+              myId = JSON.parse(localUser).id || "";
+            } catch {}
+          }
           
           let mySeat = "12D";
           const localConfig = localStorage.getItem(`flight_config_${sessionId}`);
@@ -233,7 +235,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
         return defaultSession;
       });
     }
-  }, [sessionId]);
+  }, [sessionId, currentUser]);
 
   // Initialize focus timer once session is loaded (runs only once per session setup)
   useEffect(() => {
