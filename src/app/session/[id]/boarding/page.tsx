@@ -219,18 +219,31 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
     const num = selectedAircraft.id === "a380" ? "380" : selectedAircraft.id === "b777" ? "777" : "350";
     setFlightNumber(`${code} ${num}`);
 
-    // Generate Seat Number
+    // Generate Seat Number aligning strictly with cockpit seating layout
     let row = 4;
+    let suffix = "A";
     if (selectedClass.id === "first") {
-      row = Math.floor(Math.random() * 2) + 1; // Row 1 or 2
+      const firstRows = [1, 2];
+      const firstSeats = ["A", "D"];
+      row = firstRows[Math.floor(Math.random() * firstRows.length)];
+      suffix = firstSeats[Math.floor(Math.random() * firstSeats.length)];
     } else if (selectedClass.id === "business") {
-      row = Math.floor(Math.random() * 5) + 4; // Row 4-8
+      const bizRows = [4, 8];
+      const bizSeats = ["A", "C", "F"];
+      row = bizRows[Math.floor(Math.random() * bizRows.length)];
+      suffix = bizSeats[Math.floor(Math.random() * bizSeats.length)];
     } else if (selectedClass.id === "premium") {
-      row = Math.floor(Math.random() * 5) + 12; // Row 12-16
+      const premRows = [14];
+      const premSeats = ["A", "B", "D", "J"];
+      row = premRows[Math.floor(Math.random() * premRows.length)];
+      suffix = premSeats[Math.floor(Math.random() * premSeats.length)];
     } else {
-      row = Math.floor(Math.random() * 15) + 24; // Row 24-38
+      const econRows = [26, 32];
+      const econSeats = ["A", "B", "D", "J"];
+      row = econRows[Math.floor(Math.random() * econRows.length)];
+      suffix = econSeats[Math.floor(Math.random() * econSeats.length)];
     }
-    setSeatNumber(`${row}${selectedClass.seatSuffix}`);
+    setSeatNumber(`${row}${suffix}`);
   }, [selectedAirline, selectedClass, selectedAircraft]);
 
   const handleTakeOff = () => {

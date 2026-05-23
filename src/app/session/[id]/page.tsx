@@ -161,8 +161,6 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
       try {
         const parsed = JSON.parse(localSession) as FlightSession;
         setSession(parsed);
-        setSecondsRemaining(parsed.duration * 60);
-        setTotalDurationSeconds(parsed.duration * 60);
       } catch {}
     }
 
@@ -232,12 +230,18 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
           duration: 306,
           mode: "CHILL",
         };
-        setSecondsRemaining(defaultSession.duration * 60);
-        setTotalDurationSeconds(defaultSession.duration * 60);
         return defaultSession;
       });
     }
   }, [sessionId]);
+
+  // Initialize focus timer once session is loaded (runs only once per session setup)
+  useEffect(() => {
+    if (session && totalDurationSeconds === 0) {
+      setSecondsRemaining(session.duration * 60);
+      setTotalDurationSeconds(session.duration * 60);
+    }
+  }, [session, totalDurationSeconds]);
 
   // Fetch friends list to invite
   useEffect(() => {
