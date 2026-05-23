@@ -296,8 +296,21 @@ export default function LandingPortalPage() {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-white/5 py-8 text-center text-xs text-white/20 font-display">
-        FlightEdu — Study Like You&apos;re Travelling the World • Powered by Google OAuth & Supabase
+      <footer className="relative z-10 border-t border-white/5 py-8 text-center font-display">
+        <p className="text-xs text-white/20">
+          FlightEdu — Study Like You&apos;re Travelling the World • Powered by Google OAuth &amp; Supabase
+        </p>
+        <p className="mt-2 text-xs text-white/30">
+          Built by{" "}
+          <a
+            href="https://www.linkedin.com/in/tses/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-electric-400 hover:text-electric-300 underline underline-offset-2 transition-colors"
+          >
+            Srinath
+          </a>
+        </p>
       </footer>
     </main>
   );

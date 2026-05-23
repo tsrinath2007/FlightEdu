@@ -176,38 +176,48 @@ export default function JourneyPage() {
               </p>
               {options.map((opt) => {
                 const isSelected = selected?.mode === opt.mode;
+                const isDisabled = opt.mode === "TRAIN" || opt.mode === "CAR";
                 return (
-                  <motion.button
-                    key={opt.mode}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleSelectOption(opt)}
-                    className={`w-full flex items-center gap-4 rounded-2xl border px-5 py-4 text-left transition-all ${
-                      isSelected
-                        ? "border-electric-500/60 bg-electric-500/10 shadow-[0_0_20px_rgba(14,165,233,0.15)]"
-                        : "border-white/8 bg-white/5 hover:border-white/16 hover:bg-white/8"
-                    }`}
-                  >
-                    <span className="text-2xl">{getTransportEmoji(opt.mode)}</span>
-                    <div className="flex-1">
-                      <p className="font-display font-semibold text-white">{getTransportLabel(opt.mode)}</p>
-                      <p className="text-xs text-white/40">{opt.distanceText}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`font-display text-lg font-bold ${isSelected ? "text-electric-400" : "text-white"}`}>
-                        {opt.durationText}
-                      </p>
-                      {isSelected && (
-                        <p className="text-xs text-white/40">
-                          ~{calcArrivalTime(opt.duration)}
+                  <div key={opt.mode} className="relative">
+                    <motion.button
+                      whileTap={isDisabled ? {} : { scale: 0.98 }}
+                      onClick={() => !isDisabled && handleSelectOption(opt)}
+                      disabled={isDisabled}
+                      className={`w-full flex items-center gap-4 rounded-2xl border px-5 py-4 text-left transition-all ${
+                        isDisabled
+                          ? "border-white/5 bg-white/[0.02] opacity-50 cursor-not-allowed"
+                          : isSelected
+                          ? "border-electric-500/60 bg-electric-500/10 shadow-[0_0_20px_rgba(14,165,233,0.15)]"
+                          : "border-white/8 bg-white/5 hover:border-white/16 hover:bg-white/8"
+                      }`}
+                    >
+                      <span className="text-2xl">{getTransportEmoji(opt.mode)}</span>
+                      <div className="flex-1">
+                        <p className={`font-display font-semibold ${isDisabled ? "text-white/40" : "text-white"}`}>{getTransportLabel(opt.mode)}</p>
+                        <p className="text-xs text-white/30">{opt.distanceText}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-display text-lg font-bold ${isDisabled ? "text-white/30" : isSelected ? "text-electric-400" : "text-white"}`}>
+                          {opt.durationText}
                         </p>
+                        {isSelected && !isDisabled && (
+                          <p className="text-xs text-white/40">
+                            ~{calcArrivalTime(opt.duration)}
+                          </p>
+                        )}
+                      </div>
+                      {isSelected && !isDisabled && (
+                        <div className="flex size-5 items-center justify-center rounded-full bg-electric-500 flex-shrink-0">
+                          <span className="text-xs text-white">✓</span>
+                        </div>
                       )}
-                    </div>
-                    {isSelected && (
-                      <div className="flex size-5 items-center justify-center rounded-full bg-electric-500 flex-shrink-0">
-                        <span className="text-xs text-white">✓</span>
+                    </motion.button>
+                    {isDisabled && (
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-amber-400">
+                        <span>🚧</span> Under development
                       </div>
                     )}
-                  </motion.button>
+                  </div>
                 );
               })}
             </motion.div>
