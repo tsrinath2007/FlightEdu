@@ -461,7 +461,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  const syncCoinsToProfile = () => {
+  const syncCoinsToProfile = async () => {
     // Persist earned coins back to the localStorage profile cache
     try {
       const cached = localStorage.getItem("flightedu_onboarding");
@@ -472,21 +472,26 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
         localStorage.setItem("flightedu_onboarding", JSON.stringify(parsed));
       }
     } catch {}
-    // Also try DB sync (fire-and-forget)
-    fetch("/api/user/coins", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ coinsEarned: Math.round(coinsEarned) }),
-    }).catch(() => {});
+    // Also try DB sync with keepalive to prevent browser cancel on page navigation
+    try {
+      await fetch("/api/user/coins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coinsEarned: Math.round(coinsEarned) }),
+        keepalive: true,
+      });
+    } catch (e) {
+      console.warn("DB coin sync failed:", e);
+    }
   };
 
-  const handleEject = () => {
+  const handleEject = async () => {
     if (session?.mode === "HARDCORE") {
       const confirmEject = confirm("⚠️ WARNING: Hardcore Flight Mode engaged. Ejecting early will cost -500 focus coins! Do you still want to eject?");
       if (!confirmEject) return;
     }
     if (audioRef.current) audioRef.current.pause();
-    syncCoinsToProfile();
+    await syncCoinsToProfile();
     router.push("/dashboard");
   };
 
