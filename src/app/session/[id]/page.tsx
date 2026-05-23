@@ -188,8 +188,8 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
             } catch {}
           }
           
-          // Filter out the current user to prevent duplicates
-          const filteredParticipants = data.session.participants.filter(p => p.userId !== myId);
+          // Filter out the current user, and only include participants who have accepted the invite
+          const filteredParticipants = data.session.participants.filter(p => p.userId !== myId && p.isAccepted);
           
           const mapped = filteredParticipants.map((p, idx) => {
             const u = p.user;

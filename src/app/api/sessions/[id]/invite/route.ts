@@ -44,11 +44,12 @@ export async function POST(
       return NextResponse.json({ error: "Pilot is already in the cabin" }, { status: 400 });
     }
 
-    // Add friend to session
+    // Add friend to session (starts as isAccepted: false for private invite)
     const participant = await prisma.sessionParticipant.create({
       data: {
         sessionId,
         userId: friendId,
+        isAccepted: false,
       },
     });
 
