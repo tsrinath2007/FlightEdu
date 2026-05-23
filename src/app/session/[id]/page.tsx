@@ -1896,16 +1896,18 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                 ) : (
                   <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10">
                     {friendsList.map((friend) => {
-                      const isAlreadyInCabin = activePilots.some((p) => p.userId === friend.id);
+                      const u = friend.user;
+                      if (!u) return null;
+                      const isAlreadyInCabin = activePilots.some((p) => p.userId === u.id);
                       return (
-                        <div key={friend.id} className="flex items-center justify-between bg-white/4 border border-white/5 rounded-2xl p-3">
+                        <div key={u.id} className="flex items-center justify-between bg-white/4 border border-white/5 rounded-2xl p-3">
                           <div className="flex items-center gap-3">
                             <div className="size-8 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center font-display font-extrabold text-purple-300 text-xs uppercase">
-                              {friend.name?.substring(0, 2) || "PL"}
+                              {u.name?.substring(0, 2) || "PL"}
                             </div>
                             <div>
-                              <p className="text-xs font-bold text-white leading-tight">{friend.name}</p>
-                              <p className="text-[9px] font-mono text-white/40 mt-0.5">ID: {friend.pilotId}</p>
+                              <p className="text-xs font-bold text-white leading-tight">{u.name}</p>
+                              <p className="text-[9px] font-mono text-white/40 mt-0.5">ID: {u.pilotId}</p>
                             </div>
                           </div>
                           {isAlreadyInCabin ? (
@@ -1914,7 +1916,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                             </span>
                           ) : (
                             <button
-                              onClick={() => handleInviteFriend(friend.id)}
+                              onClick={() => handleInviteFriend(u.id)}
                               className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[9px] font-bold uppercase tracking-wider transition cursor-pointer shadow-md shadow-emerald-600/15"
                             >
                               Invite
