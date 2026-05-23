@@ -555,11 +555,22 @@ export default function ProfilePage() {
                 <p className="text-xs font-mono text-neon-400 mt-0.5 tracking-wider">@{dbUser.pilotId}</p>
               )}
 
-              <div className="mt-5 pt-5 border-t border-white/10 flex items-center justify-center gap-2.5">
-                <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 px-3 py-1 text-amber-300">
+              <div className="mt-5 pt-5 border-t border-white/10 flex flex-col gap-3 items-center justify-center">
+                <div className="flex items-center justify-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 px-3 py-1 text-amber-300">
                   <Coins className="size-4" />
                   <span className="text-sm font-bold">{dbUser?.coins ?? 0} Coins</span>
                 </div>
+
+                <button
+                  onClick={async () => {
+                    const supabase = createClient();
+                    await supabase?.auth.signOut();
+                    window.location.href = "/";
+                  }}
+                  className="w-full mt-2 py-2 rounded-xl bg-red-950/30 hover:bg-red-900/50 border border-red-500/20 hover:border-red-500/40 text-red-400 font-semibold text-xs tracking-wider uppercase transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>Sign Out 🚪</span>
+                </button>
               </div>
             </Card>
 

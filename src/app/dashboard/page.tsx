@@ -29,6 +29,9 @@ export default function DashboardPage() {
   const [totalRooms] = useState(243);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string>("Pilot");
+  const [userCoins, setUserCoins] = useState<number>(0);
+  const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Load custom user details and avatar on user changes
   useEffect(() => {
@@ -47,6 +50,7 @@ export default function DashboardPage() {
         const parsed = JSON.parse(cachedOnboarding);
         if (parsed.name) setDisplayName(parsed.name);
         if (parsed.avatarUrl) setAvatarPreview(parsed.avatarUrl);
+        if (parsed.coins !== undefined) setUserCoins(parsed.coins);
       } catch {}
     }
 
@@ -59,11 +63,20 @@ export default function DashboardPage() {
       .then((data) => {
         if (data.user) {
           if (data.user.name) setDisplayName(data.user.name);
+          if (data.user.coins !== undefined) setUserCoins(data.user.coins);
           if (data.user.avatarUrl) {
             setAvatarPreview(data.user.avatarUrl);
             localStorage.setItem("flightedu_avatar", data.user.avatarUrl);
           }
         }
+      })
+      .catch(() => {});
+
+    // 4. Fetch pending friend requests
+    fetch("/api/friends/request")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.incoming) setIncomingRequests(data.incoming);
       })
       .catch(() => {});
   }, [user]);
@@ -79,6 +92,32 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleAcceptRequest = async (senderId: string) => {
+    try {
+      const res = await fetch("/api/friends/request", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ senderId }),
+      });
+      if (res.ok) {
+        setIncomingRequests((prev) => prev.filter((r) => r.user.id !== senderId));
+      }
+    } catch {}
+  };
+
+  const handleDeclineRequest = async (otherUserId: string) => {
+    try {
+      const res = await fetch("/api/friends/request", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otherUserId }),
+      });
+      if (res.ok) {
+        setIncomingRequests((prev) => prev.filter((r) => r.user.id !== otherUserId));
+      }
+    } catch {}
+  };
+
   async function handleSignOut() {
     const { createClient: makeClient } = await import("@/lib/supabase/client");
     const supabase = makeClient();
@@ -92,13 +131,98 @@ export default function DashboardPage() {
       <GlobeBackground />
 
       {/* Header */}
-      <header className="relative z-20 flex items-center justify-between px-5 pt-5 pb-3">
+      <header className="relative z-40 flex items-center justify-between px-5 pt-5 pb-3">
         <div className="flex items-center gap-2">
           <span className="text-2xl">🌍</span>
-          <span className="font-display text-lg font-bold text-white">FlightEdu</span>
+          <span className="font-display text-lg font-bold text-white tracking-wide">FlightEdu</span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 md:gap-4 relative">
+          {/* Coins Display */}
+          {!loading && user && (
+            <div className="flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 text-amber-400 font-bold text-xs tracking-wide shadow-[0_0_8px_rgba(245,158,11,0.15)] select-none">
+              <span>🪙</span>
+              <span>{userCoins}</span>
+            </div>
+          )}
+
+          {/* Notifications Bell */}
+          {!loading && user && (
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition cursor-pointer flex items-center justify-center"
+              >
+                <span className="text-xs">🔔</span>
+                {incomingRequests.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white font-mono font-bold text-[8px] size-3.5 rounded-full flex items-center justify-center animate-bounce shadow-md">
+                    {incomingRequests.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Notifications Dropdown */}
+              <AnimatePresence>
+                {showNotifications && (
+                  <>
+                    {/* Click outside backdrop */}
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setShowNotifications(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 mt-3 w-64 bg-[#0c122c]/95 border border-white/10 rounded-2xl p-4 shadow-2xl space-y-3 z-50 backdrop-blur-md text-left"
+                    >
+                      <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                        <h4 className="font-display font-extrabold text-[10px] text-white uppercase tracking-wider">Cadet Crew Invites</h4>
+                        <span className="text-[8px] font-mono text-white/40">{incomingRequests.length} pending</span>
+                      </div>
+
+                      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10">
+                        {incomingRequests.length === 0 ? (
+                          <p className="text-center py-6 text-[10px] text-white/35">No pending friend requests.</p>
+                        ) : (
+                          incomingRequests.map((req) => (
+                            <div key={req.friendshipId} className="flex flex-col gap-2 bg-white/4 border border-white/5 rounded-xl p-2">
+                              <div className="flex items-center gap-2">
+                                <div className="size-6 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center font-display font-extrabold text-purple-300 text-[8px] uppercase">
+                                  {req.user.name?.substring(0, 2) || "PL"}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-[10px] font-bold text-white leading-tight truncate">{req.user.name}</p>
+                                  <p className="text-[7px] font-mono text-white/40 mt-0.5 truncate">ID: {req.user.pilotId}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex gap-1.5 mt-1">
+                                <button
+                                  onClick={() => handleAcceptRequest(req.user.id)}
+                                  className="flex-1 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[8px] font-bold uppercase tracking-wider transition cursor-pointer shadow-md shadow-emerald-600/10"
+                                >
+                                  Accept
+                                </button>
+                                <button
+                                  onClick={() => handleDeclineRequest(req.user.id)}
+                                  className="flex-1 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white font-mono text-[8px] font-bold uppercase tracking-wider transition cursor-pointer"
+                                >
+                                  Decline
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* User Details */}
           {!loading && user && (
             <div className="flex items-center gap-2">
               <img
@@ -111,9 +235,10 @@ export default function DashboardPage() {
               </span>
             </div>
           )}
+          
           <button
             onClick={handleSignOut}
-            className="rounded-lg px-3 py-1.5 text-xs text-white/40 hover:bg-white/8 hover:text-white/70 transition"
+            className="rounded-lg px-2 py-1 text-xs text-white/40 hover:bg-white/8 hover:text-white/70 transition cursor-pointer"
           >
             Sign out
           </button>
