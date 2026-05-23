@@ -22,6 +22,7 @@ interface OnboardingData {
   name: string;
   email: string;
   phone: string;
+  gender: string;
   age: string;
   studyTime: string;
   studyDuration: string;
@@ -33,6 +34,7 @@ const INITIAL_DATA: OnboardingData = {
   name: "",
   email: "",
   phone: "",
+  gender: "prefer_not_to_say",
   age: "21",
   studyTime: "",
   studyDuration: "",
@@ -168,14 +170,33 @@ const CALL_DISTRACTIONS = [
   },
 ];
 
+const COUNTRY_CODES = [
+  { code: "+91", country: "India", flag: "🇮🇳" },
+  { code: "+1", country: "United States", flag: "🇺🇸" },
+  { code: "+44", country: "United Kingdom", flag: "🇬🇧" },
+  { code: "+1", country: "Canada", flag: "🇨🇦" },
+  { code: "+61", country: "Australia", flag: "🇦🇺" },
+  { code: "+49", country: "Germany", flag: "🇩🇪" },
+  { code: "+33", country: "France", flag: "🇫🇷" },
+  { code: "+81", country: "Japan", flag: "🇯🇵" },
+  { code: "+65", country: "Singapore", flag: "🇸🇬" },
+  { code: "+971", country: "United Arab Emirates", flag: "🇦🇪" },
+];
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(INITIAL_DATA);
+  const [countryCode, setCountryCode] = useState("+91");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [isSimulated, setIsSimulated] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  useEffect(() => {
+    setData((prev) => ({ ...prev, phone: `${countryCode}${phoneNumber}` }));
+  }, [countryCode, phoneNumber]);
 
   useEffect(() => {
     async function loadUser() {
@@ -219,11 +240,26 @@ export default function OnboardingPage() {
         console.warn("Failed to check onboarding status:", err);
       }
 
+      const userPhone = user.user_metadata?.phone ?? "";
+      let cc = "+91";
+      let num = userPhone;
+      for (const c of COUNTRY_CODES) {
+        if (userPhone.startsWith(c.code)) {
+          cc = c.code;
+          num = userPhone.substring(c.code.length);
+          break;
+        }
+      }
+      setCountryCode(cc);
+      setPhoneNumber(num.replace(/\D/g, ""));
+
       // Pre-populate details from Supabase User Auth Metadata
       setData((prev) => ({
         ...prev,
         name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? "",
         email: user.email ?? "",
+        phone: userPhone,
+        gender: user.user_metadata?.gender ?? "prefer_not_to_say",
       }));
       setAuthLoading(false);
     }
@@ -473,23 +509,48 @@ export default function OnboardingPage() {
                     <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-white/60">
                       Satellite Dial-in Link (Phone)
                     </label>
-                    <div className="relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <Smartphone className="size-4 text-white/30" />
-                      </div>
+                    <div className="flex gap-2">
+                      <select
+                        value={countryCode}
+                        onChange={(e) => setCountryCode(e.target.value)}
+                        className="rounded-xl border border-white/10 bg-navy-950 px-3 py-3 text-sm text-white outline-none transition focus:border-electric-500/50 focus:ring-1 focus:ring-electric-500/30 shrink-0"
+                      >
+                        {COUNTRY_CODES.map((c) => (
+                          <option key={`${c.country}-${c.code}`} value={c.code} className="bg-navy-900 text-white">
+                            {c.flag} {c.code}
+                          </option>
+                        ))}
+                      </select>
                       <input
                         type="tel"
-                        value={data.phone}
-                        onChange={(e) => setData({ ...data, phone: e.target.value })}
-                        placeholder="+1 (555) 019-2834"
-                        className={`w-full rounded-xl border ${
+                        required
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                        placeholder="555-019-2834"
+                        className={`flex-1 rounded-xl border ${
                           errors.phone ? "border-coral-500/50" : "border-white/10"
-                        } bg-white/5 py-3 pl-10 pr-4 text-sm text-white outline-none transition focus:border-electric-500/50 focus:ring-1 focus:ring-electric-500/30`}
+                        } bg-white/5 py-3 px-4 text-sm text-white placeholder-white/25 outline-none transition focus:border-electric-500/50 focus:ring-1 focus:ring-electric-500/30`}
                       />
                     </div>
                     {errors.phone && (
                       <p className="mt-1 text-xs text-coral-400">{errors.phone}</p>
                     )}
+                  </div>
+
+                  {/* Gender select field */}
+                  <div>
+                    <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-white/60">
+                      Gender
+                    </label>
+                    <select
+                      value={data.gender}
+                      onChange={(e) => setData({ ...data, gender: e.target.value })}
+                      className="w-full rounded-xl border border-white/10 bg-navy-950 px-4 py-3 text-sm text-white outline-none transition focus:border-electric-500/50 focus:ring-1 focus:ring-electric-500/30"
+                    >
+                      <option value="male" className="bg-navy-900 text-white">Male 👨</option>
+                      <option value="female" className="bg-navy-900 text-white">Female 👩</option>
+                      <option value="prefer_not_to_say" className="bg-navy-900 text-white">Prefer not to say 👤</option>
+                    </select>
                   </div>
                 </div>
 

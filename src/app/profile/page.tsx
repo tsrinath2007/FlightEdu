@@ -32,6 +32,7 @@ interface ProfileDetails {
   name: string;
   email: string;
   phone: string;
+  gender?: string;
   age: string;
   studyTime: string;
   studyDuration: string;
@@ -45,6 +46,19 @@ function getAvatarUrl(seed: string) {
   return `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
 }
 
+const COUNTRY_CODES = [
+  { code: "+91", country: "India", flag: "🇮🇳" },
+  { code: "+1", country: "United States", flag: "🇺🇸" },
+  { code: "+44", country: "United Kingdom", flag: "🇬🇧" },
+  { code: "+1", country: "Canada", flag: "🇨🇦" },
+  { code: "+61", country: "Australia", flag: "🇦🇺" },
+  { code: "+49", country: "Germany", flag: "🇩🇪" },
+  { code: "+33", country: "France", flag: "🇫🇷" },
+  { code: "+81", country: "Japan", flag: "🇯🇵" },
+  { code: "+65", country: "Singapore", flag: "🇸🇬" },
+  { code: "+971", country: "United Arab Emirates", flag: "🇦🇪" },
+];
+
 export default function ProfilePage() {
   const router = useRouter();
   
@@ -54,9 +68,12 @@ export default function ProfilePage() {
   
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
+  const [countryCode, setCountryCode] = useState("+91");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [editForm, setEditForm] = useState({
     name: "",
     phone: "",
+    gender: "prefer_not_to_say",
     age: "21",
     studyTime: "",
     studyDuration: "",
@@ -103,9 +120,24 @@ export default function ProfilePage() {
           const data = await res.json();
           if (data.user) {
             setDbUser(data.user);
+            
+            const userPhone = data.user.phone || "";
+            let cc = "+91";
+            let num = userPhone;
+            for (const c of COUNTRY_CODES) {
+              if (userPhone.startsWith(c.code)) {
+                cc = c.code;
+                num = userPhone.substring(c.code.length);
+                break;
+              }
+            }
+            setCountryCode(cc);
+            setPhoneNumber(num.replace(/\D/g, ""));
+
             setEditForm({
               name: data.user.name || "",
-              phone: data.user.phone || "",
+              phone: userPhone,
+              gender: data.user.gender || "prefer_not_to_say",
               age: data.user.age || "21",
               studyTime: data.user.studyTime || "",
               studyDuration: data.user.studyDuration || "",
@@ -127,12 +159,15 @@ export default function ProfilePage() {
     setSaveLoading(true);
     setFeedback(null);
 
+    const fullPhone = `${countryCode}${phoneNumber}`;
+
     try {
       const res = await fetch("/api/user/onboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...editForm,
+          phone: fullPhone,
           email: dbUser?.email || "",
         }),
       });
@@ -319,6 +354,18 @@ export default function ProfilePage() {
                     <p className="text-sm font-medium text-white/80">{dbUser?.phone || "None configured"}</p>
                   </div>
                 </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-white/5 text-white/60">
+                    <span className="size-4 flex items-center justify-center text-xs">👥</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-white/30">Gender Designation</p>
+                    <p className="text-sm font-medium text-white/80 capitalize">
+                      {dbUser?.gender ? dbUser.gender.replace(/_/g, " ") : "Not selected"}
+                    </p>
+                  </div>
+                </div>
               </div>
             </Card>
           </div>
@@ -348,7 +395,7 @@ export default function ProfilePage() {
 
               {isEditing ? (
                 <form onSubmit={handleUpdateProfile} className="space-y-4 text-white">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-white/60">Pilot Name</label>
                       <input
@@ -359,15 +406,43 @@ export default function ProfilePage() {
                         required
                       />
                     </div>
+
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-white/60">Emergency Phone</label>
-                      <input
-                        type="text"
-                        value={editForm.phone}
-                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                      <label className="text-xs font-semibold text-white/60">Gender</label>
+                      <select
+                        value={editForm.gender}
+                        onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
                         className="w-full bg-navy-900 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-electric-500 focus:outline-none"
-                        placeholder="+1 123-456-7890"
-                      />
+                      >
+                        <option value="male">Male 👨</option>
+                        <option value="female">Female 👩</option>
+                        <option value="prefer_not_to_say">Prefer not to say 👤</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-white/60">Satellite Dial-in Link (Phone)</label>
+                      <div className="flex gap-1.5">
+                        <select
+                          value={countryCode}
+                          onChange={(e) => setCountryCode(e.target.value)}
+                          className="bg-navy-900 border border-white/10 rounded-lg px-2 py-2 text-xs focus:border-electric-500 focus:outline-none shrink-0"
+                        >
+                          {COUNTRY_CODES.map((c) => (
+                            <option key={`${c.country}-${c.code}`} value={c.code}>
+                              {c.flag} {c.code}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="tel"
+                          required
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                          placeholder="555-019-2834"
+                          className="flex-1 bg-navy-900 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-electric-500 focus:outline-none"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -446,6 +521,7 @@ export default function ProfilePage() {
                         setEditForm({
                           name: dbUser?.name || "",
                           phone: dbUser?.phone || "",
+                          gender: dbUser?.gender || "prefer_not_to_say",
                           age: dbUser?.age || "21",
                           studyTime: dbUser?.studyTime || "",
                           studyDuration: dbUser?.studyDuration || "",

@@ -8,6 +8,19 @@ import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
+const COUNTRY_CODES = [
+  { code: "+91", country: "India", flag: "🇮🇳" },
+  { code: "+1", country: "United States", flag: "🇺🇸" },
+  { code: "+44", country: "United Kingdom", flag: "🇬🇧" },
+  { code: "+1", country: "Canada", flag: "🇨🇦" },
+  { code: "+61", country: "Australia", flag: "🇦🇺" },
+  { code: "+49", country: "Germany", flag: "🇩🇪" },
+  { code: "+33", country: "France", flag: "🇫🇷" },
+  { code: "+81", country: "Japan", flag: "🇯🇵" },
+  { code: "+65", country: "Singapore", flag: "🇸🇬" },
+  { code: "+971", country: "United Arab Emirates", flag: "🇦🇪" },
+];
+
 export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -15,6 +28,9 @@ export default function RegisterPage() {
   const [pilotId, setPilotId] = useState("");
   const [pilotIdStatus, setPilotIdStatus] = useState<"idle" | "error" | "taken" | "valid">("idle");
   const [pilotIdMessage, setPilotIdMessage] = useState("");
+  const [countryCode, setCountryCode] = useState("+91");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [gender, setGender] = useState("prefer_not_to_say");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
@@ -66,15 +82,21 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!phoneNumber.trim()) {
+      setError("Satellite frequency (Phone number) is required.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     const supabase = createClient();
+    const fullPhone = `${countryCode}${phoneNumber}`;
 
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { name, pilotId },
+        data: { name, pilotId, phone: fullPhone, gender },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
@@ -82,7 +104,7 @@ export default function RegisterPage() {
     if (error) {
       setError(error.message);
     } else {
-      // Persist chosen ID locally for offline-first profile synchronization
+      // Persist details locally for offline-first profile synchronization
       const localTaken = localStorage.getItem("taken_pilot_ids");
       let takenList: string[] = [];
       if (localTaken) {
@@ -96,6 +118,8 @@ export default function RegisterPage() {
       }
       localStorage.setItem(`flight_pilot_id_${email}`, pilotId);
       localStorage.setItem("flight_active_pilot_id", pilotId);
+      localStorage.setItem(`flight_gender_${email}`, gender);
+      localStorage.setItem(`flight_phone_${email}`, fullPhone);
       setDone(true);
     }
     setLoading(false);
@@ -208,6 +232,45 @@ export default function RegisterPage() {
                     </p>
                   )}
                 </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-white/60">Gender</label>
+                  <select
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-navy-950 px-4 py-2.5 text-sm text-white outline-none transition focus:border-electric-500/50 focus:ring-1 focus:ring-electric-500/30"
+                  >
+                    <option value="male" className="bg-navy-900 text-white">Male 👨</option>
+                    <option value="female" className="bg-navy-900 text-white">Female 👩</option>
+                    <option value="prefer_not_to_say" className="bg-navy-900 text-white">Prefer not to say 👤</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-white/60">Satellite Dial-in Link (Phone)</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      className="rounded-xl border border-white/10 bg-navy-950 px-3 py-2.5 text-sm text-white outline-none transition focus:border-electric-500/50 focus:ring-1 focus:ring-electric-500/30 shrink-0"
+                    >
+                      {COUNTRY_CODES.map((c) => (
+                        <option key={`${c.country}-${c.code}`} value={c.code} className="bg-navy-900 text-white">
+                          {c.flag} {c.code}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="tel"
+                      required
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                      placeholder="555-019-2834"
+                      className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/25 outline-none transition focus:border-electric-500/50 focus:ring-1 focus:ring-electric-500/30"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-white/60">Email</label>
                   <input

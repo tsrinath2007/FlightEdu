@@ -20,6 +20,7 @@ model User {
   unlockedMaps   String[]  @default([])
   age            String?
   phone          String?
+  gender         String?
   studyTime      String?
   studyDuration  String?
   distractibility String?
