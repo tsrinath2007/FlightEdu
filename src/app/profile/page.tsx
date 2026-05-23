@@ -217,8 +217,8 @@ export default function ProfilePage() {
         const res = await fetch("/api/user/onboard");
         if (res.ok) {
           const data = await res.json();
-          if (data.user && (data.user.phone || data.user.gender || data.user.name)) {
-            // DB returned full data — use it and update localStorage cache
+          if (data.user && data.user.id) {
+            // DB returned data — DB is authoritative, especially for coins
             const dbProfile = {
               ...fallbackProfile,
               ...data.user,
@@ -227,6 +227,8 @@ export default function ProfilePage() {
               gender: data.user.gender || fallbackProfile.gender,
               pilotId: data.user.pilotId || fallbackProfile.pilotId,
               name: data.user.name || fallbackProfile.name,
+              // DB coins is ALWAYS authoritative (so SQL updates work)
+              coins: data.user.coins ?? fallbackProfile.coins,
             };
             setDbUser(dbProfile);
             // Persist to localStorage so next refresh is instant
