@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plane, Shield, Compass, Navigation, Award, Volume2, VolumeX, AlertTriangle, 
   Play, Pause, LogOut, CheckCircle2, ChevronRight, Compass as AltimeterIcon,
-  Users, Info, Sparkles, User
+  Users, Info, Sparkles, User, RotateCcw, ZoomIn, ZoomOut, ArrowUp, ArrowDown, ArrowLeft, ArrowRight
 } from "lucide-react";
 
 interface CockpitPageProps {
@@ -97,7 +97,12 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
   const [speed, setSpeed] = useState(0);
 
   // View state: 'timer' or 'cabin'
-  const [activeTab, setActiveTab] = useState<"timer" | "cabin">("timer");
+  const [activeTab, setActiveTab] = useState<"timer" | "cabin">("cabin");
+
+  // Interactive 3D Camera Controls
+  const [pitch, setPitch] = useState(40); // RotateX
+  const [yaw, setYaw] = useState(-15);   // RotateZ
+  const [zoom, setZoom] = useState(1);    // Scale
 
   // Multiplayer Seat States
   const [multiplayerPilots, setMultiplayerPilots] = useState<MultiplayerPilot[]>(INITIAL_MULTIPLAYER_PILOTS);
@@ -229,7 +234,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     return () => clearInterval(timer);
   }, [isActive, secondsRemaining, totalDurationSeconds, config]);
 
-  // Flight Instruments Engine (Altitude and Speed simulation)
+  // Flight Instruments Engine
   useEffect(() => {
     if (!isActive) {
       if (secondsRemaining > 0 && secondsRemaining < totalDurationSeconds) {
@@ -299,7 +304,6 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
 
   const handleSeatClick = (seatId: string, isOccupied: boolean, pilot?: MultiplayerPilot) => {
     if (isOccupied && pilot) {
-      // Open details of the other player
       setSelectedSeatDetails(pilot);
       try {
         const tap = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
@@ -307,13 +311,11 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
         tap.play().catch(() => {});
       } catch (e) {}
     } else if (!isOccupied && config) {
-      // Instantly change our own seat!
       const updatedConfig = { ...config, seatNumber: seatId };
       setConfig(updatedConfig);
       localStorage.setItem(`flight_config_${sessionId}`, JSON.stringify(updatedConfig));
       setSelectedSeatDetails(null);
 
-      // Play premium sliding slide sound effect
       try {
         const slide = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
         slide.volume = 0.2;
@@ -338,6 +340,12 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     router.push("/dashboard");
   };
 
+  const resetCamera = () => {
+    setPitch(40);
+    setYaw(-15);
+    setZoom(1);
+  };
+
   if (!session || !config) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-navy-950 text-white">
@@ -351,12 +359,12 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
 
   const progressPercent = ((totalDurationSeconds - secondsRemaining) / totalDurationSeconds) * 100;
 
-  // Custom Aircraft Seating Maps rendering config
+  // Custom Aircraft Seating Maps rendering config (Supports 3D CSS structures!)
   const renderSeatRow = (rowNumber: number, letters: string[], isFirstOrBusiness = false) => {
     return (
-      <div key={rowNumber} className="flex items-center justify-center gap-2">
+      <div key={rowNumber} className="flex items-center justify-center gap-4 transform-style-3d">
         {/* Left Side Seats */}
-        <div className="flex gap-1.5">
+        <div className="flex gap-2 transform-style-3d">
           {letters.slice(0, letters.length / 2).map((letter) => {
             const seatId = `${rowNumber}${letter}`;
             const pilot = multiplayerPilots.find((p) => p.seat === seatId);
@@ -364,32 +372,45 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
             const isOccupied = !!pilot && !isMe;
 
             return (
-              <button
-                key={seatId}
-                onClick={() => handleSeatClick(seatId, isOccupied, pilot)}
-                className={`relative flex items-center justify-center rounded-lg font-mono text-[9px] font-bold transition duration-300 ${
-                  isFirstOrBusiness ? "size-10 text-xs border" : "size-7 text-[9px] border"
-                } ${
-                  isMe
-                    ? "bg-electric-500 text-white border-electric-400 ring-2 ring-electric-400/50 animate-pulse shadow-md shadow-electric-500/20"
-                    : isOccupied
-                    ? "bg-purple-600/35 border-purple-500/30 text-purple-300 hover:bg-purple-600/50 cursor-pointer"
-                    : "bg-white/4 border-white/5 text-white/30 hover:bg-white/10 hover:border-white/20 cursor-pointer"
-                }`}
+              <div 
+                key={seatId} 
+                className="relative transform-style-3d transition-transform duration-300 hover:scale-105"
+                style={{ transform: `translateZ(${isMe ? "14px" : isOccupied ? "8px" : "2px"})` }}
               >
-                {isMe ? "YOU" : isOccupied ? pilot?.avatar : seatId}
-              </button>
+                {/* 3D Drop Shadow */}
+                <div className="absolute inset-0 bg-black/60 blur-[3px] rounded-lg translate-y-[4px] translate-z-[-2px] pointer-events-none" />
+                
+                <button
+                  onClick={() => handleSeatClick(seatId, isOccupied, pilot)}
+                  className={`relative flex items-center justify-center rounded-lg font-mono text-[9px] font-bold border transition-all duration-300 transform-style-3d ${
+                    isFirstOrBusiness ? "size-10 text-xs" : "size-8 text-[9px]"
+                  } ${
+                    isMe
+                      ? "bg-electric-500 text-white border-electric-400 shadow-[0_0_15px_rgba(56,189,248,0.5)] ring-2 ring-electric-400/50"
+                      : isOccupied
+                      ? "bg-purple-600/40 border-purple-500/35 text-purple-200 hover:bg-purple-600/60"
+                      : "bg-navy-900/60 border-white/10 text-white/30 hover:bg-white/10 hover:border-white/20"
+                  }`}
+                >
+                  {isMe ? "YOU" : isOccupied ? pilot?.avatar : seatId}
+
+                  {/* Pulsing Holographic Column for Active focusers! */}
+                  {isMe && isActive && (
+                    <div className="absolute inset-0 border border-electric-400 rounded-lg animate-ping opacity-45 pointer-events-none" />
+                  )}
+                </button>
+              </div>
             );
           })}
         </div>
 
         {/* Plane Center Aisle */}
-        <div className="w-6 flex items-center justify-center">
-          <span className="text-[9px] font-mono text-white/10">{rowNumber}</span>
+        <div className="w-8 flex items-center justify-center transform-style-3d">
+          <span className="text-[9px] font-mono text-white/20 select-none">{rowNumber}</span>
         </div>
 
         {/* Right Side Seats */}
-        <div className="flex gap-1.5">
+        <div className="flex gap-2 transform-style-3d">
           {letters.slice(letters.length / 2).map((letter) => {
             const seatId = `${rowNumber}${letter}`;
             const pilot = multiplayerPilots.find((p) => p.seat === seatId);
@@ -397,21 +418,34 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
             const isOccupied = !!pilot && !isMe;
 
             return (
-              <button
-                key={seatId}
-                onClick={() => handleSeatClick(seatId, isOccupied, pilot)}
-                className={`relative flex items-center justify-center rounded-lg font-mono text-[9px] font-bold transition duration-300 ${
-                  isFirstOrBusiness ? "size-10 text-xs border" : "size-7 text-[9px] border"
-                } ${
-                  isMe
-                    ? "bg-electric-500 text-white border-electric-400 ring-2 ring-electric-400/50 animate-pulse shadow-md shadow-electric-500/20"
-                    : isOccupied
-                    ? "bg-purple-600/35 border-purple-500/30 text-purple-300 hover:bg-purple-600/50 cursor-pointer"
-                    : "bg-white/4 border-white/5 text-white/30 hover:bg-white/10 hover:border-white/20 cursor-pointer"
-                }`}
+              <div 
+                key={seatId} 
+                className="relative transform-style-3d transition-transform duration-300 hover:scale-105"
+                style={{ transform: `translateZ(${isMe ? "14px" : isOccupied ? "8px" : "2px"})` }}
               >
-                {isMe ? "YOU" : isOccupied ? pilot?.avatar : seatId}
-              </button>
+                {/* 3D Drop Shadow */}
+                <div className="absolute inset-0 bg-black/60 blur-[3px] rounded-lg translate-y-[4px] translate-z-[-2px] pointer-events-none" />
+                
+                <button
+                  onClick={() => handleSeatClick(seatId, isOccupied, pilot)}
+                  className={`relative flex items-center justify-center rounded-lg font-mono text-[9px] font-bold border transition-all duration-300 transform-style-3d ${
+                    isFirstOrBusiness ? "size-10 text-xs" : "size-8 text-[9px]"
+                  } ${
+                    isMe
+                      ? "bg-electric-500 text-white border-electric-400 shadow-[0_0_15px_rgba(56,189,248,0.5)] ring-2 ring-electric-400/50"
+                      : isOccupied
+                      ? "bg-purple-600/40 border-purple-500/35 text-purple-200 hover:bg-purple-600/60"
+                      : "bg-navy-900/60 border-white/10 text-white/30 hover:bg-white/10 hover:border-white/20"
+                  }`}
+                >
+                  {isMe ? "YOU" : isOccupied ? pilot?.avatar : seatId}
+
+                  {/* Pulsing Holographic Column */}
+                  {isMe && isActive && (
+                    <div className="absolute inset-0 border border-electric-400 rounded-lg animate-ping opacity-45 pointer-events-none" />
+                  )}
+                </button>
+              </div>
             );
           })}
         </div>
@@ -421,7 +455,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
 
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-navy-950 text-white pb-16">
-      {/* Background Grid Elements */}
+      {/* Background Grid */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-navy-900/40 via-navy-950 to-black z-0" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,_transparent_1px),_linear-gradient(90deg,_rgba(255,255,255,0.015)_1px,_transparent_1px)] bg-[size:32px_32px] opacity-40 z-0" />
 
@@ -570,7 +604,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
 
           </div>
 
-          {/* Right Column: Central Console with Autopilot Timer AND Interactive Multiplayer Seating Map! */}
+          {/* Right Column: HUD Focus clock & 3D Interactive Seating Chart */}
           <div className="lg:col-span-8 space-y-6">
             
             {/* Holographic Tab Selector */}
@@ -596,12 +630,12 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                 }`}
               >
                 <Users className="size-4" />
-                <span>💺 Multiplayer Cabin Map</span>
+                <span>💺 Holographic 3D Seating Map</span>
               </button>
             </div>
 
-            {/* Central Dashboard Display (Dynamic Tab Panels) */}
-            <div className="rounded-3xl border border-white/10 bg-navy-900/20 p-8 backdrop-blur-md min-h-[500px] relative overflow-hidden shadow-2xl flex flex-col justify-between">
+            {/* Central Console Display (Dynamic Tab Panels) */}
+            <div className="rounded-3xl border border-white/10 bg-navy-900/20 p-8 backdrop-blur-md min-h-[520px] relative overflow-hidden shadow-2xl flex flex-col justify-between">
               
               <AnimatePresence mode="wait">
                 {/* PANEL A: AUTOPILOT CHRONOMETER TIMER */}
@@ -654,77 +688,116 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                   </motion.div>
                 )}
 
-                {/* PANEL B: INTERACTIVE MULTIPLAYER CABIN SEATING PLAN */}
+                {/* PANEL B: 3D INTERACTIVE MULTIPLAYER CABIN SEATING PLAN */}
                 {activeTab === "cabin" && (
                   <motion.div
                     key="cabin-panel"
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -15 }}
-                    className="space-y-6 flex flex-col h-full"
+                    className="space-y-6 flex flex-col h-full transform-style-3d"
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-display font-extrabold text-md text-white tracking-wide">
-                          Interactive Live Cabin Seating Map
+                          Holographic 3D Interactive Seating Deck
                         </h3>
-                        <p className="text-xs text-white/40 mt-0.5">
-                          Change your seat instantly by clicking any empty seat. Hover/Click online cadets to view study status.
+                        <p className="text-xs text-white/45 mt-0.5">
+                          Drag the camera using telemetry controls on the right. Tap empty seats to switch seating in 3D.
                         </p>
                       </div>
-                      <span className="rounded bg-purple-500/15 border border-purple-500/20 px-2 py-0.5 text-[10px] font-semibold text-purple-400">
-                        ● {multiplayerPilots.length + 1} Pilots Online
+                      <span className="rounded bg-purple-500/15 border border-purple-500/20 px-2 py-0.5 text-[10px] font-semibold text-purple-400 animate-pulse">
+                        ● {multiplayerPilots.length + 1} Pilots In Cabin
                       </span>
                     </div>
 
-                    {/* Interactive Seat Deck Area */}
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch pt-2">
+                    {/* Interactive 3D Seat Deck Layout */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch pt-2 transform-style-3d">
                       
-                      {/* Left: 2D Plane Seat map Grid */}
-                      <div className="md:col-span-8 bg-black/35 rounded-2xl border border-white/5 p-4 overflow-y-auto max-h-[350px] space-y-4 scrollbar-thin scrollbar-thumb-white/10">
+                      {/* Left: 3D Render Perspective Plane Seat grid */}
+                      <div className="lg:col-span-8 bg-black/45 rounded-3xl border border-white/5 p-6 overflow-hidden min-h-[350px] relative flex items-center justify-center transform-style-3d select-none">
                         
-                        {/* First Class Rows (Rows 1-2) */}
-                        <div className="space-y-2 border-b border-white/5 pb-4">
-                          <p className="text-[9px] font-mono text-amber-400 font-extrabold tracking-widest uppercase text-center mb-1">
-                            ✦ First Class Suite Cabin
-                          </p>
-                          {renderSeatRow(1, ["A", "D"], true)}
-                          {renderSeatRow(2, ["A", "D"], true)}
+                        {/* 3D Cabin Canvas Grid */}
+                        <div 
+                          className="transition-transform duration-500 ease-out transform-style-3d relative"
+                          style={{
+                            perspective: "1200px",
+                            transform: `rotateX(${pitch}deg) rotateY(0deg) rotateZ(${yaw}deg) scale(${zoom})`,
+                          }}
+                        >
+                          {/* 3D Cabin Wireframe Outline */}
+                          <div className="absolute inset-x-[-20px] top-[-30px] bottom-[-20px] border border-dashed border-electric-500/20 rounded-[40px] pointer-events-none transform-style-3d">
+                            <div className="absolute inset-0 border border-dashed border-electric-500/10 translate-z-[20px] rounded-[40px]" />
+                            <div className="absolute inset-0 border border-dashed border-electric-500/5 translate-z-[40px] rounded-[40px]" />
+                          </div>
+
+                          <div className="space-y-6 transform-style-3d">
+                            {/* First Class Suite Rows (Rows 1-2) */}
+                            <div className="space-y-3 transform-style-3d">
+                              <p className="text-[8px] font-mono text-amber-400 font-extrabold tracking-widest uppercase text-center select-none translate-z-[10px]">
+                                ✦ First Class Suites ✦
+                              </p>
+                              {renderSeatRow(1, ["A", "D"], true)}
+                              {renderSeatRow(2, ["A", "D"], true)}
+                            </div>
+
+                            {/* Business Class Rows (Rows 4-8) */}
+                            <div className="space-y-3 transform-style-3d">
+                              <p className="text-[8px] font-mono text-electric-400 font-extrabold tracking-widest uppercase text-center select-none translate-z-[10px]">
+                                ✦ Business Pods ✦
+                              </p>
+                              {renderSeatRow(4, ["A", "C", "F"], true)}
+                              {renderSeatRow(8, ["A", "C", "F"], true)}
+                            </div>
+
+                            {/* Economy Class (Rows 14-32) */}
+                            <div className="space-y-3 transform-style-3d">
+                              <p className="text-[8px] font-mono text-white/30 font-extrabold tracking-widest uppercase text-center select-none translate-z-[10px]">
+                                ✦ Main Cabin Economy ✦
+                              </p>
+                              {renderSeatRow(14, ["A", "B", "D", "J"])}
+                              {renderSeatRow(26, ["A", "B", "D", "J"])}
+                              {renderSeatRow(32, ["A", "B", "D", "J"])}
+                            </div>
+                          </div>
+
                         </div>
 
-                        {/* Business Class Rows (Rows 4-8) */}
-                        <div className="space-y-2 border-b border-white/5 pb-4">
-                          <p className="text-[9px] font-mono text-electric-400 font-extrabold tracking-widest uppercase text-center mb-1">
-                            ✦ Business Class Console Pods
-                          </p>
-                          {renderSeatRow(4, ["A", "C", "F"], true)}
-                          {renderSeatRow(8, ["A", "C", "F"], true)}
-                        </div>
-
-                        {/* Economy Class (Rows 14-32) */}
-                        <div className="space-y-2">
-                          <p className="text-[9px] font-mono text-white/40 font-extrabold tracking-widest uppercase text-center mb-1">
-                            ✦ Premium & Economy Seating
-                          </p>
-                          {renderSeatRow(14, ["A", "B", "D", "J"])}
-                          {renderSeatRow(26, ["A", "B", "D", "J"])}
-                          {renderSeatRow(32, ["A", "B", "D", "J"])}
+                        {/* Interactive Holographic 3D Camera Controls Overlay */}
+                        <div className="absolute bottom-4 right-4 bg-navy-950/80 border border-white/10 rounded-2xl p-2.5 flex flex-col gap-2 backdrop-blur-md">
+                          <p className="text-[8px] font-mono text-white/40 uppercase tracking-widest text-center">3D Camera</p>
+                          <div className="grid grid-cols-3 gap-1">
+                            <div />
+                            <button onClick={() => setPitch((p) => Math.min(80, p + 5))} className="p-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-white"><ArrowUp className="size-3.5" /></button>
+                            <div />
+                            <button onClick={() => setYaw((y) => y - 5)} className="p-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-white"><ArrowLeft className="size-3.5" /></button>
+                            <button onClick={resetCamera} className="p-1.5 rounded-lg bg-electric-500/20 border border-electric-500/30 hover:bg-electric-500/30 text-electric-400"><RotateCcw className="size-3.5" /></button>
+                            <button onClick={() => setYaw((y) => y + 5)} className="p-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-white"><ArrowRight className="size-3.5" /></button>
+                            <div />
+                            <button onClick={() => setPitch((p) => Math.max(10, p - 5))} className="p-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-white"><ArrowDown className="size-3.5" /></button>
+                            <div />
+                          </div>
+                          
+                          <div className="flex gap-1.5 mt-1 border-t border-white/5 pt-2">
+                            <button onClick={() => setZoom((z) => Math.min(1.4, z + 0.1))} className="flex-1 p-1 rounded-md bg-white/5 hover:bg-white/10 text-white flex justify-center"><ZoomIn className="size-3" /></button>
+                            <button onClick={() => setZoom((z) => Math.max(0.7, z - 0.1))} className="flex-1 p-1 rounded-md bg-white/5 hover:bg-white/10 text-white flex justify-center"><ZoomOut className="size-3" /></button>
+                          </div>
                         </div>
 
                       </div>
 
                       {/* Right: Hover/Click Cadet Details Overlay */}
-                      <div className="md:col-span-4 flex flex-col justify-center">
+                      <div className="lg:col-span-4 flex flex-col justify-center transform-style-3d">
                         <AnimatePresence mode="wait">
                           {selectedSeatDetails ? (
                             <motion.div
                               key={selectedSeatDetails.seat}
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              className="rounded-2xl border border-purple-500/20 bg-purple-500/5 p-5 text-center space-y-4"
+                              initial={{ opacity: 0, scale: 0.95, z: -10 }}
+                              animate={{ opacity: 1, scale: 1, z: 0 }}
+                              exit={{ opacity: 0, scale: 0.95, z: -10 }}
+                              className="rounded-3xl border border-purple-500/20 bg-purple-500/5 p-5 text-center space-y-4 transform-style-3d"
                             >
-                              <div className={`size-12 rounded-full mx-auto flex items-center justify-center text-2xl border ${selectedSeatDetails.avatarColor}`}>
+                              <div className={`size-14 rounded-full mx-auto flex items-center justify-center text-3xl border ${selectedSeatDetails.avatarColor}`}>
                                 {selectedSeatDetails.avatar}
                               </div>
                               
@@ -735,18 +808,22 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                                 <p className="text-[10px] text-white/40 font-mono mt-0.5">Assigned Seat {selectedSeatDetails.seat}</p>
                               </div>
 
-                              <div className="space-y-2 pt-2 border-t border-white/5 text-[10px] text-left text-white/60 font-mono">
+                              <div className="space-y-2 pt-3 border-t border-white/5 text-[10px] text-left text-white/60 font-mono">
                                 <div className="flex justify-between">
                                   <span>Task/Subject:</span>
-                                  <span className="font-bold text-white">{selectedSeatDetails.subject}</span>
+                                  <span className="font-bold text-white truncate max-w-[110px]">{selectedSeatDetails.subject}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Time Focused:</span>
                                   <span className="text-emerald-400 font-semibold">⚡ {selectedSeatDetails.focusTime}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span>Weekly Streak:</span>
+                                  <span>Streak:</span>
                                   <span className="text-white">{selectedSeatDetails.streak} days 🔥</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Total Coins:</span>
+                                  <span className="text-amber-400">🪙 {selectedSeatDetails.coins}</span>
                                 </div>
                               </div>
                               
@@ -759,12 +836,12 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                               key="empty-details"
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
-                              className="rounded-2xl border border-white/5 bg-white/4 p-5 text-center text-white/45 text-xs flex flex-col items-center justify-center min-h-[220px]"
+                              className="rounded-3xl border border-white/5 bg-white/4 p-5 text-center text-white/45 text-xs flex flex-col items-center justify-center min-h-[220px]"
                             >
                               <Users className="size-8 text-white/20 mb-3 animate-pulse" />
-                              <p className="font-bold text-white/60">Pilot Manifest Detail</p>
+                              <p className="font-bold text-white/60">Study Partner Details</p>
                               <p className="text-[10px] text-white/35 mt-1 max-w-[150px] mx-auto leading-relaxed">
-                                Click an occupied seat to view that Pilot's live focus telemetry!
+                                Click an occupied seat in the 3D cabin to inspect that Pilot Cadet's live stats!
                               </p>
                             </motion.div>
                           )}
