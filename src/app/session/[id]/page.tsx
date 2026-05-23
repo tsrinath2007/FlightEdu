@@ -116,6 +116,11 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
   const [customizeTab, setCustomizeTab] = useState<"daily" | "emotes" | "skins" | "owned">("emotes");
   const [sendingEnergy, setSendingEnergy] = useState<string | null>(null);
 
+  // Fullscreen Immersive states
+  const [isFullscreenLounge, setIsFullscreenLounge] = useState(false);
+  const [timerDisplayMode, setTimerDisplayMode] = useState<"clock" | "minutes">("clock");
+  const [timerCountMode, setTimerCountMode] = useState<"down" | "up">("down");
+
   // Multiplayer Seat States
   const [multiplayerPilots, setMultiplayerPilots] = useState<MultiplayerPilot[]>(INITIAL_MULTIPLAYER_PILOTS);
   const [selectedSeatDetails, setSelectedSeatDetails] = useState<MultiplayerPilot | null>(null);
@@ -524,6 +529,22 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     );
   };
 
+  const getFullscreenTimerText = () => {
+    const elapsedSecs = totalDurationSeconds - secondsRemaining;
+    const targetSecs = timerCountMode === "down" ? secondsRemaining : elapsedSecs;
+    const sign = timerCountMode === "down" ? "-" : "+";
+
+    if (timerDisplayMode === "minutes") {
+      const minutes = Math.floor(targetSecs / 60);
+      return `${sign}${minutes}m`;
+    } else {
+      const h = Math.floor(targetSecs / 3600);
+      const m = Math.floor((targetSecs % 3600) / 60);
+      const s = targetSecs % 60;
+      return `${sign}${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    }
+  };
+
   if (!session || !config) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-navy-950 text-white">
@@ -792,9 +813,27 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                           Study live with fellow pilot cadets! Select study pods to inspect stats and customize your spiky chibi avatar.
                         </p>
                       </div>
-                      <span className="rounded-full bg-purple-500/10 border border-purple-500/20 px-3 py-1 text-[10px] font-bold text-purple-400 animate-pulse">
-                        ● {multiplayerPilots.length + 1} Pilots In Cabin
-                      </span>
+                      
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setIsFullscreenLounge(true);
+                            try {
+                              const slide = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+                              slide.volume = 0.2;
+                              slide.play().catch(() => {});
+                            } catch (e) {}
+                          }}
+                          className="rounded-full bg-electric-500/10 border border-electric-500/25 hover:bg-electric-500/20 px-3.5 py-1 text-[10px] font-bold text-electric-400 flex items-center gap-1.5 transition shadow-[0_0_8px_rgba(14,165,233,0.1)] cursor-pointer"
+                        >
+                          <span>💻</span>
+                          <span>Immersive Focus Mode</span>
+                        </button>
+                        
+                        <span className="rounded-full bg-purple-500/10 border border-purple-500/20 px-3 py-1 text-[10px] font-bold text-purple-400 animate-pulse select-none">
+                          ● {multiplayerPilots.length + 1} Pilots In Cabin
+                        </span>
+                      </div>
                     </div>
 
                     {/* Interactive 2D Lounge layout */}
@@ -1349,7 +1388,270 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
           </div>
 
         </div>
-      </div>
+          {/* IMMERSIVE FULLSCREEN FOCUS LOUNGE OVERLAY */}
+          <AnimatePresence>
+            {isFullscreenLounge && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                className="fixed inset-0 z-50 bg-[#070b18]/98 backdrop-blur-2xl flex flex-col justify-between p-6 md:p-8 select-none"
+              >
+                {/* 1. Header Ticket bar: Top-Left customizable Clock & Top-Right Exit */}
+                <div className="flex items-center justify-between w-full pb-4 border-b border-white/5">
+                  
+                  {/* Top-Left togglable Clock */}
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        setTimerCountMode(prev => prev === "down" ? "up" : "down");
+                        try {
+                          const click = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
+                          click.volume = 0.1;
+                          click.play().catch(() => {});
+                        } catch (e) {}
+                      }}
+                      className="size-8 rounded-xl bg-white/4 hover:bg-white/8 border border-white/10 flex items-center justify-center text-sm font-black text-electric-400 tracking-wider shadow-sm transition cursor-pointer"
+                      title="Toggle count up (+) vs count down (-)"
+                    >
+                      {timerCountMode === "down" ? "−" : "+"}
+                    </button>
+
+                    <div 
+                      onClick={() => {
+                        setTimerDisplayMode(prev => prev === "clock" ? "minutes" : "clock");
+                        try {
+                          const click = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
+                          click.volume = 0.1;
+                          click.play().catch(() => {});
+                        } catch (e) {}
+                      }}
+                      className="cursor-pointer group select-none"
+                      title="Click to toggle Clock format vs Minutes format"
+                    >
+                      <p className="text-[8px] font-mono font-bold tracking-widest text-white/30 uppercase group-hover:text-electric-400/80 transition">Flight Focus Clock</p>
+                      <h2 className="font-mono text-2xl md:text-3xl font-extrabold text-white tracking-widest leading-none mt-1 shadow-neon filter drop-shadow-[0_0_8px_rgba(56,189,248,0.4)] group-hover:scale-102 transition-transform">
+                        {getFullscreenTimerText()}
+                      </h2>
+                    </div>
+                  </div>
+
+                  {/* Flight telemetry stats centered (Aesthetic) */}
+                  <div className="hidden md:flex items-center gap-6 font-mono text-[10px] text-white/35">
+                    <div>
+                      <span>ALT: </span>
+                      <span className="font-bold text-white/70 animate-pulse">{altitude.toLocaleString()} FT</span>
+                    </div>
+                    <div>
+                      <span>SPD: </span>
+                      <span className="font-bold text-white/70">{speed} KM/H</span>
+                    </div>
+                    <div>
+                      <span>COINS: </span>
+                      <span className="font-bold text-amber-400">🪙 {coinsEarned.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {/* Top-Right Exit Focus Mode button */}
+                  <button
+                    onClick={() => {
+                      setIsFullscreenLounge(false);
+                      try {
+                        const click = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+                        click.volume = 0.2;
+                        click.play().catch(() => {});
+                      } catch (e) {}
+                    }}
+                    className="rounded-full bg-red-500/10 border border-red-500/20 hover:bg-red-500/25 px-4 py-2 text-[10px] font-bold text-red-400 tracking-wider transition uppercase cursor-pointer"
+                  >
+                    Exit Focus Mode ❌
+                  </button>
+
+                </div>
+
+                {/* 2. Middle Main Body: Massive visual 2D Cabin Seating map floor plan */}
+                <div className="flex-1 flex flex-col items-center justify-center py-6 md:py-8 max-h-[70vh] overflow-hidden">
+                  <div className="w-full max-w-lg bg-black/40 border border-white/5 rounded-3xl p-6 relative flex flex-col justify-between overflow-y-auto max-h-[85%] shadow-2xl">
+                    
+                    {/* Energy Vibes Streaming Beam Line Overlay inside fullscreen */}
+                    <AnimatePresence>
+                      {sendingEnergy && (() => {
+                        const target = multiplayerPilots.find(p => p.seat === sendingEnergy);
+                        if (!target) return null;
+                        return (
+                          <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 pointer-events-none z-50 overflow-visible"
+                          >
+                            <svg className="absolute inset-0 w-full h-full">
+                              <motion.line 
+                                x1="50%" y1="50%" 
+                                x2="80%" y2="40%" 
+                                stroke="url(#beam-grad)"
+                                strokeWidth="4"
+                                strokeDasharray="8 4"
+                                animate={{ strokeDashoffset: [-20, 0] }}
+                                transition={{ ease: "linear", duration: 0.5, repeat: Infinity }}
+                              />
+                            </svg>
+                            <div className="absolute top-[40%] left-[80%] -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+                              <span className="text-xl animate-bounce">⚡✨🚀</span>
+                            </div>
+                          </motion.div>
+                        );
+                      })()}
+                    </AnimatePresence>
+
+                    {/* Reuses our beautiful renderSeat layout dynamically inside fullscreen */}
+                    <div className="flex-1 flex flex-col gap-5 overflow-y-auto pr-1 select-none scrollbar-thin scrollbar-thumb-white/10">
+                      
+                      {/* Cockpit visual header */}
+                      <div className="flex flex-col items-center justify-center border-b border-dashed border-white/10 pb-4">
+                        <div className="w-18 h-9 bg-gradient-to-t from-slate-800 to-slate-900 rounded-t-full border-t border-x border-white/20 flex items-center justify-center shadow-lg">
+                          <span className="text-[7.5px] font-mono font-bold text-white/50 tracking-widest uppercase animate-pulse">Flight Control</span>
+                        </div>
+                        <div className="w-px h-5 bg-gradient-to-b from-white/20 to-transparent" />
+                      </div>
+
+                      {/* 1. FIRST CLASS (Rows 1-2) */}
+                      <div className="space-y-2">
+                        <p className="text-[7.5px] font-mono font-extrabold tracking-[0.25em] uppercase text-center text-amber-400">✦ First Class Suites ✦</p>
+                        {[1, 2].map((rowNum) => (
+                          <div key={rowNum} className="flex items-center justify-center gap-8">
+                            {renderSeat(`${rowNum}A`)}
+                            <div className="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-white/35 font-bold select-none">{rowNum}</div>
+                            {renderSeat(`${rowNum}D`)}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="h-px bg-white/5 my-1.5" />
+
+                      {/* 2. BUSINESS CLASS (Rows 4-8) */}
+                      <div className="space-y-2">
+                        <p className="text-[7.5px] font-mono font-extrabold tracking-[0.25em] uppercase text-center text-electric-400">✦ Business Pods ✦</p>
+                        {[4, 8].map((rowNum) => (
+                          <div key={rowNum} className="flex items-center justify-center gap-4">
+                            <div className="flex gap-2.5">
+                              {renderSeat(`${rowNum}A`)}
+                              {renderSeat(`${rowNum}C`)}
+                            </div>
+                            <div className="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-white/35 font-bold select-none">{rowNum}</div>
+                            {renderSeat(`${rowNum}F`)}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="h-px bg-white/5 my-1.5" />
+
+                      {/* 3. ECONOMY CLASS (Rows 14-32) */}
+                      <div className="space-y-2">
+                        <p className="text-[7.5px] font-mono font-extrabold tracking-[0.25em] uppercase text-center text-white/30">✦ Main Cabin Economy ✦</p>
+                        {[14, 26, 32].map((rowNum) => (
+                          <div key={rowNum} className="flex items-center justify-center gap-4">
+                            <div className="flex gap-2">
+                              {renderSeat(`${rowNum}A`)}
+                              {renderSeat(`${rowNum}B`)}
+                            </div>
+                            <div className="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-white/35 font-bold select-none">{rowNum}</div>
+                            <div className="flex gap-2">
+                              {renderSeat(`${rowNum}D`)}
+                              {renderSeat(`${rowNum}J`)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Tail Visual exhaust */}
+                      <div className="flex flex-col items-center justify-center border-t border-dashed border-white/10 pt-4 mt-2">
+                        <div className="w-px h-5 bg-gradient-to-t from-white/20 to-transparent" />
+                        <div className="w-12 h-3.5 bg-gradient-to-b from-slate-800 to-slate-950 rounded-b border-b border-x border-white/10 flex justify-center items-end" />
+                      </div>
+
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* 3. Footer Control Deck: Changing Emote activity or Sound track on the fly in fullscreen */}
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-4 border-t border-white/5">
+                  
+                  {/* Current assigned seat indicator */}
+                  <div className="flex items-center gap-3">
+                    <span className="size-8 rounded-xl bg-electric-500/10 border border-electric-500/20 text-electric-400 flex items-center justify-center text-sm font-bold">💺</span>
+                    <div>
+                      <p className="text-[8px] font-mono font-bold text-white/30 uppercase">Assigned Cabin Seat</p>
+                      <p className="text-[10px] text-white font-bold tracking-wide mt-0.5">Pod {config.seatNumber} • {config.cabinClass.name}</p>
+                    </div>
+                  </div>
+
+                  {/* Fast Action Emote Quick Bar! */}
+                  <div className="flex bg-navy-950 border border-white/5 rounded-2xl p-1 items-center gap-1.5 max-w-sm">
+                    {[
+                      { value: "LAPTOP", name: "Laptop 💻" },
+                      { value: "BOOK", name: "Book 📚" },
+                      { value: "WRITING", name: "Write 📝" },
+                      { value: "CHILL", name: "Chill ☕" },
+                    ].map((act) => {
+                      const isOwned = act.value === "LAPTOP" || ownedItems.includes(`activity_${act.value}`);
+                      const isEquipped = avatarActivity === act.value;
+                      
+                      return (
+                        <button
+                          key={act.value}
+                          onClick={() => isOwned && equipItem("activity", act.value, `activity_${act.value}`)}
+                          disabled={!isOwned}
+                          className={`px-3 py-1.5 rounded-xl text-[9px] font-extrabold uppercase transition duration-300 ${
+                            isEquipped
+                              ? "bg-emerald-500 text-white font-bold shadow-md shadow-emerald-500/15"
+                              : !isOwned
+                              ? "text-white/20 cursor-not-allowed opacity-50"
+                              : "text-white/45 hover:bg-white/5 hover:text-white/80 cursor-pointer"
+                          }`}
+                        >
+                          {act.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Sound & Autopilot controllers */}
+                  <div className="flex items-center gap-3">
+                    {/* Ambient toggle */}
+                    <button
+                      onClick={toggleAmbience}
+                      className={`flex items-center gap-2 px-4 py-2 border rounded-xl transition duration-300 text-[9px] font-bold tracking-wider uppercase cursor-pointer ${
+                        ambiencePlaying
+                          ? "bg-electric-500/10 border-electric-400/40 text-electric-400"
+                          : "bg-white/4 border-white/5 hover:bg-white/8 text-white/70"
+                      }`}
+                    >
+                      <Volume2 className="size-3.5" />
+                      <span>{ambiencePlaying ? "Sound Playing" : "Ambience Muted"}</span>
+                    </button>
+
+                    {/* Play/Pause Focus Timer */}
+                    <button
+                      onClick={toggleAutopilot}
+                      className={`flex items-center gap-2 px-5 py-2 rounded-xl transition duration-300 text-[9px] font-extrabold tracking-widest uppercase cursor-pointer ${
+                        isActive
+                          ? "bg-amber-500 hover:bg-amber-400 text-navy-950"
+                          : "bg-electric-500 hover:bg-electric-400 text-white"
+                      }`}
+                    >
+                      {isActive ? <Pause className="size-3.5 fill-current" /> : <Play className="size-3.5 fill-current" />}
+                      <span>{isActive ? "Pause Focus" : "Start Focus"}</span>
+                    </button>
+                  </div>
+
+                </div>
+
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
     </main>
   );
 }
