@@ -110,43 +110,55 @@ export default function ProfilePage() {
       setFeedback({ type: "error", text: "Image must be under 5 MB" });
       return;
     }
-    // Show local preview immediately
-    const reader = new FileReader();
-    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
 
-    // Upload to Supabase Storage
     setAvatarUploading(true);
-    try {
-      const supabase = createClient();
-      if (!supabase) throw new Error("No client");
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user");
-      const ext = file.name.split(".").pop();
-      const path = `avatars/${user.id}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(path, file, { upsert: true, contentType: file.type });
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-      // Save URL to DB via onboard endpoint
-      await fetch("/api/user/avatar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ avatarUrl: publicUrl }),
-      });
-      setDbUser((prev) => prev ? { ...prev, avatarUrl: publicUrl } : prev);
-      setFeedback({ type: "success", text: "Profile picture updated!" });
+
+    // Read file as base64 for instant local save
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const base64 = ev.target?.result as string;
+      // Always save to localStorage first (reliable fallback)
+      localStorage.setItem("flightedu_avatar", base64);
+      setAvatarPreview(base64);
+
+      // Try uploading to Supabase Storage
+      try {
+        const supabase = createClient();
+        if (!supabase) throw new Error("No client");
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("No user");
+        const ext = file.name.split(".").pop() ?? "jpg";
+        const path = `avatars/${user.id}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(path, file, { upsert: true, contentType: file.type });
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+        // Save URL to DB
+        await fetch("/api/user/avatar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ avatarUrl: publicUrl }),
+        });
+        // Also overwrite localStorage with the remote URL for future loads
+        localStorage.setItem("flightedu_avatar", publicUrl);
+        setDbUser((prev) => prev ? { ...prev, avatarUrl: publicUrl } : prev);
+      } catch (err) {
+        console.warn("Cloud upload failed, avatar saved locally:", err);
+      } finally {
+        setAvatarUploading(false);
+      }
+      setFeedback({ type: "success", text: "Profile picture updated ✅" });
       setTimeout(() => setFeedback(null), 3000);
-    } catch (err) {
-      console.warn("Avatar upload failed (storage may not be configured):", err);
-      // Keep local preview even if upload fails
-      setFeedback({ type: "success", text: "Preview updated locally!" });
-      setTimeout(() => setFeedback(null), 3000);
-    } finally {
-      setAvatarUploading(false);
-    }
+    };
+    reader.readAsDataURL(file);
   }
+
+  useEffect(() => {
+    // Load saved avatar from localStorage on mount
+    const savedAvatar = localStorage.getItem("flightedu_avatar");
+    if (savedAvatar) setAvatarPreview(savedAvatar);
+  }, []);
 
   useEffect(() => {
     async function loadProfile() {
@@ -166,14 +178,61 @@ export default function ProfilePage() {
       const isGoogle = user.app_metadata?.provider === "google" || user.identities?.some((id: any) => id.provider === "google");
       setIsGoogleUser(!!isGoogle);
 
+      // --- Build profile from all sources: DB > localStorage cache > Supabase auth metadata ---
+
+      // 1. Read localStorage onboarding cache (always available)
+      let localData: Record<string, string> = {};
+      try {
+        const cached = localStorage.getItem("flightedu_onboarding");
+        if (cached) localData = JSON.parse(cached) as Record<string, string>;
+      } catch {}
+
+      // 2. Read Supabase auth user_metadata (stored during sign-up)
+      const meta = user.user_metadata ?? {};
+      const metaPhone = meta.phone ?? meta.phone_number ?? "";
+      const metaGender = meta.gender ?? "";
+      const metaName = meta.full_name ?? meta.name ?? "";
+      const metaPilotId = meta.pilot_id ?? meta.pilotId ?? "";
+
+      // 3. Merge: localStorage > auth metadata as fallback
+      const fallbackProfile: ProfileDetails = {
+        id: user.id,
+        email: user.email ?? "",
+        name: localData.name || metaName,
+        phone: localData.phone || metaPhone,
+        gender: localData.gender || metaGender,
+        pilotId: localData.pilotId || metaPilotId,
+        age: localData.age ?? "21",
+        studyTime: localData.studyTime ?? "",
+        studyDuration: localData.studyDuration ?? "",
+        distractibility: localData.distractibility ?? "",
+        callDistraction: localData.callDistraction ?? "",
+        coins: 0,
+        avatarUrl: undefined,
+        onboarded: true,
+      };
+
+      // 4. Try to get authoritative data from DB (may fail if DB is paused)
       try {
         const res = await fetch("/api/user/onboard");
         if (res.ok) {
           const data = await res.json();
-          if (data.user) {
-            setDbUser(data.user);
-            
-            const userPhone = data.user.phone || "";
+          if (data.user && (data.user.phone || data.user.gender || data.user.name)) {
+            // DB returned full data — use it and update localStorage cache
+            const dbProfile = {
+              ...fallbackProfile,
+              ...data.user,
+              // DB may return null for some fields, keep fallback in those cases
+              phone: data.user.phone || fallbackProfile.phone,
+              gender: data.user.gender || fallbackProfile.gender,
+              pilotId: data.user.pilotId || fallbackProfile.pilotId,
+              name: data.user.name || fallbackProfile.name,
+            };
+            setDbUser(dbProfile);
+            // Persist to localStorage so next refresh is instant
+            localStorage.setItem("flightedu_onboarding", JSON.stringify(dbProfile));
+
+            const userPhone = dbProfile.phone || "";
             let cc = "+91";
             let num = userPhone;
             for (const c of COUNTRY_CODES) {
@@ -185,22 +244,48 @@ export default function ProfilePage() {
             }
             setCountryCode(cc);
             setPhoneNumber(num.replace(/\D/g, ""));
-
             setEditForm({
-              name: data.user.name || "",
+              name: dbProfile.name || "",
               phone: userPhone,
-              gender: data.user.gender || "prefer_not_to_say",
-              age: data.user.age || "21",
-              studyTime: data.user.studyTime || "",
-              studyDuration: data.user.studyDuration || "",
-              distractibility: data.user.distractibility || "",
-              callDistraction: data.user.callDistraction || "",
+              gender: dbProfile.gender || "prefer_not_to_say",
+              age: dbProfile.age || "21",
+              studyTime: dbProfile.studyTime || "",
+              studyDuration: dbProfile.studyDuration || "",
+              distractibility: dbProfile.distractibility || "",
+              callDistraction: dbProfile.callDistraction || "",
             });
+            setLoading(false);
+            return;
           }
         }
       } catch (err) {
-        console.error("Failed to load user profile:", err);
+        console.warn("DB fetch failed, using local fallback:", err);
       }
+
+      // 5. DB unavailable — show fallback data from localStorage/auth metadata
+      setDbUser(fallbackProfile);
+      const userPhone = fallbackProfile.phone || "";
+      let cc = "+91";
+      let num = userPhone;
+      for (const c of COUNTRY_CODES) {
+        if (userPhone.startsWith(c.code)) {
+          cc = c.code;
+          num = userPhone.substring(c.code.length);
+          break;
+        }
+      }
+      setCountryCode(cc);
+      setPhoneNumber(num.replace(/\D/g, ""));
+      setEditForm({
+        name: fallbackProfile.name || "",
+        phone: userPhone,
+        gender: fallbackProfile.gender || "prefer_not_to_say",
+        age: fallbackProfile.age || "21",
+        studyTime: fallbackProfile.studyTime || "",
+        studyDuration: fallbackProfile.studyDuration || "",
+        distractibility: fallbackProfile.distractibility || "",
+        callDistraction: fallbackProfile.callDistraction || "",
+      });
       setLoading(false);
     }
     loadProfile();
