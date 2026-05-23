@@ -207,7 +207,7 @@ export default function ProfilePage() {
         studyDuration: localData.studyDuration ?? "",
         distractibility: localData.distractibility ?? "",
         callDistraction: localData.callDistraction ?? "",
-        coins: 0,
+        coins: Number(localData.coins) || 0,
         avatarUrl: undefined,
         onboarded: true,
       };

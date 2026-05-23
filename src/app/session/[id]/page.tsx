@@ -112,7 +112,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
   const [avatarEyes, setAvatarEyes] = useState<EyesStyle>("glossy");
   const [avatarActivity, setAvatarActivity] = useState<ActivityType>("LAPTOP");
   const [ownedItems, setOwnedItems] = useState<string[]>([]);
-  const [walletCoins, setWalletCoins] = useState(500);
+  const [walletCoins, setWalletCoins] = useState(0);
   const [customizeTab, setCustomizeTab] = useState<"daily" | "emotes" | "skins" | "owned">("emotes");
   const [sendingEnergy, setSendingEnergy] = useState<string | null>(null);
 
@@ -150,12 +150,22 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
 
   // Load session & config & customize items
   useEffect(() => {
-    const savedCoins = localStorage.getItem(`wallet_coins_${sessionId}`);
-    if (savedCoins) {
-      setWalletCoins(Number(savedCoins));
+    // Load wallet from profile (DB-persisted coins or localStorage onboarding cache)
+    let profileCoins = 0;
+    try {
+      const cached = localStorage.getItem("flightedu_onboarding");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        profileCoins = Number(parsed.coins) || 0;
+      }
+    } catch {}
+    // Session-specific earned coins are layered on top
+    const savedSessionCoins = localStorage.getItem(`wallet_coins_${sessionId}`);
+    if (savedSessionCoins) {
+      setWalletCoins(Number(savedSessionCoins));
     } else {
-      setWalletCoins(500);
-      localStorage.setItem(`wallet_coins_${sessionId}`, "500");
+      setWalletCoins(profileCoins);
+      localStorage.setItem(`wallet_coins_${sessionId}`, String(profileCoins));
     }
 
     const savedOwned = localStorage.getItem(`owned_customizer_items`);
@@ -290,6 +300,8 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
       setAltitude(0);
       setSpeed(0);
       setIsActive(false);
+      // Sync earned coins to profile on landing
+      syncCoinsToProfile();
     }
 
     return () => clearInterval(timer);
@@ -449,12 +461,32 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+  const syncCoinsToProfile = () => {
+    // Persist earned coins back to the localStorage profile cache
+    try {
+      const cached = localStorage.getItem("flightedu_onboarding");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        const currentCoins = Number(parsed.coins) || 0;
+        parsed.coins = currentCoins + Math.round(coinsEarned);
+        localStorage.setItem("flightedu_onboarding", JSON.stringify(parsed));
+      }
+    } catch {}
+    // Also try DB sync (fire-and-forget)
+    fetch("/api/user/coins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ coinsEarned: Math.round(coinsEarned) }),
+    }).catch(() => {});
+  };
+
   const handleEject = () => {
     if (session?.mode === "HARDCORE") {
       const confirmEject = confirm("⚠️ WARNING: Hardcore Flight Mode engaged. Ejecting early will cost -500 focus coins! Do you still want to eject?");
       if (!confirmEject) return;
     }
     if (audioRef.current) audioRef.current.pause();
+    syncCoinsToProfile();
     router.push("/dashboard");
   };
 
