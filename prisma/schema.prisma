@@ -11,6 +11,7 @@ model User {
   id             String    @id @default(cuid())
   email          String    @unique
   name           String?
+  pilotId        String?   @unique
   avatarUrl      String?
   coins          Int       @default(0)
   totalHours     Float     @default(0)

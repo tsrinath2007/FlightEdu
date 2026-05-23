@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -22,6 +22,7 @@ interface OnboardingData {
   name: string;
   email: string;
   phone: string;
+  pilotId: string;
   gender: string;
   age: string;
   studyTime: string;
@@ -34,6 +35,7 @@ const INITIAL_DATA: OnboardingData = {
   name: "",
   email: "",
   phone: "",
+  pilotId: "",
   gender: "prefer_not_to_say",
   age: "21",
   studyTime: "",
@@ -193,10 +195,34 @@ export default function OnboardingPage() {
   const [authLoading, setAuthLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [pilotIdStatus, setPilotIdStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const pilotIdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setData((prev) => ({ ...prev, phone: `${countryCode}${phoneNumber}` }));
   }, [countryCode, phoneNumber]);
+
+  const checkPilotId = useCallback((id: string) => {
+    if (pilotIdTimerRef.current) clearTimeout(pilotIdTimerRef.current);
+    if (!id || id.length < 6) {
+      setPilotIdStatus(id.length > 0 ? "invalid" : "idle");
+      return;
+    }
+    if (!/^[a-zA-Z0-9_.-]+$/.test(id)) {
+      setPilotIdStatus("invalid");
+      return;
+    }
+    setPilotIdStatus("checking");
+    pilotIdTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/user/check-pilot-id?id=${encodeURIComponent(id)}`);
+        const result = await res.json() as { available: boolean; error?: string };
+        setPilotIdStatus(result.available ? "available" : "taken");
+      } catch {
+        setPilotIdStatus("available"); // optimistic
+      }
+    }, 600);
+  }, []);
 
   useEffect(() => {
     async function loadUser() {
@@ -289,6 +315,17 @@ export default function OnboardingPage() {
         newErrors.phone = "Satellite frequency (Phone) is required";
       } else if (data.phone.replace(/\D/g, "").length < 8) {
         newErrors.phone = "Provide a valid phone link";
+      }
+      if (!data.pilotId.trim()) {
+        newErrors.pilotId = "Pilot ID (callsign) is required";
+      } else if (data.pilotId.length < 6) {
+        newErrors.pilotId = "Pilot ID must be at least 6 characters";
+      } else if (pilotIdStatus === "taken") {
+        newErrors.pilotId = "This callsign is already taken — choose another";
+      } else if (pilotIdStatus === "invalid") {
+        newErrors.pilotId = "Only letters, numbers, _ . - allowed";
+      } else if (pilotIdStatus === "checking") {
+        newErrors.pilotId = "Still verifying callsign availability...";
       }
     } else if (step === 2) {
       if (!data.studyTime) newErrors.studyTime = "Please select your departure slot";
@@ -534,6 +571,59 @@ export default function OnboardingPage() {
                     </div>
                     {errors.phone && (
                       <p className="mt-1 text-xs text-coral-400">{errors.phone}</p>
+                    )}
+                  </div>
+
+                  {/* Pilot ID field */}
+                  <div>
+                    <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-white/60">
+                      Pilot Callsign ID
+                      <span className="ml-2 text-white/30 normal-case font-normal">(min 6 chars · must be unique)</span>
+                    </label>
+                    <div className="relative">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <span className="text-sm">🪪</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={data.pilotId}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\s/g, "");
+                          setData({ ...data, pilotId: val });
+                          checkPilotId(val);
+                        }}
+                        placeholder="e.g. srinth007 (min 6 chars)"
+                        maxLength={24}
+                        className={`w-full rounded-xl border ${
+                          errors.pilotId
+                            ? "border-coral-500/50"
+                            : pilotIdStatus === "available"
+                            ? "border-emerald-500/50"
+                            : pilotIdStatus === "taken"
+                            ? "border-coral-500/50"
+                            : "border-white/10"
+                        } bg-white/5 py-3 pl-10 pr-10 text-sm text-white outline-none transition focus:border-electric-500/50 focus:ring-1 focus:ring-electric-500/30`}
+                      />
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                        {pilotIdStatus === "checking" && (
+                          <span className="size-4 rounded-full border-2 border-white/30 border-t-transparent animate-spin" />
+                        )}
+                        {pilotIdStatus === "available" && <span className="text-emerald-400 text-sm">✓</span>}
+                        {pilotIdStatus === "taken" && <span className="text-coral-400 text-sm">✗</span>}
+                        {pilotIdStatus === "invalid" && <span className="text-amber-400 text-sm">!</span>}
+                      </div>
+                    </div>
+                    {pilotIdStatus === "available" && !errors.pilotId && (
+                      <p className="mt-1 text-xs text-emerald-400">✓ Callsign is available — cleared for takeoff!</p>
+                    )}
+                    {pilotIdStatus === "taken" && !errors.pilotId && (
+                      <p className="mt-1 text-xs text-coral-400">✗ Callsign already in use — try another</p>
+                    )}
+                    {pilotIdStatus === "invalid" && !errors.pilotId && (
+                      <p className="mt-1 text-xs text-amber-400">Only letters, numbers, _ . - allowed</p>
+                    )}
+                    {errors.pilotId && (
+                      <p className="mt-1 text-xs text-coral-400">{errors.pilotId}</p>
                     )}
                   </div>
 

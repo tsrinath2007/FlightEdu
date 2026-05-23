@@ -15,6 +15,7 @@ export async function POST(request: Request) {
       name: string;
       email: string;
       phone: string;
+      pilotId?: string;
       gender?: string;
       age: string;
       studyTime: string;
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
         update: {
           name: body.name,
           phone: body.phone,
+          pilotId: body.pilotId || undefined,
           gender: body.gender,
           age: body.age,
           studyTime: body.studyTime,
@@ -44,6 +46,7 @@ export async function POST(request: Request) {
           email: user.email ?? body.email,
           name: body.name,
           phone: body.phone,
+          pilotId: body.pilotId || undefined,
           gender: body.gender,
           age: body.age,
           studyTime: body.studyTime,
