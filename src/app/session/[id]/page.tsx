@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -57,6 +57,9 @@ interface FlightSession {
   transportMode: string;
   duration: number; // in minutes
   mode: "CHILL" | "HARDCORE";
+  isPrivate?: boolean;
+  hostId?: string;
+  inviteCode?: string;
 }
 
 interface MultiplayerPilot {
@@ -72,6 +75,7 @@ interface MultiplayerPilot {
   avatarEyes: EyesStyle;
   avatarActivity: ActivityType;
   isActive: boolean;
+  userId?: string;
 }
 
 const INITIAL_MULTIPLAYER_PILOTS: MultiplayerPilot[] = [
@@ -124,6 +128,172 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
   // Multiplayer Seat States
   const [multiplayerPilots, setMultiplayerPilots] = useState<MultiplayerPilot[]>(INITIAL_MULTIPLAYER_PILOTS);
   const [selectedSeatDetails, setSelectedSeatDetails] = useState<MultiplayerPilot | null>(null);
+
+  const activePilots = React.useMemo(() => {
+    if (session?.isPrivate) {
+      return multiplayerPilots.filter((p) => !!p.userId);
+    }
+    return multiplayerPilots;
+  }, [session?.isPrivate, multiplayerPilots]);
+
+  // Invite friends states
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [friendsList, setFriendsList] = useState<any[]>([]);
+  const [loadingFriends, setLoadingFriends] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/api/user/onboard")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) {
+          setCurrentUser(data.user);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Fetch and sync session & participants
+  const fetchParticipants = useCallback(async () => {
+    // Prioritize local session if present (offline fallback)
+    const localSession = localStorage.getItem(`flight_session_${sessionId}`);
+    if (localSession) {
+      try {
+        const parsed = JSON.parse(localSession) as FlightSession;
+        setSession(parsed);
+        setSecondsRemaining(parsed.duration * 60);
+        setTotalDurationSeconds(parsed.duration * 60);
+      } catch {}
+    }
+
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}`);
+      if (res.ok) {
+        const data = await res.json() as { session: FlightSession & { participants?: any[] } };
+        setSession(data.session);
+        
+        // If private, replace mock pilots with real ones
+        if (data.session.isPrivate && data.session.participants) {
+          const localUser = localStorage.getItem("flightedu_onboarding");
+          let myId = "";
+          try {
+            if (localUser) myId = JSON.parse(localUser).id || "";
+          } catch {}
+          
+          let mySeat = "12D";
+          const localConfig = localStorage.getItem(`flight_config_${sessionId}`);
+          if (localConfig) {
+            try {
+              mySeat = JSON.parse(localConfig).seatNumber || "12D";
+            } catch {}
+          }
+          
+          // Filter out the current user to prevent duplicates
+          const filteredParticipants = data.session.participants.filter(p => p.userId !== myId);
+          
+          const mapped = filteredParticipants.map((p, idx) => {
+            const u = p.user;
+            const seats = ["1A", "2D", "4C", "8F", "14D", "26B", "32J"];
+            // Avoid mapping to current user's seat
+            const availableSeats = seats.filter(s => s !== mySeat);
+            const seat = availableSeats[idx % availableSeats.length] || "8F";
+            
+            return {
+              seat,
+              name: u.name || "Pilot",
+              subject: u.studyTime || "Focus Study",
+              focusTime: u.studyDuration || "Flexible",
+              streak: u.currentStreak || 0,
+              coins: u.coins || 0,
+              avatarHair: "spiky" as HairStyle,
+              avatarHairColor: "black",
+              avatarClothing: "uniform" as ClothingStyle,
+              avatarEyes: "glossy" as EyesStyle,
+              avatarActivity: "LAPTOP" as ActivityType,
+              isActive: true,
+              userId: u.id,
+            };
+          });
+          setMultiplayerPilots(mapped);
+        }
+      } else {
+        throw new Error();
+      }
+    } catch (err) {
+      setSession((prev) => {
+        if (prev) return prev;
+        const defaultSession: FlightSession = {
+          id: sessionId,
+          origin: "Dubai International",
+          originCode: "DXB",
+          destination: "Bengaluru Kempegowda",
+          destinationCode: "BLR",
+          transportMode: "FLIGHT",
+          duration: 306,
+          mode: "CHILL",
+        };
+        setSecondsRemaining(defaultSession.duration * 60);
+        setTotalDurationSeconds(defaultSession.duration * 60);
+        return defaultSession;
+      });
+    }
+  }, [sessionId]);
+
+  // Fetch friends list to invite
+  useEffect(() => {
+    if (showInviteModal) {
+      setLoadingFriends(true);
+      fetch("/api/friends/request")
+        .then((res) => res.json())
+        .then((data) => {
+          setFriendsList(data.friends || []);
+        })
+        .catch(() => {})
+        .finally(() => setLoadingFriends(false));
+    }
+  }, [showInviteModal]);
+
+  const handleInviteFriend = async (friendId: string) => {
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ friendId }),
+      });
+      if (res.ok) {
+        alert("Flight invite sent successfully!");
+        fetchParticipants();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to invite friend");
+      }
+    } catch (e) {
+      alert("Failed to send invite");
+    }
+  };
+
+  const handleKickParticipant = async (targetUserId: string) => {
+    const confirmKick = confirm("Are you sure you want to remove this pilot from the cabin?");
+    if (!confirmKick) return;
+
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/kick`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId }),
+      });
+      if (res.ok) {
+        alert("Pilot removed from the cabin.");
+        setSelectedSeatDetails(null);
+        fetchParticipants();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to kick participant");
+      }
+    } catch (e) {
+      alert("Failed to kick participant");
+    }
+  };
 
   const [checklist, setChecklist] = useState([
     { id: 1, text: "Fasten Seatbelt sign enabled", completed: true },
@@ -234,44 +404,15 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
       });
     }
 
-    const localSession = localStorage.getItem(`flight_session_${sessionId}`);
-    if (localSession) {
-      try {
-        const parsed = JSON.parse(localSession) as FlightSession;
-        setSession(parsed);
-        setSecondsRemaining(parsed.duration * 60);
-        setTotalDurationSeconds(parsed.duration * 60);
-      } catch (e) {
-        console.error("Session parse fail:", e);
-      }
-    } else {
-      fetch(`/api/sessions/${sessionId}`)
-        .then((res) => {
-          if (!res.ok) throw new Error();
-          return res.json();
-        })
-        .then((data: { session: FlightSession }) => {
-          setSession(data.session);
-          setSecondsRemaining(data.session.duration * 60);
-          setTotalDurationSeconds(data.session.duration * 60);
-        })
-        .catch(() => {
-          const defaultSession: FlightSession = {
-            id: sessionId,
-            origin: "Dubai International",
-            originCode: "DXB",
-            destination: "Bengaluru Kempegowda",
-            destinationCode: "BLR",
-            transportMode: "FLIGHT",
-            duration: 306,
-            mode: "CHILL",
-          };
-          setSession(defaultSession);
-          setSecondsRemaining(defaultSession.duration * 60);
-          setTotalDurationSeconds(defaultSession.duration * 60);
-        });
-    }
-  }, [sessionId]);
+    fetchParticipants();
+  }, [sessionId, fetchParticipants]);
+
+  // Dynamic Polling for Multiplayer Cabin Participants
+  useEffect(() => {
+    fetchParticipants();
+    const interval = setInterval(fetchParticipants, 5000);
+    return () => clearInterval(interval);
+  }, [sessionId, fetchParticipants]);
 
   // Autopilot Focus Timer engine
   useEffect(() => {
@@ -498,7 +639,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
   const renderSeat = (seatId: string) => {
     if (!config) return null;
     const isMe = config.seatNumber === seatId;
-    const pilot = multiplayerPilots.find((p) => p.seat === seatId);
+    const pilot = activePilots.find((p) => p.seat === seatId);
     const isOccupied = !!pilot && !isMe;
 
     if (isMe) {
@@ -867,8 +1008,18 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                           <span>Immersive Focus Mode</span>
                         </button>
                         
+                        {session?.isPrivate && session.hostId === currentUser?.id && (
+                          <button
+                            onClick={() => setShowInviteModal(true)}
+                            className="rounded-full bg-emerald-500/10 border border-emerald-500/25 hover:bg-emerald-500/20 px-3 py-1 text-[10px] font-bold text-emerald-400 flex items-center gap-1.5 transition shadow-[0_0_8px_rgba(16,185,129,0.15)] cursor-pointer"
+                          >
+                            <span>👥</span>
+                            <span>Invite Wingman</span>
+                          </button>
+                        )}
+
                         <span className="rounded-full bg-purple-500/10 border border-purple-500/20 px-3 py-1 text-[10px] font-bold text-purple-400 animate-pulse select-none">
-                          ● {multiplayerPilots.length + 1} Pilots In Cabin
+                          ● {activePilots.length + 1} Pilots In Cabin
                         </span>
                       </div>
                     </div>
@@ -882,7 +1033,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                         {/* Energy Vibes Streaming Beam Line */}
                         <AnimatePresence>
                           {sendingEnergy && (() => {
-                            const target = multiplayerPilots.find(p => p.seat === sendingEnergy);
+                            const target = activePilots.find(p => p.seat === sendingEnergy);
                             if (!target) return null;
                             return (
                               <motion.div 
@@ -1056,6 +1207,16 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                                 <Sparkles className="size-3.5" />
                                 <span>Send Focus Vibes</span>
                               </button>
+
+                              {session?.isPrivate && session.hostId === currentUser?.id && selectedSeatDetails.userId && selectedSeatDetails.userId !== currentUser?.id && (
+                                <button
+                                  onClick={() => handleKickParticipant(selectedSeatDetails.userId!)}
+                                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-500/30 hover:border-red-500/50 text-red-400 font-semibold text-xs tracking-wider uppercase transition shadow-lg mt-2"
+                                >
+                                  <LogOut className="size-3.5 rotate-180" />
+                                  <span>Kick Pilot ❌</span>
+                                </button>
+                              )}
                             </motion.div>
                           ) : (
                             <motion.div
@@ -1513,7 +1674,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                     {/* Energy Vibes Streaming Beam Line Overlay inside fullscreen */}
                     <AnimatePresence>
                       {sendingEnergy && (() => {
-                        const target = multiplayerPilots.find(p => p.seat === sendingEnergy);
+                        const target = activePilots.find(p => p.seat === sendingEnergy);
                         if (!target) return null;
                         return (
                           <motion.div 
@@ -1689,6 +1850,86 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
             )}
           </AnimatePresence>
         </div>
+      {/* Invite Friends Modal overlay */}
+      <AnimatePresence>
+        {showInviteModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-[#070b18]/80 backdrop-blur-md z-[100] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0c122c]/95 border border-white/10 rounded-3xl w-full max-w-md p-6 relative shadow-2xl space-y-4"
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setShowInviteModal(false)}
+                className="absolute top-4 right-4 size-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition cursor-pointer"
+              >
+                ✕
+              </button>
+
+              <div className="space-y-1">
+                <h3 className="font-display font-extrabold text-md text-white flex items-center gap-2">
+                  <span>🛫</span> Invite a Wingman
+                </h3>
+                <p className="text-xs text-white/40">
+                  Invite your friends to study live with you in this private cabin.
+                </p>
+              </div>
+
+              {/* Friends list scrollable */}
+              <div className="pt-2">
+                {loadingFriends ? (
+                  <div className="flex justify-center py-8">
+                    <div className="size-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
+                  </div>
+                ) : friendsList.length === 0 ? (
+                  <div className="text-center py-8 text-white/40 text-xs space-y-1">
+                    <p>No crew members found.</p>
+                    <p className="text-[10px] text-white/20">Add some friends first in your Dashboard Crew tab!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10">
+                    {friendsList.map((friend) => {
+                      const isAlreadyInCabin = activePilots.some((p) => p.userId === friend.id);
+                      return (
+                        <div key={friend.id} className="flex items-center justify-between bg-white/4 border border-white/5 rounded-2xl p-3">
+                          <div className="flex items-center gap-3">
+                            <div className="size-8 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center font-display font-extrabold text-purple-300 text-xs uppercase">
+                              {friend.name?.substring(0, 2) || "PL"}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-white leading-tight">{friend.name}</p>
+                              <p className="text-[9px] font-mono text-white/40 mt-0.5">ID: {friend.pilotId}</p>
+                            </div>
+                          </div>
+                          {isAlreadyInCabin ? (
+                            <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 font-mono text-[9px] font-bold uppercase tracking-wider">
+                              In Cabin
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleInviteFriend(friend.id)}
+                              className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[9px] font-bold uppercase tracking-wider transition cursor-pointer shadow-md shadow-emerald-600/15"
+                            >
+                              Invite
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
