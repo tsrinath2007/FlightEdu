@@ -12,13 +12,60 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [pilotId, setPilotId] = useState("");
+  const [pilotIdStatus, setPilotIdStatus] = useState<"idle" | "error" | "taken" | "valid">("idle");
+  const [pilotIdMessage, setPilotIdMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
 
+  function handlePilotIdChange(val: string) {
+    const cleanVal = val.toLowerCase().replace(/[^a-z0-9_]/g, ""); // Allow only lowercase alphanumeric and underscores
+    setPilotId(cleanVal);
+    
+    if (cleanVal.length === 0) {
+      setPilotIdStatus("idle");
+      setPilotIdMessage("");
+      return;
+    }
+
+    if (cleanVal.length < 6) {
+      setPilotIdStatus("error");
+      setPilotIdMessage("⚠️ Minimum 6 characters required.");
+      return;
+    }
+
+    const TAKEN_IDS = [
+      "captain_emily", "cadet_liam", "copilot_sophia", "cadet_aarav", 
+      "cadet_chloe", "cadet_hiroshi", "cadet_elena", "admin_pilot", 
+      "flightedu_host", "voyageiq_admin"
+    ];
+
+    const localTaken = localStorage.getItem("taken_pilot_ids");
+    let takenList = TAKEN_IDS;
+    if (localTaken) {
+      try {
+        takenList = [...TAKEN_IDS, ...JSON.parse(localTaken)];
+      } catch (e) {}
+    }
+
+    if (takenList.includes(cleanVal)) {
+      setPilotIdStatus("taken");
+      setPilotIdMessage("❌ Pilot ID is already taken by another cadet.");
+    } else {
+      setPilotIdStatus("valid");
+      setPilotIdMessage("✅ Pilot ID is available!");
+    }
+  }
+
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
+    if (pilotIdStatus !== "valid") {
+      setError("Please choose a valid and available Pilot ID first.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     const supabase = createClient();
@@ -27,13 +74,30 @@ export default function RegisterPage() {
       email,
       password,
       options: {
-        data: { name },
+        data: { name, pilotId },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
-    if (error) setError(error.message);
-    else setDone(true);
+    if (error) {
+      setError(error.message);
+    } else {
+      // Persist chosen ID locally for offline-first profile synchronization
+      const localTaken = localStorage.getItem("taken_pilot_ids");
+      let takenList: string[] = [];
+      if (localTaken) {
+        try {
+          takenList = JSON.parse(localTaken);
+        } catch (e) {}
+      }
+      if (!takenList.includes(pilotId)) {
+        takenList.push(pilotId);
+        localStorage.setItem("taken_pilot_ids", JSON.stringify(takenList));
+      }
+      localStorage.setItem(`flight_pilot_id_${email}`, pilotId);
+      localStorage.setItem("flight_active_pilot_id", pilotId);
+      setDone(true);
+    }
     setLoading(false);
   }
 
@@ -117,6 +181,32 @@ export default function RegisterPage() {
                     placeholder="Nikhil"
                     className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/25 outline-none transition focus:border-electric-500/50 focus:ring-1 focus:ring-electric-500/30"
                   />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-white/60">Custom Pilot ID (Username)</label>
+                  <input
+                    type="text"
+                    required
+                    value={pilotId}
+                    onChange={(e) => handlePilotIdChange(e.target.value)}
+                    placeholder="e.g. captain_tom"
+                    className={`w-full rounded-xl border px-4 py-2.5 text-sm text-white placeholder-white/25 outline-none transition focus:ring-1 ${
+                      pilotIdStatus === "valid"
+                        ? "border-emerald-500/50 focus:border-emerald-500 focus:ring-emerald-500/30"
+                        : pilotIdStatus === "taken" || pilotIdStatus === "error"
+                        ? "border-rose-500/50 focus:border-rose-500 focus:ring-rose-500/30"
+                        : "border-white/10 focus:border-electric-500/50 focus:ring-electric-500/30"
+                    } bg-white/5`}
+                  />
+                  {pilotIdMessage && (
+                    <p className={`mt-1.5 text-[10px] font-semibold ${
+                      pilotIdStatus === "valid"
+                        ? "text-emerald-400 animate-pulse"
+                        : "text-rose-400"
+                    }`}>
+                      {pilotIdMessage}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-white/60">Email</label>

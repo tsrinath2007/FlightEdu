@@ -453,6 +453,77 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     router.push("/dashboard");
   };
 
+  const renderSeat = (seatId: string) => {
+    if (!config) return null;
+    const isMe = config.seatNumber === seatId;
+    const pilot = multiplayerPilots.find((p) => p.seat === seatId);
+    const isOccupied = !!pilot && !isMe;
+
+    if (isMe) {
+      return (
+        <div
+          onClick={() => {
+            setSelectedSeatDetails(null);
+            try {
+              const tap = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
+              tap.volume = 0.15;
+              tap.play().catch(() => {});
+            } catch (e) {}
+          }}
+          className="relative group w-14 h-14 shrink-0 flex flex-col items-center justify-between rounded-xl p-1 border transition duration-300 cursor-pointer bg-electric-500/10 border-electric-400 shadow-[0_0_12px_rgba(56,189,248,0.3)] ring-1 ring-electric-400/30"
+        >
+          <span className="text-[6px] font-mono font-bold text-electric-400 uppercase leading-none">YOU</span>
+          <CadetAvatar
+            size="sm"
+            hairStyle={avatarHair}
+            hairColor={avatarHairColor}
+            clothing={avatarClothing}
+            eyesStyle={avatarEyes}
+            activity={avatarActivity}
+            isActive={isActive}
+            className="scale-90"
+          />
+        </div>
+      );
+    }
+
+    if (isOccupied && pilot) {
+      const isSelected = selectedSeatDetails?.seat === pilot.seat;
+      return (
+        <div
+          onClick={() => handleSeatClick(pilot.seat, true, pilot)}
+          className={`relative group w-14 h-14 shrink-0 flex flex-col items-center justify-between rounded-xl p-1 border transition duration-300 cursor-pointer ${
+            isSelected
+              ? "bg-purple-500/15 border-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.3)] ring-1 ring-purple-400/30"
+              : "bg-navy-900/40 border-white/5 hover:border-white/12 hover:bg-navy-900/60"
+          }`}
+        >
+          <span className="text-[6px] font-mono font-bold text-purple-400 uppercase leading-none">{pilot.seat}</span>
+          <CadetAvatar
+            size="sm"
+            hairStyle={pilot.avatarHair}
+            hairColor={pilot.avatarHairColor}
+            clothing={pilot.avatarClothing}
+            eyesStyle={pilot.avatarEyes}
+            activity={pilot.avatarActivity}
+            isActive={pilot.isActive}
+            className="scale-90"
+          />
+        </div>
+      );
+    }
+
+    return (
+      <button
+        onClick={() => handleSeatClick(seatId, false)}
+        className="w-14 h-14 shrink-0 bg-navy-950/50 hover:bg-electric-500/20 hover:border-electric-400/40 border border-white/5 rounded-xl cursor-pointer flex flex-col items-center justify-center transition duration-300 font-mono text-[9px] font-bold text-white/20"
+      >
+        <span>💺</span>
+        <span className="text-[7px] text-white/30 tracking-wider mt-0.5">{seatId}</span>
+      </button>
+    );
+  };
+
   if (!session || !config) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-navy-950 text-white">
@@ -771,79 +842,83 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                           })()}
                         </AnimatePresence>
 
-                        {/* Lounge Grid row by row */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {/* Airplane Cabin Floor Plan Map */}
+                        <div className="flex-1 flex flex-col gap-4 overflow-y-auto max-h-[380px] pr-1 select-none scrollbar-thin scrollbar-thumb-white/10">
                           
-                          {/* 1. YOUR COZY STUDY POD */}
-                          <div 
-                            onClick={() => {
-                              setSelectedSeatDetails(null);
-                              try {
-                                const tap = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
-                                tap.volume = 0.15;
-                                tap.play().catch(() => {});
-                              } catch (e) {}
-                            }}
-                            className={`relative group flex flex-col items-center justify-between rounded-2xl p-3 border transition duration-300 cursor-pointer ${
-                              !selectedSeatDetails
-                                ? "bg-electric-500/10 border-electric-400 shadow-[0_0_15px_rgba(56,189,248,0.2)] ring-1 ring-electric-400/40"
-                                : "bg-navy-900/45 border-white/5 hover:border-white/12 hover:bg-navy-900/60"
-                            }`}
-                          >
-                            <div className="flex justify-between w-full items-center mb-1">
-                              <span className="text-[8px] font-mono font-bold text-electric-400 tracking-wider">POD {config.seatNumber} (YOU)</span>
-                              <span className={`text-[7px] font-mono px-1 rounded uppercase font-bold ${isActive ? "bg-emerald-500/25 text-emerald-400 animate-pulse" : "bg-neutral-800 text-neutral-400"}`}>
-                                {isActive ? "Focusing" : "Idle"}
-                              </span>
+                          {/* Nose / Cockpit visual header */}
+                          <div className="flex flex-col items-center justify-center border-b border-dashed border-white/10 pb-4">
+                            <div className="w-16 h-8 bg-gradient-to-t from-slate-800 to-slate-900 rounded-t-full border-t border-x border-white/20 flex items-center justify-center shadow-md">
+                              <span className="text-[7px] font-mono font-bold text-white/40 tracking-widest uppercase">Flight Deck</span>
                             </div>
-                            
-                            <CadetAvatar
-                              size="md"
-                              hairStyle={avatarHair}
-                              hairColor={avatarHairColor}
-                              clothing={avatarClothing}
-                              eyesStyle={avatarEyes}
-                              activity={avatarActivity}
-                              isActive={isActive}
-                            />
-                            
-                            <span className="text-[10px] font-display font-semibold text-white/90 truncate mt-1">Study Cadet</span>
+                            <div className="w-px h-4 bg-gradient-to-b from-white/20 to-transparent" />
                           </div>
 
-                          {/* 2. MULTIPLAYER CADET STUDY PODS */}
-                          {multiplayerPilots.map((pilot) => {
-                            const isSelected = selectedSeatDetails?.seat === pilot.seat;
-                            return (
-                              <div
-                                key={pilot.seat}
-                                onClick={() => handleSeatClick(pilot.seat, true, pilot)}
-                                className={`relative group flex flex-col items-center justify-between rounded-2xl p-3 border transition duration-300 cursor-pointer ${
-                                  isSelected
-                                    ? "bg-purple-500/10 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.2)] ring-1 ring-purple-400/40"
-                                    : "bg-navy-900/45 border-white/5 hover:border-white/12 hover:bg-navy-900/60"
-                                }`}
-                              >
-                                <div className="flex justify-between w-full items-center mb-1">
-                                  <span className="text-[8px] font-mono font-bold text-purple-400 tracking-wider">POD {pilot.seat}</span>
-                                  <span className={`text-[7px] font-mono px-1 rounded uppercase font-bold ${pilot.isActive ? "bg-emerald-500/25 text-emerald-400" : "bg-neutral-800 text-neutral-400"}`}>
-                                    {pilot.isActive ? "Focusing" : "Idle"}
-                                  </span>
-                                </div>
-                                
-                                <CadetAvatar
-                                  size="md"
-                                  hairStyle={pilot.avatarHair}
-                                  hairColor={pilot.avatarHairColor}
-                                  clothing={pilot.avatarClothing}
-                                  eyesStyle={pilot.avatarEyes}
-                                  activity={pilot.avatarActivity}
-                                  isActive={pilot.isActive}
-                                />
-                                
-                                <span className="text-[10px] font-display font-semibold text-white/90 truncate mt-1">{pilot.name.split(" ")[1] || pilot.name}</span>
+                          {/* 1. FIRST CLASS (Rows 1-2) */}
+                          <div className="space-y-2">
+                            <p className="text-[7px] font-mono font-extrabold tracking-[0.2em] uppercase text-center text-amber-400">✦ First Class Suites ✦</p>
+                            
+                            {[1, 2].map((rowNum) => (
+                              <div key={rowNum} className="flex items-center justify-center gap-6">
+                                {/* Left Seat: A */}
+                                {renderSeat(`${rowNum}A`)}
+                                {/* Center Aisle row label */}
+                                <div className="w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-[9px] font-mono text-white/30 font-bold select-none">{rowNum}</div>
+                                {/* Right Seat: D */}
+                                {renderSeat(`${rowNum}D`)}
                               </div>
-                            );
-                          })}
+                            ))}
+                          </div>
+
+                          <div className="h-px bg-white/5 my-1" />
+
+                          {/* 2. BUSINESS CLASS (Rows 4-8) */}
+                          <div className="space-y-2">
+                            <p className="text-[7px] font-mono font-extrabold tracking-[0.2em] uppercase text-center text-electric-400">✦ Business Pods ✦</p>
+                            
+                            {[4, 8].map((rowNum) => (
+                              <div key={rowNum} className="flex items-center justify-center gap-3">
+                                {/* Left Seats: A, C */}
+                                <div className="flex gap-2">
+                                  {renderSeat(`${rowNum}A`)}
+                                  {renderSeat(`${rowNum}C`)}
+                                </div>
+                                {/* Center Aisle */}
+                                <div className="w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-[9px] font-mono text-white/30 font-bold select-none">{rowNum}</div>
+                                {/* Right Seat: F */}
+                                {renderSeat(`${rowNum}F`)}
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="h-px bg-white/5 my-1" />
+
+                          {/* 3. ECONOMY CLASS (Rows 14-32) */}
+                          <div className="space-y-2">
+                            <p className="text-[7px] font-mono font-extrabold tracking-[0.2em] uppercase text-center text-white/30">✦ Main Cabin Economy ✦</p>
+                            
+                            {[14, 26, 32].map((rowNum) => (
+                              <div key={rowNum} className="flex items-center justify-center gap-3">
+                                {/* Left Seats: A, B */}
+                                <div className="flex gap-1.5">
+                                  {renderSeat(`${rowNum}A`)}
+                                  {renderSeat(`${rowNum}B`)}
+                                </div>
+                                {/* Center Aisle */}
+                                <div className="w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-[9px] font-mono text-white/30 font-bold select-none">{rowNum}</div>
+                                {/* Right Seats: D, J */}
+                                <div className="flex gap-1.5">
+                                  {renderSeat(`${rowNum}D`)}
+                                  {renderSeat(`${rowNum}J`)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Tail visual footer */}
+                          <div className="flex flex-col items-center justify-center border-t border-dashed border-white/10 pt-4 mt-2">
+                            <div className="w-px h-4 bg-gradient-to-t from-white/20 to-transparent" />
+                            <div className="w-10 h-3 bg-gradient-to-b from-slate-800 to-slate-950 rounded-b border-b border-x border-white/10 flex justify-center items-end" />
+                          </div>
 
                         </div>
 
