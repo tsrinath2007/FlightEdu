@@ -66,9 +66,14 @@ export default function JourneyPage() {
           mode: sessionMode,
         }),
       });
+      if (!res.ok) {
+        throw new Error("Server responded with error status");
+      }
       const data = await res.json() as { session: { id: string } };
       router.push(`/session/${data.session.id}/boarding`);
-    } catch {
+    } catch (err) {
+      console.error("Error boarding journey:", err);
+      alert("⚠️ Flight deck alert: Unable to clear you for takeoff. Please check your credentials or try again.");
       setCreating(false);
     }
   }
