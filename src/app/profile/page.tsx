@@ -58,8 +58,77 @@ const COUNTRY_CODES = [
   { code: "+33", country: "France", flag: "🇫🇷" },
   { code: "+81", country: "Japan", flag: "🇯🇵" },
   { code: "+65", country: "Singapore", flag: "🇸🇬" },
-  { code: "+971", country: "United Arab Emirates", flag: "🇦🇪" },
 ];
+
+function validatePhoneNumber(dialCode: string, number: string): string | null {
+  const digits = number.replace(/\D/g, "");
+  
+  if (!digits) {
+    return "Satellite frequency (Phone) is required";
+  }
+
+  if (dialCode === "+91") {
+    if (digits.length !== 10) {
+      return "India phone number must be exactly 10 digits";
+    }
+    if (!/^[6-9]/.test(digits)) {
+      return "India mobile number must start with 6, 7, 8, or 9";
+    }
+  } else if (dialCode === "+1") {
+    if (digits.length !== 10) {
+      return "US/Canada phone number must be exactly 10 digits";
+    }
+  } else if (dialCode === "+44") {
+    if (digits.length !== 10) {
+      return "UK mobile number must be exactly 10 digits";
+    }
+  } else if (dialCode === "+61") {
+    if (digits.length !== 9) {
+      return "Australia phone number must be exactly 9 digits";
+    }
+    if (!/^4/.test(digits)) {
+      return "Australia mobile number must start with 4";
+    }
+  } else if (dialCode === "+49") {
+    if (digits.length < 10 || digits.length > 11) {
+      return "Germany phone number must be 10 or 11 digits";
+    }
+  } else if (dialCode === "+33") {
+    if (digits.length !== 9) {
+      return "France phone number must be exactly 9 digits";
+    }
+    if (!/^[6-7]/.test(digits)) {
+      return "France mobile number must start with 6 or 7";
+    }
+  } else if (dialCode === "+81") {
+    if (digits.length !== 10) {
+      return "Japan phone number must be exactly 10 digits";
+    }
+    if (!/^[7-9]/.test(digits)) {
+      return "Japan mobile number must start with 7, 8, or 9";
+    }
+  } else if (dialCode === "+65") {
+    if (digits.length !== 8) {
+      return "Singapore phone number must be exactly 8 digits";
+    }
+    if (!/^[8-9]/.test(digits)) {
+      return "Singapore mobile number must start with 8 or 9";
+    }
+  } else if (dialCode === "+971") {
+    if (digits.length !== 9) {
+      return "UAE phone number must be exactly 9 digits";
+    }
+    if (!/^5[024568]/.test(digits)) {
+      return "UAE mobile number must start with 50, 52, 54, 55, 56, or 58";
+    }
+  } else {
+    if (digits.length < 8) {
+      return "Phone number must be at least 8 digits";
+    }
+  }
+
+  return null;
+}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -296,7 +365,12 @@ export default function ProfilePage() {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaveLoading(true);
-    setFeedback(null);
+    const phoneError = validatePhoneNumber(countryCode, phoneNumber);
+    if (phoneError) {
+      setFeedback({ type: "error", text: phoneError });
+      setSaveLoading(false);
+      return;
+    }
 
     const fullPhone = `${countryCode}${phoneNumber}`;
 
