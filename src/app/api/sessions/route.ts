@@ -35,11 +35,15 @@ export async function POST(request: Request) {
     transportMode: string;
     duration: number;
     mode: "CHILL" | "HARDCORE";
+    isPrivate?: boolean;
   };
 
+  const isPrivate = !!body.isPrivate;
+
   // Upsert the user into the database first to prevent foreign key errors
+  let dbUser;
   try {
-    await prisma.user.upsert({
+    dbUser = await prisma.user.upsert({
       where: { id: userId },
       update: {},
       create: {
@@ -54,6 +58,37 @@ export async function POST(request: Request) {
     console.warn("Database upsert failed during session creation, continuing anyway:", dbErr);
   }
 
+  // If private, verify and deduct coins
+  if (isPrivate && dbUser) {
+    const currentCoins = dbUser.coins || 0;
+    if (currentCoins < 300) {
+      return NextResponse.json(
+        { error: "Insignificant focus coins to charter a private flight (300 required)" },
+        { status: 400 }
+      );
+    }
+
+    try {
+      // Deduct coins & record transaction
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: userId },
+          data: { coins: { decrement: 300 } },
+        }),
+        prisma.transaction.create({
+          data: {
+            userId: userId,
+            amount: -300,
+            reason: `Private Flight Charter (${body.originCode} → ${body.destinationCode})`,
+          },
+        }),
+      ]);
+    } catch (txErr) {
+      console.error("Failed to process private flight coin deduction:", txErr);
+      return NextResponse.json({ error: "Failed to process private charter fee" }, { status: 500 });
+    }
+  }
+
   const session = await prisma.session.create({
     data: {
       hostId: userId,
@@ -64,6 +99,7 @@ export async function POST(request: Request) {
       transportMode: body.transportMode as "FLIGHT" | "BUS" | "TRAIN" | "CAR",
       duration: body.duration,
       mode: body.mode,
+      isPrivate: isPrivate,
       inviteCode: nanoid(8),
       participants: {
         create: { userId: userId },

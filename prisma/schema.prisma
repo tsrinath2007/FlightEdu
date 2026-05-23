@@ -51,6 +51,7 @@ model Session {
   mode            SessionMode   @default(CHILL)
   status          SessionStatus @default(WAITING)
   inviteCode      String        @unique @default(cuid())
+  isPrivate       Boolean       @default(false)
   startedAt       DateTime?
   completedAt     DateTime?
   createdAt       DateTime      @default(now())
