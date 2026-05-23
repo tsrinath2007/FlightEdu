@@ -148,6 +148,7 @@ export default function DashboardPage() {
 function BottomNav() {
   const items = [
     { icon: "🏠", label: "Home", href: "/dashboard" },
+    { icon: "👥", label: "Friends", href: "/friends" },
     { icon: "🗺️", label: "Map", href: "/map" },
     { icon: "✈️", label: "Journey", href: "/journey" },
     { icon: "🏆", label: "Ranks", href: "/leaderboard" },
@@ -155,12 +156,12 @@ function BottomNav() {
   ];
 
   return (
-    <nav className="flex items-center gap-1 rounded-2xl bg-navy-800/80 backdrop-blur border border-white/10 px-2 py-1.5">
+    <nav className="flex items-center gap-1 rounded-2xl bg-navy-800/80 backdrop-blur border border-white/10 px-2 py-1.5 shadow-2xl">
       {items.map((item) => (
         <Link
           key={item.label}
           href={item.href}
-          className="flex flex-col items-center gap-0.5 rounded-xl px-4 py-1.5 text-white/50 hover:bg-white/8 hover:text-white transition"
+          className="flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-white/50 hover:bg-white/8 hover:text-white transition"
         >
           <span className="text-lg">{item.icon}</span>
           <span className="text-[10px]">{item.label}</span>
