@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -33,12 +33,14 @@ interface ProfileDetails {
   email: string;
   phone: string;
   gender?: string;
+  pilotId?: string;
   age: string;
   studyTime: string;
   studyDuration: string;
   distractibility: string;
   callDistraction: string;
   coins: number;
+  avatarUrl?: string;
   onboarded: boolean;
 }
 
@@ -95,6 +97,56 @@ export default function ProfilePage() {
   
   // Feedback messages
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  
+  // Avatar upload
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setFeedback({ type: "error", text: "Image must be under 5 MB" });
+      return;
+    }
+    // Show local preview immediately
+    const reader = new FileReader();
+    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+
+    // Upload to Supabase Storage
+    setAvatarUploading(true);
+    try {
+      const supabase = createClient();
+      if (!supabase) throw new Error("No client");
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user");
+      const ext = file.name.split(".").pop();
+      const path = `avatars/${user.id}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+      // Save URL to DB via onboard endpoint
+      await fetch("/api/user/avatar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatarUrl: publicUrl }),
+      });
+      setDbUser((prev) => prev ? { ...prev, avatarUrl: publicUrl } : prev);
+      setFeedback({ type: "success", text: "Profile picture updated!" });
+      setTimeout(() => setFeedback(null), 3000);
+    } catch (err) {
+      console.warn("Avatar upload failed (storage may not be configured):", err);
+      // Keep local preview even if upload fails
+      setFeedback({ type: "success", text: "Preview updated locally!" });
+      setTimeout(() => setFeedback(null), 3000);
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
 
   useEffect(() => {
     async function loadProfile() {
@@ -304,15 +356,43 @@ export default function ProfilePage() {
           {/* Main Account details (Left Panel) */}
           <div className="md:col-span-1 space-y-6">
             <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-md text-center">
-              <div className="relative mx-auto size-24 rounded-full border-2 border-electric-500/40 p-1 bg-navy-900/60 overflow-hidden">
-                <img
-                  src={getAvatarUrl(dbUser?.email || "pilot")}
-                  alt="avatar"
-                  className="size-full rounded-full"
-                />
+              {/* Avatar with upload */}
+              <div
+                className="relative mx-auto size-24 rounded-full cursor-pointer group"
+                onClick={() => !avatarUploading && avatarInputRef.current?.click()}
+                title="Click to change profile picture"
+              >
+                <div className="size-full rounded-full border-2 border-electric-500/40 p-1 bg-navy-900/60 overflow-hidden">
+                  <img
+                    src={avatarPreview || dbUser?.avatarUrl || getAvatarUrl(dbUser?.email || "pilot")}
+                    alt="avatar"
+                    className="size-full rounded-full object-cover"
+                  />
+                </div>
+                {/* Camera overlay */}
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {avatarUploading ? (
+                    <span className="size-5 rounded-full border-2 border-white/60 border-t-transparent animate-spin" />
+                  ) : (
+                    <span className="text-xl">📷</span>
+                  )}
+                </div>
+                <div className="absolute -bottom-1 -right-1 size-6 rounded-full bg-electric-500 flex items-center justify-center border-2 border-navy-950">
+                  <span className="text-[10px]">✏️</span>
+                </div>
               </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
               <h2 className="mt-4 text-lg font-bold text-white truncate">{dbUser?.name || "Anonymous Pilot"}</h2>
               <p className="text-xs text-white/40 truncate">{dbUser?.email || "no-email@flightedu.com"}</p>
+              {dbUser?.pilotId && (
+                <p className="text-xs font-mono text-neon-400 mt-0.5 tracking-wider">@{dbUser.pilotId}</p>
+              )}
 
               <div className="mt-5 pt-5 border-t border-white/10 flex items-center justify-center gap-2.5">
                 <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 px-3 py-1 text-amber-300">
@@ -334,6 +414,18 @@ export default function ProfilePage() {
                     <p className="text-sm font-medium text-white/80">{dbUser?.name || "Not entered"}</p>
                   </div>
                 </div>
+
+                {dbUser?.pilotId && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-white/5 text-neon-400">
+                      <span className="size-4 flex items-center justify-center text-xs font-bold">#</span>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-white/30">Pilot ID</p>
+                      <p className="text-sm font-medium text-neon-400 font-mono tracking-wide">@{dbUser.pilotId}</p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-white/5 text-white/60">

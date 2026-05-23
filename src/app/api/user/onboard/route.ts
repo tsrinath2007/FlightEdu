@@ -80,17 +80,39 @@ export async function GET() {
     }
 
     let onboarded = false;
+    let fullUser = null;
     try {
       const dbUser = await prisma.user.findUnique({
         where: { id: user.id },
-        select: { onboarded: true },
+        select: {
+          onboarded: true,
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          gender: true,
+          pilotId: true,
+          age: true,
+          studyTime: true,
+          studyDuration: true,
+          distractibility: true,
+          callDistraction: true,
+          coins: true,
+          avatarUrl: true,
+          totalHours: true,
+          currentStreak: true,
+        },
       });
       onboarded = dbUser?.onboarded ?? false;
+      fullUser = dbUser;
     } catch (dbErr) {
       console.warn("Database lookup failed, falling back to false:", dbErr);
     }
 
-    return NextResponse.json({ onboarded, user: { id: user.id, email: user.email, name: user.user_metadata?.full_name ?? user.user_metadata?.name } });
+    return NextResponse.json({
+      onboarded,
+      user: fullUser ?? { id: user.id, email: user.email, name: user.user_metadata?.full_name ?? user.user_metadata?.name },
+    });
   } catch (err) {
     return NextResponse.json({ onboarded: false });
   }
