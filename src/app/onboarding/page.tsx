@@ -197,6 +197,10 @@ export default function OnboardingPage() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [pilotIdStatus, setPilotIdStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const pilotIdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [swipeX, setSwipeX] = useState(0);
+  const [swiping, setSwiping] = useState(false);
+  const [launched, setLaunched] = useState(false);
+  const swipeTrackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setData((prev) => ({ ...prev, phone: `${countryCode}${phoneNumber}` }));
@@ -994,6 +998,22 @@ export default function OnboardingPage() {
                         09F (Focus Cabin)
                       </div>
                     </div>
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-white/30">
+                        Pilot ID
+                      </div>
+                      <div className="font-display font-bold text-neon-400 text-sm tracking-wider">
+                        {data.pilotId ? `@${data.pilotId}` : <span className="text-white/30 italic">—</span>}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-white/30">
+                        Status
+                      </div>
+                      <div className="font-display font-bold text-emerald-400 text-sm">
+                        ✓ Cleared
+                      </div>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-6">
@@ -1077,13 +1097,72 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                <div className="bg-white/[0.02] border-t border-white/5 px-8 py-6 flex flex-col sm:flex-row gap-3">
-                  <Button
-                    onClick={() => router.push("/dashboard")}
-                    className="w-full bg-gradient-to-r from-electric-500 to-neon-500 hover:shadow-glow-electric text-white font-bold py-6 text-base"
+                <div className="bg-white/[0.02] border-t border-white/5 px-8 py-6">
+                  {/* Swipe-to-launch slider */}
+                  <p className="text-center text-[10px] uppercase tracking-widest text-white/30 mb-3">Slide to board your first flight</p>
+                  <div
+                    ref={swipeTrackRef}
+                    className="relative h-14 rounded-full bg-white/5 border border-white/10 overflow-hidden select-none"
+                    style={{ touchAction: "none" }}
                   >
-                    Launch First Flight ✈️
-                  </Button>
+                    {/* Animated fill */}
+                    <motion.div
+                      className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-electric-500/30 to-neon-500/30"
+                      animate={{ width: launched ? "100%" : `calc(${swipeX}px + 56px)` }}
+                      transition={{ duration: launched ? 0.3 : 0 }}
+                    />
+                    {/* Label */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <span className={`text-xs font-semibold uppercase tracking-widest transition-opacity ${
+                        swipeX > 60 ? "opacity-0" : "opacity-100"
+                      } ${launched ? "text-white" : "text-white/40"}`}>
+                        {launched ? "🛫 Initiating takeoff..." : "✈️  Launch First Flight"}
+                      </span>
+                      {swipeX > 60 && !launched && (
+                        <span className="text-xs font-semibold uppercase tracking-widest text-white/60">
+                          Release to launch 🚀
+                        </span>
+                      )}
+                    </div>
+                    {/* Draggable thumb */}
+                    {!launched && (
+                      <motion.div
+                        className="absolute top-1 left-1 size-12 rounded-full bg-gradient-to-br from-electric-400 to-neon-500 shadow-glow-electric flex items-center justify-center cursor-grab active:cursor-grabbing z-10"
+                        animate={{ x: swipeX }}
+                        transition={{ duration: swiping ? 0 : 0.3, type: "spring", stiffness: 300, damping: 30 }}
+                        drag="x"
+                        dragConstraints={swipeTrackRef}
+                        dragElastic={0}
+                        dragMomentum={false}
+                        onDragStart={() => setSwiping(true)}
+                        onDrag={(_, info) => {
+                          const trackW = swipeTrackRef.current?.offsetWidth ?? 300;
+                          const maxX = trackW - 56;
+                          const clamped = Math.max(0, Math.min(info.offset.x, maxX));
+                          setSwipeX(clamped);
+                        }}
+                        onDragEnd={(_, info) => {
+                          setSwiping(false);
+                          const trackW = swipeTrackRef.current?.offsetWidth ?? 300;
+                          const maxX = trackW - 56;
+                          if (info.offset.x >= maxX * 0.85) {
+                            setSwipeX(maxX);
+                            setLaunched(true);
+                            setTimeout(() => router.push("/dashboard"), 800);
+                          } else {
+                            setSwipeX(0);
+                          }
+                        }}
+                      >
+                        <span className="text-xl">✈️</span>
+                      </motion.div>
+                    )}
+                    {launched && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="size-5 rounded-full border-2 border-white/50 border-t-transparent animate-spin" />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>
