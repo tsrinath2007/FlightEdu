@@ -100,7 +100,7 @@ export async function POST(request: Request) {
       duration: body.duration,
       mode: body.mode,
       isPrivate: isPrivate,
-      inviteCode: nanoid(8),
+      inviteCode: nanoid(8).toUpperCase(),
       participants: {
         create: { userId: userId },
       },

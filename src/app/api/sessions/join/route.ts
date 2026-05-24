@@ -17,14 +17,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Flight Pass Code is required" }, { status: 400 });
     }
 
-    const cleanCode = inviteCode.trim().toUpperCase();
+    const cleanCode = inviteCode.trim();
 
     // 1. Find the flight session by inviteCode or direct ID
     const session = await prisma.session.findFirst({
       where: {
         OR: [
-          { inviteCode: cleanCode },
-          { id: inviteCode.toLowerCase() }
+          { inviteCode: { equals: cleanCode, mode: "insensitive" } },
+          { id: cleanCode.toLowerCase() }
         ]
       },
       include: {

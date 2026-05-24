@@ -717,6 +717,11 @@ export default function InteractiveMapPage() {
   const handleBoardFlight = async () => {
     if (!origin || !destination) return;
 
+    if (!studySubject.trim()) {
+      setErrorText("📋 Declaring your focus subject is mandatory before boarding.");
+      return;
+    }
+
     if (isPrivate && userCoins < 300) {
       setErrorText("Insufficient coins: You need at least 300 focus coins to charter a private flight.");
       return;
@@ -808,6 +813,10 @@ export default function InteractiveMapPage() {
   };
 
   const handleJoinFlightCode = async () => {
+    if (!studySubject.trim()) {
+      setJoinError("📋 Declaring your focus subject is mandatory before boarding the flight.");
+      return;
+    }
     if (!joinFlightCode.trim()) {
       setJoinError("Please enter a Boarding Pass Code first.");
       return;
@@ -1488,8 +1497,8 @@ export default function InteractiveMapPage() {
 
                       {/* Ask Focus Subject (what he is studying) */}
                       <div className="space-y-1.5 border-t border-white/5 pt-3">
-                        <label className="text-[7.5px] font-bold text-white/45 uppercase tracking-widest">
-                          What are you studying today?
+                        <label className="text-[7.5px] font-bold text-white/45 uppercase tracking-widest flex items-center gap-1">
+                          What are you studying today? <span className="text-red-400 font-normal lowercase font-sans text-[7px] tracking-normal">(Mandatory)</span>
                         </label>
                         <input
                           type="text"
@@ -1566,8 +1575,8 @@ export default function InteractiveMapPage() {
                     <div className="space-y-4">
                       {/* Ask Focus Subject (what he is studying) */}
                       <div className="space-y-1.5">
-                        <label className="text-[7.5px] font-bold text-white/45 uppercase tracking-widest">
-                          What are you studying today?
+                        <label className="text-[7.5px] font-bold text-white/45 uppercase tracking-widest flex items-center gap-1">
+                          What are you studying today? <span className="text-red-400 font-normal lowercase font-sans text-[7px] tracking-normal">(Mandatory)</span>
                         </label>
                         <input
                           type="text"

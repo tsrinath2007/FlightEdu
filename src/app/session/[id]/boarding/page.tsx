@@ -270,6 +270,10 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
   }, [selectedAirline, selectedClass, selectedAircraft]);
 
   const handleTakeOff = () => {
+    if (!studySubject.trim()) {
+      alert("⚠️ Declaring your focus subject is mandatory before boarding the flight.");
+      return;
+    }
     setIsTakingOff(true);
     
     // Play pre-flight audio indicator if turned on
@@ -559,7 +563,7 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
                   04
                 </span>
                 <h3 className="font-display text-lg font-bold text-white tracking-wide">
-                  Declare Your Focus Subject
+                  Declare Your Focus Subject <span className="text-red-400 text-sm font-normal">(Mandatory)</span>
                 </h3>
               </div>
 
