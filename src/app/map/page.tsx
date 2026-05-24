@@ -36,7 +36,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "UAE", 
     timezone: "GMT+4", 
     description: "Ultra-modern desert metropolis, gateway between East and West.",
-    preferredDestinations: ["blr", "hyd", "lhr", "sin"] 
+    preferredDestinations: ["blr", "hyd", "lhr", "sin", "bom", "del", "cdg", "doh", "cpt", "cai"] 
   },
   { 
     id: "blr", 
@@ -49,7 +49,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "India", 
     timezone: "GMT+5:30", 
     description: "The Silicon Valley of India, beautiful gardens and tech hubs.",
-    preferredDestinations: ["dxb", "hyd", "sin", "hnd"] 
+    preferredDestinations: ["dxb", "hyd", "sin", "hnd", "bom", "del"] 
   },
   { 
     id: "hyd", 
@@ -62,7 +62,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "India", 
     timezone: "GMT+5:30", 
     description: "Historic City of Pearls, famous for biryani and high-tech parks.",
-    preferredDestinations: ["dxb", "blr", "sin", "lhr"] 
+    preferredDestinations: ["dxb", "blr", "sin", "lhr", "bom", "del"] 
   },
   { 
     id: "sin", 
@@ -75,7 +75,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "Singapore", 
     timezone: "GMT+8", 
     description: "Futuristic garden city state, financial capital of Southeast Asia.",
-    preferredDestinations: ["dxb", "blr", "hyd", "syd", "hnd"] 
+    preferredDestinations: ["dxb", "blr", "hyd", "syd", "hnd", "hkg", "bkk"] 
   },
   { 
     id: "lhr", 
@@ -88,7 +88,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "United Kingdom", 
     timezone: "GMT+1", 
     description: "Vibrant global cultural center, historic architecture and financial hub.",
-    preferredDestinations: ["dxb", "jfk", "hyd"] 
+    preferredDestinations: ["dxb", "jfk", "hyd", "cdg", "fra", "ams"] 
   },
   { 
     id: "jfk", 
@@ -101,7 +101,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "United States", 
     timezone: "GMT-4", 
     description: "The Big Apple, spectacular skyscrapers, global media and finance capital.",
-    preferredDestinations: ["lhr", "syd"] 
+    preferredDestinations: ["lhr", "syd", "lax", "sfo", "yyz", "mex", "gru"] 
   },
   { 
     id: "hnd", 
@@ -114,7 +114,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "Japan", 
     timezone: "GMT+9", 
     description: "High-tech metropolis blending neon skyscrapers and ancient temples.",
-    preferredDestinations: ["sin", "blr", "syd"] 
+    preferredDestinations: ["sin", "blr", "syd", "icn", "hkg"] 
   },
   { 
     id: "syd", 
@@ -127,8 +127,216 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "Australia", 
     timezone: "GMT+10", 
     description: "Stunning harbor city, famous opera house and sun-drenched beaches.",
-    preferredDestinations: ["sin", "jfk", "hnd"] 
+    preferredDestinations: ["sin", "jfk", "hnd", "lax"] 
   },
+  { 
+    id: "bom", 
+    name: "Mumbai", 
+    code: "BOM", 
+    x: 63, 
+    y: 47, 
+    lat: 19.0896,
+    lng: 72.8656,
+    country: "India", 
+    timezone: "GMT+5:30", 
+    description: "Historic gateway city of India, home of Bollywood and massive finance centers.",
+    preferredDestinations: ["dxb", "blr", "hyd", "sin", "lhr"] 
+  },
+  { 
+    id: "del", 
+    name: "New Delhi", 
+    code: "DEL", 
+    x: 63, 
+    y: 42, 
+    lat: 28.5562,
+    lng: 77.1000,
+    country: "India", 
+    timezone: "GMT+5:30", 
+    description: "Vibrant capital of India, blending thousands of years of history with modern politics.",
+    preferredDestinations: ["dxb", "blr", "hyd", "lhr", "hnd"] 
+  },
+  { 
+    id: "lax", 
+    name: "Los Angeles", 
+    code: "LAX", 
+    x: 10, 
+    y: 38, 
+    lat: 33.9425,
+    lng: -118.4081,
+    country: "United States", 
+    timezone: "GMT-8", 
+    description: "Creative capital of the world, golden beaches, Hollywood glamour, and coastal sun.",
+    preferredDestinations: ["jfk", "sfo", "hnd", "syd"] 
+  },
+  { 
+    id: "sfo", 
+    name: "San Francisco", 
+    code: "SFO", 
+    x: 9, 
+    y: 35, 
+    lat: 37.6213,
+    lng: -122.3790,
+    country: "United States", 
+    timezone: "GMT-8", 
+    description: "Innovative technology capital, home of the Golden Gate, rolling hills, and startup hubs.",
+    preferredDestinations: ["lax", "jfk", "hnd"] 
+  },
+  { 
+    id: "cdg", 
+    name: "Paris", 
+    code: "CDG", 
+    x: 41, 
+    y: 29, 
+    lat: 49.0097,
+    lng: 2.5479,
+    country: "France", 
+    timezone: "GMT+1", 
+    description: "The City of Light, global epicenter of art, fashion, gastronomy, and romance.",
+    preferredDestinations: ["lhr", "dxb", "jfk", "fra"] 
+  },
+  { 
+    id: "fra", 
+    name: "Frankfurt", 
+    code: "FRA", 
+    x: 43, 
+    y: 28, 
+    lat: 50.0379,
+    lng: 8.5622,
+    country: "Germany", 
+    timezone: "GMT+1", 
+    description: "Financial heart of continental Europe, towering skyscrapers and historic river banks.",
+    preferredDestinations: ["cdg", "lhr", "dxb", "sin"] 
+  },
+  { 
+    id: "icn", 
+    name: "Seoul", 
+    code: "ICN", 
+    x: 82, 
+    y: 36, 
+    lat: 37.4602,
+    lng: 126.4407,
+    country: "South Korea", 
+    timezone: "GMT+9", 
+    description: "Dynamic high-tech capital, K-pop epicenters, futuristic towers, and royal palaces.",
+    preferredDestinations: ["hnd", "sin", "lax"] 
+  },
+  { 
+    id: "hkg", 
+    name: "Hong Kong", 
+    code: "HKG", 
+    x: 78, 
+    y: 44, 
+    lat: 22.3080,
+    lng: 113.9185,
+    country: "Hong Kong", 
+    timezone: "GMT+8", 
+    description: "Breathtaking vertical skyline, bustling harbor, shopping, and culinary wonders.",
+    preferredDestinations: ["sin", "hnd", "dxb", "lhr"] 
+  },
+  { 
+    id: "gru", 
+    name: "São Paulo", 
+    code: "GRU", 
+    x: 31, 
+    y: 72, 
+    lat: -23.4356,
+    lng: -46.4731,
+    country: "Brazil", 
+    timezone: "GMT-3", 
+    description: "Huge cultural melting pot, skyscrapers, rich art galleries, and vibrant carnival spirits.",
+    preferredDestinations: ["jfk", "cdg", "cpt"] 
+  },
+  { 
+    id: "cpt", 
+    name: "Cape Town", 
+    code: "CPT", 
+    x: 48, 
+    y: 77, 
+    lat: -33.9715,
+    lng: 18.6021,
+    country: "South Africa", 
+    timezone: "GMT+2", 
+    description: "Stunning coastal city bounded by Table Mountain, vineyards, and white sand beaches.",
+    preferredDestinations: ["dxb", "lhr", "gru"] 
+  },
+  { 
+    id: "cai", 
+    name: "Cairo", 
+    code: "CAI", 
+    x: 49, 
+    y: 39, 
+    lat: 30.1219,
+    lng: 31.4056,
+    country: "Egypt", 
+    timezone: "GMT+2", 
+    description: "The Cradle of Civilization, ancient pyramids, Nile cruises, and bustling bazaars.",
+    preferredDestinations: ["dxb", "lhr", "fra"] 
+  },
+  { 
+    id: "yyz", 
+    name: "Toronto", 
+    code: "YYZ", 
+    x: 21, 
+    y: 30, 
+    lat: 43.6777,
+    lng: -79.6248,
+    country: "Canada", 
+    timezone: "GMT-5", 
+    description: "Diverse cultural hub of Canada, CN tower views, lakeside parks, and active finance sectors.",
+    preferredDestinations: ["jfk", "lhr", "lax"] 
+  },
+  { 
+    id: "mex", 
+    name: "Mexico City", 
+    code: "MEX", 
+    x: 16, 
+    y: 47, 
+    lat: 19.4363,
+    lng: -99.0721,
+    country: "Mexico", 
+    timezone: "GMT-6", 
+    description: "Ancient Aztec origins, beautiful spanish architecture, museums, and rich street food.",
+    preferredDestinations: ["jfk", "lax", "gru"] 
+  },
+  { 
+    id: "bkk", 
+    name: "Bangkok", 
+    code: "BKK", 
+    x: 72, 
+    y: 50, 
+    lat: 13.6900,
+    lng: 100.7501,
+    country: "Thailand", 
+    timezone: "GMT+7", 
+    description: "Ornate shrines, vibrant street life, floating markets, and rich Thailand culinary arts.",
+    preferredDestinations: ["sin", "hnd", "dxb", "blr"] 
+  },
+  { 
+    id: "doh", 
+    name: "Doha", 
+    code: "DOH", 
+    x: 53, 
+    y: 41, 
+    lat: 25.2731,
+    lng: 51.6081,
+    country: "Qatar", 
+    timezone: "GMT+3", 
+    description: "Sleek modern coastline, Islamic arts, beautiful desert dunes, and global transit hubs.",
+    preferredDestinations: ["dxb", "lhr", "hyd", "sin"] 
+  },
+  { 
+    id: "ams", 
+    name: "Amsterdam", 
+    code: "AMS", 
+    x: 41, 
+    y: 27, 
+    lat: 52.3105,
+    lng: 4.7683,
+    country: "Netherlands", 
+    timezone: "GMT+1", 
+    description: "Canals, tulips, art museums, and incredibly bicycle-friendly cobblestone streets.",
+    preferredDestinations: ["lhr", "cdg", "dxb", "jfk"] 
+  }
 ];
 
 interface TravelHistoryItem {
