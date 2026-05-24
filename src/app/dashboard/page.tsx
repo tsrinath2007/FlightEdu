@@ -36,6 +36,7 @@ export default function DashboardPage() {
   const [userStreakFreezes, setUserStreakFreezes] = useState<number>(2);
   const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
   const [flightInvites, setFlightInvites] = useState<any[]>([]);
+  const [adminNotifs, setAdminNotifs] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
 
   // Load custom user details and avatar on user changes
@@ -95,6 +96,22 @@ export default function DashboardPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.invites) setFlightInvites(data.invites);
+      })
+      .catch(() => {});
+
+    // 6. Fetch admin coin notifications
+    fetch("/api/user/notifications")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.notifications) {
+          try {
+            const dismissed = JSON.parse(localStorage.getItem("dismissed_admin_notifs") || "[]") as string[];
+            const active = data.notifications.filter((n: any) => !dismissed.includes(n.id));
+            setAdminNotifs(active);
+          } catch {
+            setAdminNotifs(data.notifications);
+          }
+        }
       })
       .catch(() => {});
   }, [user]);
@@ -163,6 +180,15 @@ export default function DashboardPage() {
     } catch {}
   };
 
+  const handleDismissAdminNotif = (notifId: string) => {
+    try {
+      const dismissed = JSON.parse(localStorage.getItem("dismissed_admin_notifs") || "[]") as string[];
+      dismissed.push(notifId);
+      localStorage.setItem("dismissed_admin_notifs", JSON.stringify(dismissed));
+      setAdminNotifs((prev) => prev.filter((n) => n.id !== notifId));
+    } catch {}
+  };
+
   async function handleSignOut() {
     const { createClient: makeClient } = await import("@/lib/supabase/client");
     const supabase = makeClient();
@@ -209,7 +235,7 @@ export default function DashboardPage() {
 
           {/* Notifications Bell */}
           {!loading && user && (() => {
-            const totalNotifs = incomingRequests.length + flightInvites.length;
+            const totalNotifs = incomingRequests.length + flightInvites.length + adminNotifs.length;
             return (
               <div className="relative">
                 <button
@@ -314,6 +340,33 @@ export default function DashboardPage() {
                                           Decline
                                         </button>
                                       </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* 3. Admin Coin Grants */}
+                              {adminNotifs.length > 0 && (
+                                <div className="space-y-2">
+                                  <p className="text-[7px] font-mono tracking-widest text-yellow-400 uppercase font-bold border-b border-white/5 pb-1">✦ Crew Treasury Alerts ✦</p>
+                                  {adminNotifs.map((notif) => (
+                                    <div key={notif.id} className="flex flex-col gap-2 bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-2 relative group animate-fade-in">
+                                      <div className="flex items-center gap-2">
+                                        <div className="size-6 rounded-lg bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center text-[10px]">
+                                          🪙
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-[9px] font-bold text-white leading-tight">Admin Reward</p>
+                                          <p className="text-[7px] text-white/70 mt-0.5">{notif.reason}</p>
+                                          <p className="text-[6px] font-mono text-white/30 mt-0.5">{new Date(notif.createdAt).toLocaleDateString()}</p>
+                                        </div>
+                                      </div>
+                                      <button
+                                        onClick={() => handleDismissAdminNotif(notif.id)}
+                                        className="absolute top-2 right-2 text-[8px] text-white/30 hover:text-white/70 cursor-pointer"
+                                      >
+                                        ✕
+                                      </button>
                                     </div>
                                   ))}
                                 </div>
