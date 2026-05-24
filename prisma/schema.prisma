@@ -71,6 +71,7 @@ model SessionParticipant {
   completed      Boolean   @default(false)
   isAccepted     Boolean   @default(true)
   seat           String?   // Real-time seating alignment sync
+  coinsEarned    Int       @default(0)
 
   session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id])

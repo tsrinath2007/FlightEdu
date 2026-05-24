@@ -385,8 +385,13 @@ export default function InteractiveMapPage() {
               Math.round(h.hoursCompleted * 60)
             );
             
-            // Coins earned is based on time, capped strictly at a maximum of 100 focus coins per flight
-            const coins = Math.min(100, Math.round(actualMinutes * 1.6));
+            // Retrieve exact coinsEarned from database, falling back to legacy dynamic logic if 0 and completed/time suggests otherwise
+            let coins = h.coinsEarned;
+            if (coins === 0 && h.hoursCompleted > 0 && h.completed) {
+              coins = Math.min(100, Math.round(actualMinutes * 1.6));
+            } else if (h.completed === false && h.session.mode === "HARDCORE" && coins === 0) {
+              coins = -500;
+            }
 
             const start = h.joinedAt ? new Date(h.joinedAt) : new Date();
             const end = h.leftAt 

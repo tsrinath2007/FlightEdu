@@ -11,11 +11,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { coinsEarned, secondsFocused } = await request.json() as {
+    const { coinsEarned, secondsFocused, sessionId, completed } = await request.json() as {
       coinsEarned: number;
       secondsFocused?: number;
+      sessionId?: string;
+      completed?: boolean;
     };
-    const amount = Math.max(0, Math.round(coinsEarned || 0));
+    const amount = Math.round(coinsEarned || 0);
 
     try {
       // Fetch the current user details for streak calculations
@@ -71,10 +73,35 @@ export async function POST(request: Request) {
         }
       }
 
+      const newCoins = Math.max(0, dbUser.coins + amount);
+
+      // 1. Update the SessionParticipant focus logs if flight is connected
+      if (sessionId) {
+        const actualHours = secondsFocused ? Number((secondsFocused / 3600).toFixed(4)) : 0;
+        try {
+          await prisma.sessionParticipant.update({
+            where: {
+              sessionId_userId: {
+                sessionId,
+                userId: user.id
+              }
+            },
+            data: {
+              hoursCompleted: actualHours,
+              completed: !!completed,
+              coinsEarned: amount
+            }
+          });
+        } catch (err) {
+          console.warn("Failed to update session participant details:", err);
+        }
+      }
+
+      // 2. Persist coins, streaks, and focus metrics to the User record
       const updated = await prisma.user.update({
         where: { id: user.id },
         data: {
-          coins: { increment: amount },
+          coins: newCoins,
           totalHours: { increment: totalHoursIncrement },
           currentStreak: newStreak,
           longestStreak: Math.max(dbUser.longestStreak, newStreak),

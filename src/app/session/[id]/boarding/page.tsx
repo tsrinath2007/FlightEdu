@@ -269,6 +269,9 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
       gateNumber,
     };
     localStorage.setItem(`flight_config_${sessionId}`, JSON.stringify(flightConfig));
+    if (session) {
+      localStorage.setItem(`flight_session_${sessionId}`, JSON.stringify(session));
+    }
 
     setTimeout(() => {
       // Redirect to full study cockpit route!

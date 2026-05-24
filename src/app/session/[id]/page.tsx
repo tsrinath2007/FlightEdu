@@ -632,14 +632,17 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  const syncCoinsToProfile = async () => {
+  const syncCoinsToProfile = async (overrideCoins?: number) => {
+    const finalCoins = overrideCoins !== undefined ? overrideCoins : Math.min(100, Math.round(coinsEarned));
+    const isCompleted = secondsRemaining === 0;
+
     // Persist earned coins back to the localStorage profile cache
     try {
       const cached = localStorage.getItem("flightedu_onboarding");
       if (cached) {
         const parsed = JSON.parse(cached);
         const currentCoins = Number(parsed.coins) || 0;
-        parsed.coins = currentCoins + Math.round(coinsEarned);
+        parsed.coins = Math.max(0, currentCoins + finalCoins);
         localStorage.setItem("flightedu_onboarding", JSON.stringify(parsed));
       }
     } catch {}
@@ -650,8 +653,10 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          coinsEarned: Math.round(coinsEarned),
+          coinsEarned: finalCoins,
           secondsFocused: elapsedSeconds,
+          sessionId: sessionId,
+          completed: isCompleted,
         }),
         keepalive: true,
       });
@@ -661,12 +666,31 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
   };
 
   const handleEject = async () => {
-    if (session?.mode === "HARDCORE") {
+    // Fail-safe check for session mode via state and direct localStorage cache
+    let currentMode = session?.mode;
+    if (!currentMode) {
+      try {
+        const localSession = localStorage.getItem(`flight_session_${sessionId}`);
+        if (localSession) {
+          const parsed = JSON.parse(localSession);
+          currentMode = parsed.mode;
+        }
+      } catch (err) {
+        console.warn("Fail-safe session cache read failed:", err);
+      }
+    }
+
+    let finalCoins = Math.min(100, Math.round(coinsEarned));
+
+    if (currentMode === "HARDCORE") {
       const confirmEject = confirm("⚠️ WARNING: Hardcore Flight Mode engaged. Ejecting early will cost -500 focus coins! Do you still want to eject?");
       if (!confirmEject) return;
+      
+      // Deduct 500 focus coins for early ejection in Hardcore mode!
+      finalCoins = -500;
     }
     if (audioRef.current) audioRef.current.pause();
-    await syncCoinsToProfile();
+    await syncCoinsToProfile(finalCoins);
     router.push("/dashboard");
   };
 
