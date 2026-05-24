@@ -377,6 +377,15 @@ export default function InteractiveMapPage() {
   const [creatingSession, setCreatingSession] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
 
+  // Boarding Code & Joining States
+  const [activeBoardingTab, setActiveBoardingTab] = useState<"router" | "join">("router");
+  const [joinFlightCode, setJoinFlightCode] = useState("");
+  const [joiningFlight, setJoiningFlight] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [joinStatus, setJoinStatus] = useState<"IDLE" | "PENDING" | "ACCEPTED">("IDLE");
+  const [joinedSessionId, setJoinedSessionId] = useState<string | null>(null);
+  const [studySubject, setStudySubject] = useState("");
+
   // Google Maps Style Toggle
   const [mapStyle, setMapStyle] = useState<"hybrid" | "roadmap" | "satellite" | "terrain">("hybrid");
 
@@ -569,14 +578,16 @@ export default function InteractiveMapPage() {
       try {
         const parsed = JSON.parse(cached);
         if (parsed.coins !== undefined) setUserCoins(parsed.coins);
+        if (parsed.studyTime) setStudySubject(parsed.studyTime);
       } catch {}
     }
 
     fetch("/api/user/onboard")
       .then((res) => res.json())
       .then((data) => {
-        if (data.user && data.user.coins !== undefined) {
-          setUserCoins(data.user.coins);
+        if (data.user) {
+          if (data.user.coins !== undefined) setUserCoins(data.user.coins);
+          if (data.user.studyTime) setStudySubject(data.user.studyTime);
         }
       })
       .catch(() => {});
@@ -756,6 +767,13 @@ export default function InteractiveMapPage() {
         }
       }
 
+      // Save initial seat/flight detail configuration cached locally for check-in
+      const initialConfig = {
+        sessionId: data.session.id,
+        studySubject: studySubject.trim() || "Focus Study",
+      };
+      localStorage.setItem(`flight_config_${data.session.id}`, JSON.stringify(initialConfig));
+
       router.push(`/session/${data.session.id}/boarding`);
     } catch (err: any) {
       console.warn("DB offline takeover engaging:", err);
@@ -775,11 +793,136 @@ export default function InteractiveMapPage() {
       };
       
       localStorage.setItem(`flight_session_${mockSessionId}`, JSON.stringify(mockSession));
+      
+      // Save initial seat/flight detail configuration cached locally for check-in
+      const initialConfig = {
+        sessionId: mockSessionId,
+        studySubject: studySubject.trim() || "Focus Study",
+      };
+      localStorage.setItem(`flight_config_${mockSessionId}`, JSON.stringify(initialConfig));
+
       router.push(`/session/${mockSessionId}/boarding`);
     } finally {
       setCreatingSession(false);
     }
   };
+
+  const handleJoinFlightCode = async () => {
+    if (!joinFlightCode.trim()) {
+      setJoinError("Please enter a Boarding Pass Code first.");
+      return;
+    }
+
+    setJoiningFlight(true);
+    setJoinError(null);
+
+    try {
+      const res = await fetch("/api/sessions/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inviteCode: joinFlightCode.trim().toUpperCase(),
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json() as { error?: string };
+        throw new Error(errData.error || "Failed to board flight.");
+      }
+
+      const data = await res.json() as {
+        success: boolean;
+        status: "BOARDED" | "PENDING";
+        sessionId: string;
+        message: string;
+      };
+
+      setJoinedSessionId(data.sessionId);
+
+      // Save initial seat/flight detail configuration cached locally for check-in
+      const initialConfig = {
+        sessionId: data.sessionId,
+        studySubject: studySubject.trim() || "Focus Study",
+      };
+      localStorage.setItem(`flight_config_${data.sessionId}`, JSON.stringify(initialConfig));
+
+      if (data.status === "BOARDED") {
+        setJoinStatus("ACCEPTED");
+        // Public flight, accepted immediately!
+        router.push(`/session/${data.sessionId}/boarding`);
+      } else {
+        // Private flight, request pending host approval!
+        setJoinStatus("PENDING");
+        setJoinError(null);
+      }
+    } catch (err: any) {
+      setJoinError(err.message || "Failed to board flight. Verify your code.");
+    } finally {
+      setJoiningFlight(false);
+    }
+  };
+
+  // Poll for private flight host approval clearance in real-time
+  useEffect(() => {
+    if (joinStatus !== "PENDING" || !joinedSessionId) return;
+
+    let pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/sessions/${joinedSessionId}`);
+        if (res.ok) {
+          const data = await res.json() as {
+            session: {
+              id: string;
+              participants?: Array<{
+                userId: string;
+                isAccepted: boolean;
+              }>;
+            };
+          };
+
+          // Try loading current user's ID
+          let myId = "";
+          const cachedUser = localStorage.getItem("flightedu_onboarding");
+          if (cachedUser) {
+            try {
+              myId = JSON.parse(cachedUser).id || "";
+            } catch {}
+          }
+          if (!myId) {
+            // Fetch from onboard API if cached is missing
+            const onboardRes = await fetch("/api/user/onboard");
+            if (onboardRes.ok) {
+              const onboardData = await onboardRes.json();
+              myId = onboardData.user?.id || "";
+            }
+          }
+
+          if (data.session && data.session.participants) {
+            const myParticipant = data.session.participants.find(p => p.userId === myId);
+            if (myParticipant) {
+              if (myParticipant.isAccepted) {
+                // Host has accepted the boarding request!
+                clearInterval(pollInterval);
+                setJoinStatus("ACCEPTED");
+                
+                // Get the updated configurations and take off to the boarding gate!
+                router.push(`/session/${joinedSessionId}/boarding`);
+              }
+            } else {
+              // Host declined / deleted participant record!
+              clearInterval(pollInterval);
+              setJoinStatus("IDLE");
+              setJoinError("⚠️ Boarding request was declined by the host pilot.");
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Cleared polling interval due to error check:", err);
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [joinStatus, joinedSessionId, router]);
 
   // Helper to draw a smooth SVG arc curve between two percentages
   const getSvgArcPath = (x1: number, y1: number, x2: number, y2: number) => {
@@ -1241,105 +1384,234 @@ export default function InteractiveMapPage() {
 
           {/* LOWER SECTION: Direct Boarding Manifest (opens when origin & destination chosen!) */}
           <div className="p-5 border-t border-white/5 bg-navy-950 shrink-0">
-            <AnimatePresence mode="wait">
-              {origin && destination ? (() => {
-                // Calculate distance and duration
-                const dx = Math.abs(origin.x - destination.x);
-                const dy = Math.abs(origin.y - destination.y);
-                const distanceVal = Math.sqrt(dx * dx + dy * dy);
-                const durationMinutes = Math.max(30, Math.round(distanceVal * 6));
+            {/* Aerospace Navigation Tabs */}
+            <div className="flex border border-white/10 rounded-2xl bg-white/4 p-1 mb-4 select-none">
+              <button
+                onClick={() => {
+                  setActiveBoardingTab("router");
+                  setJoinError(null);
+                }}
+                className={`flex-1 py-2 text-center rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition duration-300 cursor-pointer ${
+                  activeBoardingTab === "router"
+                    ? "bg-electric-500 text-white shadow-lg shadow-electric-500/20"
+                    : "text-white/50 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                🗺️ Flight Router
+              </button>
+              <button
+                onClick={() => {
+                  setActiveBoardingTab("join");
+                  setJoinError(null);
+                }}
+                className={`flex-1 py-2 text-center rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition duration-300 cursor-pointer ${
+                  activeBoardingTab === "join"
+                    ? "bg-electric-500 text-white shadow-lg shadow-electric-500/20"
+                    : "text-white/50 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                🎫 Boarding Code
+              </button>
+            </div>
 
-                return (
-                  <motion.div
-                    key="boarding-manifest"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 15 }}
-                    className="space-y-4 text-xs"
-                  >
-                    {/* Routing display */}
-                    <div className="flex items-center justify-between bg-white/4 border border-white/5 p-3 rounded-2xl">
-                      <div className="text-center">
-                        <span className="font-mono text-base font-extrabold text-white">{origin.code}</span>
-                        <p className="text-[9px] text-white/45 mt-0.5 truncate max-w-[60px]">{origin.name}</p>
-                      </div>
-                      
-                      <div className="flex-1 flex flex-col items-center justify-center px-2">
-                        <span className="text-[8px] font-mono text-electric-400 font-bold uppercase">{durationMinutes} min flight</span>
-                        <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent relative mt-1">
-                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rounded-full bg-electric-400 flex items-center justify-center shadow-lg">
-                            <span className="text-[8px]">✈️</span>
+            <AnimatePresence mode="wait">
+              {activeBoardingTab === "router" ? (
+                origin && destination ? (() => {
+                  // Calculate distance and duration
+                  const dx = Math.abs(origin.x - destination.x);
+                  const dy = Math.abs(origin.y - destination.y);
+                  const distanceVal = Math.sqrt(dx * dx + dy * dy);
+                  const durationMinutes = Math.max(30, Math.round(distanceVal * 6));
+
+                  return (
+                    <motion.div
+                      key="boarding-manifest"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 15 }}
+                      className="space-y-4 text-xs"
+                    >
+                      {/* Routing display */}
+                      <div className="flex items-center justify-between bg-white/4 border border-white/5 p-3 rounded-2xl">
+                        <div className="text-center">
+                          <span className="font-mono text-base font-extrabold text-white">{origin.code}</span>
+                          <p className="text-[9px] text-white/45 mt-0.5 truncate max-w-[60px]">{origin.name}</p>
+                        </div>
+                        
+                        <div className="flex-1 flex flex-col items-center justify-center px-2">
+                          <span className="text-[8px] font-mono text-electric-400 font-bold uppercase">{durationMinutes} min flight</span>
+                          <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent relative mt-1">
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rounded-full bg-electric-400 flex items-center justify-center shadow-lg">
+                              <span className="text-[8px]">✈️</span>
+                            </div>
                           </div>
+                        </div>
+
+                        <div className="text-center">
+                          <span className="font-mono text-base font-extrabold text-white">{destination.code}</span>
+                          <p className="text-[9px] text-white/45 mt-0.5 truncate max-w-[60px]">{destination.name}</p>
                         </div>
                       </div>
 
-                      <div className="text-center">
-                        <span className="font-mono text-base font-extrabold text-white">{destination.code}</span>
-                        <p className="text-[9px] text-white/45 mt-0.5 truncate max-w-[60px]">{destination.name}</p>
+                      {/* Flight mode settings */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setSessionMode(sessionMode === "CHILL" ? "HARDCORE" : "CHILL")}
+                          className={`p-2.5 rounded-xl border transition text-left flex flex-col ${
+                            sessionMode === "HARDCORE"
+                              ? "border-red-500/40 bg-red-500/5 text-red-400"
+                              : "border-white/5 bg-white/4 text-white/70 hover:text-white"
+                          }`}
+                        >
+                          <span className="text-[7.5px] font-mono font-bold uppercase text-white/45 mb-0.5">Flight Mode</span>
+                          <span className="text-[10px] font-bold">{sessionMode === "CHILL" ? "😌 Chill Mode" : "😈 Hardcore"}</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            if (userCoins >= 300) {
+                              setIsPrivate(!isPrivate);
+                            } else {
+                              alert(`Insufficient coins: You need at least 300 focus coins to charter a private flight (Current Balance: 🪙 ${userCoins}).`);
+                            }
+                          }}
+                          className={`p-2.5 rounded-xl border transition text-left flex flex-col ${
+                            isPrivate
+                              ? "border-yellow-500/40 bg-yellow-500/5 text-yellow-400"
+                              : "border-white/5 bg-white/4 text-white/70 hover:text-white"
+                          }`}
+                        >
+                          <span className="text-[7.5px] font-mono font-bold uppercase text-white/45 mb-0.5">Privacy settings</span>
+                          <span className="text-[10px] font-bold">{isPrivate ? "🔒 Private Charter" : "🌍 Public Cabin"}</span>
+                        </button>
                       </div>
-                    </div>
 
-                    {/* Flight mode settings */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => setSessionMode(sessionMode === "CHILL" ? "HARDCORE" : "CHILL")}
-                        className={`p-2.5 rounded-xl border transition text-left flex flex-col ${
-                          sessionMode === "HARDCORE"
-                            ? "border-red-500/40 bg-red-500/5 text-red-400"
-                            : "border-white/5 bg-white/4 text-white/70 hover:text-white"
-                        }`}
+                      {/* Ask Focus Subject (what he is studying) */}
+                      <div className="space-y-1.5 border-t border-white/5 pt-3">
+                        <label className="text-[7.5px] font-bold text-white/45 uppercase tracking-widest">
+                          What are you studying today?
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Next.js, Organic Chemistry, UI Design..."
+                          value={studySubject}
+                          onChange={(e) => setStudySubject(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-[10px] text-white placeholder-white/30 focus:outline-none focus:border-electric-400/60 transition duration-300"
+                        />
+                      </div>
+
+                      {/* Error indicator */}
+                      {errorText && (
+                        <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-2.5 text-[10px] text-red-400">
+                          ⚠️ {errorText}
+                        </div>
+                      )}
+
+                      {/* BOARD FLIGHT DIRECT ACTION BUTTON */}
+                      <Button
+                        size="lg"
+                        className="w-full shadow-lg shadow-electric-500/20 uppercase tracking-widest font-extrabold text-[10px] py-4 bg-gradient-to-r from-electric-500 to-blue-600 hover:from-electric-400 hover:to-blue-500"
+                        loading={creatingSession}
+                        onClick={handleBoardFlight}
                       >
-                        <span className="text-[7.5px] font-mono font-bold uppercase text-white/45 mb-0.5">Flight Mode</span>
-                        <span className="text-[10px] font-bold">{sessionMode === "CHILL" ? "😌 Chill Mode" : "😈 Hardcore"}</span>
-                      </button>
-
+                        {isPrivate
+                          ? `Engage Engines · 🪙 300`
+                          : `${sessionMode === "CHILL" ? "😌" : "😈"} Board Cabin · ${durationMinutes}m flight`}
+                      </Button>
+                    </motion.div>
+                  );
+                })() : (
+                  <motion.div 
+                    key="compass-ready"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-center py-6 text-white/40 leading-relaxed font-mono"
+                  >
+                    <Compass className="size-6 text-white/20 mx-auto mb-2 animate-spin-slow" />
+                    <p className="text-[10px] font-bold text-white/60 uppercase">Flight Router Ready</p>
+                    <p className="text-[8px] text-white/30 max-w-[180px] mx-auto mt-1 leading-normal">
+                      Select a city pin on the radar map to designate departure (🛫) and arrival (🛬) points to board direct!
+                    </p>
+                  </motion.div>
+                )
+              ) : (
+                <motion.div
+                  key="boarding-code-tab"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="space-y-4 text-xs"
+                >
+                  {joinStatus === "PENDING" ? (
+                    <div className="text-center py-6 text-yellow-400 font-mono space-y-4 bg-white/4 border border-white/5 rounded-2xl p-4">
+                      <div className="size-8 rounded-full border-2 border-yellow-500 border-t-transparent animate-spin mx-auto" />
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold uppercase tracking-wider">⏳ SECURING BOARDING CLEARANCE</p>
+                        <p className="text-[8px] text-white/40 max-w-[200px] mx-auto leading-normal">
+                          Request submitted. Waiting for the Host Pilot to clear your entry... Please stand by.
+                        </p>
+                      </div>
                       <button
                         onClick={() => {
-                          if (userCoins >= 300) {
-                            setIsPrivate(!isPrivate);
-                          } else {
-                            alert(`Insufficient coins: You need at least 300 focus coins to charter a private flight (Current Balance: 🪙 ${userCoins}).`);
-                          }
+                          setJoinStatus("IDLE");
+                          setJoinedSessionId(null);
                         }}
-                        className={`p-2.5 rounded-xl border transition text-left flex flex-col ${
-                          isPrivate
-                            ? "border-yellow-500/40 bg-yellow-500/5 text-yellow-400"
-                            : "border-white/5 bg-white/4 text-white/70 hover:text-white"
-                        }`}
+                        className="px-3 py-1 rounded-xl border border-red-500/30 hover:border-red-500/50 bg-red-500/5 text-red-400 font-bold uppercase text-[8px] transition cursor-pointer"
                       >
-                        <span className="text-[7.5px] font-mono font-bold uppercase text-white/45 mb-0.5">Privacy settings</span>
-                        <span className="text-[10px] font-bold">{isPrivate ? "🔒 Private Charter" : "🌍 Public Cabin"}</span>
+                        Cancel Request ❌
                       </button>
                     </div>
-
-                    {/* Error indicator */}
-                    {errorText && (
-                      <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-2.5 text-[10px] text-red-400">
-                        ⚠️ {errorText}
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Ask Focus Subject (what he is studying) */}
+                      <div className="space-y-1.5">
+                        <label className="text-[7.5px] font-bold text-white/45 uppercase tracking-widest">
+                          What are you studying today?
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Next.js, Organic Chemistry, UI Design..."
+                          value={studySubject}
+                          onChange={(e) => setStudySubject(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white placeholder-white/30 focus:outline-none focus:border-electric-400/60 transition"
+                        />
                       </div>
-                    )}
 
-                    {/* BOARD FLIGHT DIRECT ACTION BUTTON */}
-                    <Button
-                      size="lg"
-                      className="w-full shadow-lg shadow-electric-500/20 uppercase tracking-widest font-extrabold text-[10px] py-4 bg-gradient-to-r from-electric-500 to-blue-600 hover:from-electric-400 hover:to-blue-500"
-                      loading={creatingSession}
-                      onClick={handleBoardFlight}
-                    >
-                      {isPrivate
-                        ? `Engage Engines · 🪙 300`
-                        : `${sessionMode === "CHILL" ? "😌" : "😈"} Board Cabin · ${durationMinutes}m flight`}
-                    </Button>
-                  </motion.div>
-                );
-              })() : (
-                <div className="text-center py-6 text-white/40 leading-relaxed font-mono">
-                  <Compass className="size-6 text-white/20 mx-auto mb-2 animate-spin-slow" />
-                  <p className="text-[10px] font-bold text-white/60 uppercase">Flight Router Ready</p>
-                  <p className="text-[8px] text-white/30 max-w-[180px] mx-auto mt-1 leading-normal">
-                    Select a city pin on the radar map to designate departure (🛫) and arrival (🛬) points to board direct!
-                  </p>
-                </div>
+                      {/* Invite Code Input */}
+                      <div className="space-y-1.5">
+                        <label className="text-[7.5px] font-bold text-white/45 uppercase tracking-widest">
+                          Enter Boarding Pass Code
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={8}
+                          placeholder="e.g. A8X9J2K1"
+                          value={joinFlightCode}
+                          onChange={(e) => setJoinFlightCode(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] font-mono font-bold tracking-widest text-center uppercase text-white placeholder-white/30 focus:outline-none focus:border-electric-400/60 transition"
+                        />
+                      </div>
+
+                      {/* Join error */}
+                      {joinError && (
+                        <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-2 text-[9px] text-red-400">
+                          ⚠️ {joinError}
+                        </div>
+                      )}
+
+                      {/* Submit button */}
+                      <Button
+                        size="lg"
+                        className="w-full shadow-lg shadow-electric-500/20 uppercase tracking-widest font-extrabold text-[10px] py-4 bg-gradient-to-r from-electric-500 to-blue-600 hover:from-electric-400 hover:to-blue-500"
+                        loading={joiningFlight}
+                        onClick={handleJoinFlightCode}
+                      >
+                        🎫 Board Cabin via Pass Code
+                      </Button>
+                    </div>
+                  )}
+                </motion.div>
               )}
             </AnimatePresence>
           </div>

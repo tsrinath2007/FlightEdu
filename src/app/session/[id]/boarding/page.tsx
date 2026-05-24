@@ -172,7 +172,10 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
   const [gateNumber, setGateNumber] = useState("B-12");
   const [flightNumber, setFlightNumber] = useState("EK 380");
 
-  // Load session data
+  const [passengerName, setPassengerName] = useState("Pilot Cadet");
+  const [studySubject, setStudySubject] = useState("");
+
+  // Load session data and user profile
   useEffect(() => {
     // Attempt local storage first (highly reliable offline simulation!)
     const localData = localStorage.getItem(`flight_session_${sessionId}`);
@@ -206,6 +209,26 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
           });
         });
     }
+
+    // Load active profile details
+    const localUser = localStorage.getItem("flightedu_onboarding");
+    if (localUser) {
+      try {
+        const parsed = JSON.parse(localUser);
+        if (parsed.name) setPassengerName(parsed.name);
+        if (parsed.studyTime) setStudySubject(parsed.studyTime);
+      } catch {}
+    }
+
+    fetch("/api/user/onboard")
+      .then((res) => res.json())
+      .then((data: any) => {
+        if (data.user) {
+          if (data.user.name) setPassengerName(data.user.name);
+          if (data.user.studyTime) setStudySubject(data.user.studyTime);
+        }
+      })
+      .catch(() => {});
 
     // Generate random Gate & Flight Code
     const gates = ["A-04", "B-12", "C-08", "D-15", "E-20"];
@@ -267,6 +290,8 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
       seatNumber,
       flightNumber,
       gateNumber,
+      studySubject: studySubject.trim() || "Focus Study",
+      mode: session?.mode || "CHILL",
     };
     localStorage.setItem(`flight_config_${sessionId}`, JSON.stringify(flightConfig));
     if (session) {
@@ -527,6 +552,45 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
               </div>
             </div>
 
+            {/* Step 4: Declare Focus Subject */}
+            <div className="rounded-3xl border border-white/10 bg-navy-900/40 p-6 backdrop-blur-md">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-electric-500/20 text-electric-400 text-xs font-bold font-mono">
+                  04
+                </span>
+                <h3 className="font-display text-lg font-bold text-white tracking-wide">
+                  Declare Your Focus Subject
+                </h3>
+              </div>
+
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="e.g. Advanced Next.js, Organic Chemistry, UI Design..."
+                  value={studySubject}
+                  onChange={(e) => setStudySubject(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-electric-400/60 focus:ring-1 focus:ring-electric-400/30 transition duration-300"
+                />
+                
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {["Next.js", "Physics", "Chemistry", "Anatomy", "Japanese", "Calculus", "UI Design"].map((subject) => (
+                    <button
+                      key={subject}
+                      type="button"
+                      onClick={() => setStudySubject(subject)}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition duration-300 ${
+                        studySubject === subject
+                          ? "bg-electric-500/20 border-electric-400 text-electric-300"
+                          : "bg-white/4 border-white/5 text-white/60 hover:bg-white/8 hover:text-white"
+                      }`}
+                    >
+                      📚 {subject}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
           </div>
 
           {/* Right Column: Holographic Boarding Pass Preview */}
@@ -604,7 +668,7 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
                 <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-xs">
                   <div>
                     <p className="text-[9px] font-mono tracking-widest text-white/35 uppercase">Passenger</p>
-                    <p className="font-bold text-white mt-0.5 truncate">Pilot Cadet</p>
+                    <p className="font-bold text-white mt-0.5 truncate">{passengerName}</p>
                   </div>
                   <div>
                     <p className="text-[9px] font-mono tracking-widest text-white/35 uppercase">Cabin Class</p>
@@ -627,6 +691,10 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
                   <div>
                     <p className="text-[9px] font-mono tracking-widest text-white/35 uppercase">Takeoff Mode</p>
                     <p className="font-bold text-emerald-400 mt-0.5">{session.mode}</p>
+                  </div>
+                  <div className="col-span-2 border-t border-white/5 pt-3">
+                    <p className="text-[9px] font-mono tracking-widest text-white/35 uppercase">Study Focus</p>
+                    <p className="font-bold text-yellow-400 mt-0.5 truncate">📚 {studySubject || "Focus Study"}</p>
                   </div>
                 </div>
 

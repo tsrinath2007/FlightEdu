@@ -89,7 +89,8 @@ export async function POST(request: Request) {
             data: {
               hoursCompleted: actualHours,
               completed: !!completed,
-              coinsEarned: amount
+              coinsEarned: amount,
+              leftAt: new Date()
             }
           });
         } catch (err) {

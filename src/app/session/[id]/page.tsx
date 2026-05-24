@@ -46,6 +46,7 @@ interface FlightConfig {
   seatNumber: string;
   flightNumber: string;
   gateNumber: string;
+  studySubject?: string;
 }
 
 interface FlightSession {
@@ -60,6 +61,7 @@ interface FlightSession {
   isPrivate?: boolean;
   hostId?: string;
   inviteCode?: string;
+  participants?: any[];
 }
 
 interface MultiplayerPilot {
@@ -128,18 +130,8 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
   // Multiplayer Seat States
   const [multiplayerPilots, setMultiplayerPilots] = useState<MultiplayerPilot[]>(INITIAL_MULTIPLAYER_PILOTS);
   const [selectedSeatDetails, setSelectedSeatDetails] = useState<MultiplayerPilot | null>(null);
+  const [relocatingSeat, setRelocatingSeat] = useState<string | null>(null);
 
-  const activePilots = React.useMemo(() => {
-    if (session?.isPrivate) {
-      return multiplayerPilots.filter((p) => !!p.userId);
-    }
-    return multiplayerPilots;
-  }, [session?.isPrivate, multiplayerPilots]);
-
-  // Invite friends states
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [friendsList, setFriendsList] = useState<any[]>([]);
-  const [loadingFriends, setLoadingFriends] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
@@ -152,6 +144,63 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
       })
       .catch(() => {});
   }, []);
+
+  const activePilots = React.useMemo(() => {
+    if (session?.isPrivate) {
+      return multiplayerPilots.filter((p) => !!p.userId);
+    }
+    return multiplayerPilots;
+  }, [session?.isPrivate, multiplayerPilots]);
+
+  const isHost = React.useMemo(() => {
+    if (!session || !currentUser) return false;
+    return session.hostId === currentUser.id;
+  }, [session, currentUser]);
+
+  const pendingBoarders = React.useMemo(() => {
+    if (!session || !session.participants) return [];
+    return session.participants.filter((p: any) => !p.isAccepted);
+  }, [session]);
+
+  const handleApproveBoarding = async (targetUserId: string, approve: boolean) => {
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId, approve }),
+      });
+      if (res.ok) {
+        // Optimistically update local session state to trigger instant UI refresh
+        setSession((prev) => {
+          if (!prev || !prev.participants) return prev;
+          if (approve) {
+            return {
+              ...prev,
+              participants: prev.participants.map((p) =>
+                p.userId === targetUserId ? { ...p, isAccepted: true } : p
+              ),
+            };
+          } else {
+            return {
+              ...prev,
+              participants: prev.participants.filter((p) => p.userId !== targetUserId),
+            };
+          }
+        });
+        fetchParticipants();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to process boarding request");
+      }
+    } catch (e) {
+      alert("Failed to process boarding request");
+    }
+  };
+
+  // Invite friends states
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [friendsList, setFriendsList] = useState<any[]>([]);
+  const [loadingFriends, setLoadingFriends] = useState(false);
 
   // Fetch and sync session & participants
   const fetchParticipants = useCallback(async () => {
@@ -173,8 +222,8 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
         const data = await res.json() as { session: FlightSession & { participants?: any[] } };
         setSession(data.session);
         
-        // If private, replace mock pilots with real ones
-        if (data.session.isPrivate && data.session.participants) {
+        // Replace mock pilots with real ones
+        if (data.session.participants) {
           const localUser = localStorage.getItem("flightedu_onboarding");
           let myId = currentUser?.id || "";
           if (!myId && localUser) {
@@ -221,7 +270,15 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
               userId: u.id,
             };
           });
-          setMultiplayerPilots(mapped);
+          
+          if (data.session.isPrivate) {
+            setMultiplayerPilots(mapped);
+          } else {
+            // For public sessions, merge real participants and simulated participants, making sure seats don't overlap!
+            const realSeats = new Set(mapped.map(p => p.seat));
+            const activeSimulated = INITIAL_MULTIPLAYER_PILOTS.filter(p => !realSeats.has(p.seat) && p.seat !== mySeat);
+            setMultiplayerPilots([...mapped, ...activeSimulated]);
+          }
         }
       } else {
         throw new Error();
@@ -285,15 +342,23 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     }
   };
 
-  const syncSeatToDatabase = useCallback(async (seatNum: string) => {
+  const syncSeatToDatabase = useCallback(async (seatNum: string, currentSubject?: string) => {
     try {
-      await fetch(`/api/sessions/${sessionId}/seat`, {
+      const res = await fetch(`/api/sessions/${sessionId}/seat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seatNumber: seatNum }),
+        body: JSON.stringify({ 
+          seatNumber: seatNum,
+          studySubject: currentSubject
+        }),
       });
-    } catch (e) {
+      if (!res.ok) {
+        const errData = await res.json() as { error?: string };
+        throw new Error(errData.error || "This seat is already occupied.");
+      }
+    } catch (e: any) {
       console.warn("Failed to sync seat to database:", e);
+      throw e;
     }
   }, [sessionId]);
 
@@ -392,7 +457,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
       try {
         const parsed = JSON.parse(localConfig);
         setConfig(parsed);
-        syncSeatToDatabase(parsed.seatNumber);
+        syncSeatToDatabase(parsed.seatNumber, parsed.studySubject);
       } catch (e) {
         console.error("Config parse fail:", e);
       }
@@ -428,9 +493,10 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
         seatNumber: "12D",
         flightNumber: "AI 350",
         gateNumber: "T-03",
+        studySubject: "Focus Study",
       };
-      setConfig(def);
-      syncSeatToDatabase(def.seatNumber);
+      setConfig(def as any);
+      syncSeatToDatabase(def.seatNumber, def.studySubject);
     }
 
     fetchParticipants();
@@ -554,17 +620,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
         tap.play().catch(() => {});
       } catch (e) {}
     } else if (!isOccupied && config) {
-      const updatedConfig = { ...config, seatNumber: seatId };
-      setConfig(updatedConfig);
-      localStorage.setItem(`flight_config_${sessionId}`, JSON.stringify(updatedConfig));
-      setSelectedSeatDetails(null);
-      syncSeatToDatabase(seatId);
-
-      try {
-        const slide = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
-        slide.volume = 0.2;
-        slide.play().catch(() => {});
-      } catch (e) {}
+      setRelocatingSeat(seatId);
     }
   };
 
@@ -821,21 +877,35 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
           </div>
         </div>
 
-        {/* Live flight path tracker */}
-        <div className="flex items-center gap-4 bg-black/30 border border-white/5 rounded-full px-5 py-2 font-mono text-xs">
-          <span className="font-extrabold text-white/80">{session.originCode}</span>
-          <div className="w-16 h-[2px] bg-white/10 relative flex items-center justify-center">
-            <motion.div
-              style={{ left: `${Math.min(100, progressPercent)}%` }}
-              className="absolute size-3 rounded-full bg-electric-400 flex items-center justify-center -translate-x-1/2"
-            >
-              <Plane className="size-2 text-navy-950 rotate-[90deg]" />
-            </motion.div>
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Live flight path tracker */}
+          <div className="flex items-center gap-4 bg-black/30 border border-white/5 rounded-full px-5 py-2 font-mono text-xs">
+            <span className="font-extrabold text-white/80">{session.originCode}</span>
+            <div className="w-16 h-[2px] bg-white/10 relative flex items-center justify-center">
+              <motion.div
+                style={{ left: `${Math.min(100, progressPercent)}%` }}
+                className="absolute size-3 rounded-full bg-electric-400 flex items-center justify-center -translate-x-1/2"
+              >
+                <Plane className="size-2 text-navy-950 rotate-[90deg]" />
+              </motion.div>
+            </div>
+            <span className="font-extrabold text-white/80">{session.destinationCode}</span>
+            <span className="text-[10px] text-white/40 border-l border-white/10 pl-3">
+              {flightPhase}
+            </span>
           </div>
-          <span className="font-extrabold text-white/80">{session.destinationCode}</span>
-          <span className="text-[10px] text-white/40 border-l border-white/10 pl-3">
-            {flightPhase}
-          </span>
+
+          {/* Copyable Boarding Code pill */}
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(session?.inviteCode || sessionId.substring(0, 8).toUpperCase());
+              alert("🎫 Boarding Code copied! Share it with your friends.");
+            }}
+            className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/25 rounded-full px-4 py-2 font-mono text-[10px] text-emerald-400 font-bold transition duration-300 cursor-pointer active:scale-95 shadow-md shadow-emerald-500/5 select-none"
+          >
+            <span>🎫 CODE: <strong>{session?.inviteCode || sessionId.substring(0, 8).toUpperCase()}</strong></span>
+            <span className="text-[8px] bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/30 uppercase tracking-wider font-bold">Copy</span>
+          </button>
         </div>
       </div>
 
@@ -847,6 +917,56 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
           {/* Left Column: Instruments, Checklist, Sound Deck */}
           <div className="lg:col-span-4 space-y-6">
             
+            {/* Host Boarding Alerts HUD card */}
+            {isHost && pendingBoarders.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="rounded-3xl border border-yellow-500/30 bg-yellow-500/5 p-6 backdrop-blur-md space-y-4 shadow-xl shadow-yellow-500/5"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="animate-ping size-2 rounded-full bg-yellow-400" />
+                  <h3 className="font-display text-xs font-black tracking-widest text-yellow-400 uppercase">
+                    📡 Boarding Clearance Request
+                  </h3>
+                </div>
+                <p className="text-xs text-white/70 leading-normal">
+                  A cadet is requesting clearance to board this private flight cabin:
+                </p>
+                <div className="space-y-3 pt-1">
+                  {pendingBoarders.map((participant: any) => (
+                    <div key={participant.userId} className="flex flex-col gap-3 bg-white/4 border border-white/5 rounded-2xl p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="size-8 rounded-xl bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center font-display font-extrabold text-yellow-300 text-xs">
+                          {participant.user?.name?.substring(0, 2).toUpperCase() || "CD"}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-white leading-tight">{participant.user?.name || "Pilot Cadet"}</p>
+                          <p className="text-[9px] font-mono text-white/40 mt-0.5 font-bold text-yellow-400">
+                            Subject: {participant.user?.studyTime || "Focus Study"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-[10px]">
+                        <button
+                          onClick={() => handleApproveBoarding(participant.userId, false)}
+                          className="py-2 bg-red-950/40 hover:bg-red-900/60 border border-red-500/30 hover:border-red-500/50 text-red-400 font-bold uppercase tracking-wider rounded-xl transition cursor-pointer"
+                        >
+                          Decline
+                        </button>
+                        <button
+                          onClick={() => handleApproveBoarding(participant.userId, true)}
+                          className="py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase tracking-wider rounded-xl transition cursor-pointer"
+                        >
+                          Approve
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             {/* Holographic Instruments */}
             <div className="rounded-3xl border border-white/10 bg-navy-900/30 p-6 backdrop-blur-md">
               <h3 className="font-display text-xs font-black tracking-widest text-electric-400 uppercase mb-5">
@@ -1940,6 +2060,30 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                 </p>
               </div>
 
+              {/* Copier-Friendly Holographic Boarding Pass Code */}
+              <div className="rounded-2xl border border-electric-500/20 bg-electric-500/5 p-4 flex flex-col items-center justify-center gap-2.5 relative overflow-hidden">
+                <span className="text-[8px] font-mono font-bold tracking-widest text-electric-400 uppercase">
+                  🎫 Flight Boarding Pass Code
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-2xl font-black tracking-widest text-white selection:bg-electric-500">
+                    {session?.inviteCode || sessionId.substring(0, 8).toUpperCase()}
+                  </span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(session?.inviteCode || sessionId.substring(0, 8).toUpperCase());
+                      alert("🎫 Boarding Code copied! Share it with your friends.");
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/70 hover:text-white transition duration-300 cursor-pointer"
+                  >
+                    Copy Code 📋
+                  </button>
+                </div>
+                <p className="text-[9px] text-white/40 text-center">
+                  Share this Boarding Code with your wingman so they can enter it on their radar map and board your flight instantly!
+                </p>
+              </div>
+
               {/* Friends list scrollable */}
               <div className="pt-2">
                 {loadingFriends ? (
@@ -1985,6 +2129,81 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                     })}
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Premium Seating Relocation Confirmation Modal */}
+      <AnimatePresence>
+        {relocatingSeat && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-[#070b18]/80 backdrop-blur-md z-[110] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0c122c]/95 border border-white/10 rounded-3xl w-full max-w-sm p-6 relative shadow-2xl text-center space-y-5"
+            >
+              <div className="size-16 rounded-2xl bg-electric-500/10 border border-electric-500/30 flex items-center justify-center text-2xl mx-auto shadow-[0_0_15px_rgba(56,189,248,0.2)]">
+                💺
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-display font-extrabold text-md text-white">Relocate to Study Pod {relocatingSeat}?</h3>
+                <p className="text-xs text-white/50 leading-relaxed">
+                  Do you want to reassign your focus instruments and dashboard console to seat {relocatingSeat}?
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 pt-2 text-[11px] font-bold uppercase tracking-wider">
+                <button
+                  onClick={() => setRelocatingSeat(null)}
+                  className="py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition duration-300 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    const targetSeat = relocatingSeat;
+                    setRelocatingSeat(null);
+                    
+                    if (config) {
+                      const oldSeat = config.seatNumber;
+                      try {
+                        // Optimistically assign
+                        const updatedConfig = { ...config, seatNumber: targetSeat };
+                        setConfig(updatedConfig);
+                        localStorage.setItem(`flight_config_${sessionId}`, JSON.stringify(updatedConfig));
+                        setSelectedSeatDetails(null);
+                        
+                        await syncSeatToDatabase(targetSeat, config.studySubject);
+                        
+                        try {
+                          const slide = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+                          slide.volume = 0.2;
+                          slide.play().catch(() => {});
+                        } catch (e) {}
+                        
+                        // Re-fetch participants to update local seating visual map immediately
+                        fetchParticipants();
+                      } catch (err: any) {
+                        // Revert if double booked or failed!
+                        const oldConfig = { ...config, seatNumber: oldSeat };
+                        setConfig(oldConfig);
+                        localStorage.setItem(`flight_config_${sessionId}`, JSON.stringify(oldConfig));
+                        alert(err.message || "⚠️ This seat is already taken!");
+                      }
+                    }
+                  }}
+                  className="py-2.5 rounded-xl bg-electric-600 hover:bg-electric-500 text-white transition duration-300 shadow-lg shadow-electric-600/15 cursor-pointer"
+                >
+                  Confirm
+                </button>
               </div>
             </motion.div>
           </motion.div>
