@@ -186,11 +186,54 @@ export default function ProfilePage() {
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const base64 = ev.target?.result as string;
+      
       // Always save to localStorage first (reliable fallback)
       localStorage.setItem("flightedu_avatar", base64);
       setAvatarPreview(base64);
 
-      // Try uploading to Supabase Storage
+      // Scale and compress image to a small, lightweight Base64 string for database storage fallback
+      let compressedBase64 = base64;
+      try {
+        compressedBase64 = await new Promise<string>((resolve) => {
+          const img = new Image();
+          img.src = base64;
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            const MAX_WIDTH = 150;
+            const MAX_HEIGHT = 150;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width *= MAX_HEIGHT / height;
+                height = MAX_HEIGHT;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              resolve(canvas.toDataURL("image/jpeg", 0.75)); // 75% quality JPEG is extremely small (~10KB)
+            } else {
+              resolve(base64);
+            }
+          };
+          img.onerror = () => resolve(base64);
+        });
+      } catch (cErr) {
+        console.warn("Base64 image compression failed:", cErr);
+      }
+
+      // Try uploading to Supabase Storage first
+      let finalAvatarUrl = compressedBase64;
       try {
         const supabase = createClient();
         if (!supabase) throw new Error("No client");
@@ -203,33 +246,41 @@ export default function ProfilePage() {
           .upload(path, file, { upsert: true, contentType: file.type });
         if (uploadError) throw uploadError;
         const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-        // Save URL to DB
+        finalAvatarUrl = publicUrl;
+      } catch (err) {
+        console.warn("Cloud upload failed, using compressed base64 for DB fallback:", err);
+      }
+
+      try {
+        // Save final URL (either remote URL or compressed Base64) to DB
         await fetch("/api/user/avatar", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ avatarUrl: publicUrl }),
+          body: JSON.stringify({ avatarUrl: finalAvatarUrl }),
         });
-        // Also overwrite localStorage with the remote URL for future loads
-        localStorage.setItem("flightedu_avatar", publicUrl);
+
+        // Also overwrite localStorage with the persisted remote/compressed URL for future loads
+        localStorage.setItem("flightedu_avatar", finalAvatarUrl);
         
         // Update flightedu_onboarding cache to prevent stale overrides on refresh
         const cached = localStorage.getItem("flightedu_onboarding");
         if (cached) {
           try {
             const parsed = JSON.parse(cached);
-            parsed.avatarUrl = publicUrl;
+            parsed.avatarUrl = finalAvatarUrl;
             localStorage.setItem("flightedu_onboarding", JSON.stringify(parsed));
           } catch {}
         }
         
-        setDbUser((prev) => prev ? { ...prev, avatarUrl: publicUrl } : prev);
-      } catch (err) {
-        console.warn("Cloud upload failed, avatar saved locally:", err);
+        setDbUser((prev) => prev ? { ...prev, avatarUrl: finalAvatarUrl } : prev);
+        setFeedback({ type: "success", text: "Profile picture updated ✅" });
+      } catch (dbErr) {
+        console.warn("Failed to sync avatar with DB:", dbErr);
+        setFeedback({ type: "error", text: "Failed to save profile picture to server" });
       } finally {
         setAvatarUploading(false);
+        setTimeout(() => setFeedback(null), 3000);
       }
-      setFeedback({ type: "success", text: "Profile picture updated ✅" });
-      setTimeout(() => setFeedback(null), 3000);
     };
     reader.readAsDataURL(file);
   }
@@ -313,6 +364,12 @@ export default function ProfilePage() {
             setDbUser(dbProfile);
             // Persist to localStorage so next refresh is instant
             localStorage.setItem("flightedu_onboarding", JSON.stringify(dbProfile));
+
+            // Sync DB-authoritative avatarUrl back to cache to prevent stale reverts on refresh
+            if (dbProfile.avatarUrl) {
+              setAvatarPreview(dbProfile.avatarUrl);
+              localStorage.setItem("flightedu_avatar", dbProfile.avatarUrl);
+            }
 
             const userPhone = dbProfile.phone || "";
             let cc = "+91";
