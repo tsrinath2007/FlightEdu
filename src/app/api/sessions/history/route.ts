@@ -15,7 +15,6 @@ export async function GET() {
     const history = await prisma.sessionParticipant.findMany({
       where: {
         userId: user.id,
-        completed: true,
       },
       include: {
         session: true,

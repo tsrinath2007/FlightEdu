@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -16,6 +16,8 @@ interface CityHub {
   code: string;
   x: number; // SVG coordinate percent
   y: number; // SVG coordinate percent
+  lat: number; // Real GPS Latitude
+  lng: number; // Real GPS Longitude
   country: string;
   timezone: string;
   description: string;
@@ -29,6 +31,8 @@ const GLOBAL_HUBS: CityHub[] = [
     code: "DXB", 
     x: 52, 
     y: 43, 
+    lat: 25.2532,
+    lng: 55.3657,
     country: "UAE", 
     timezone: "GMT+4", 
     description: "Ultra-modern desert metropolis, gateway between East and West.",
@@ -40,6 +44,8 @@ const GLOBAL_HUBS: CityHub[] = [
     code: "BLR", 
     x: 65, 
     y: 52, 
+    lat: 13.1986,
+    lng: 77.7066,
     country: "India", 
     timezone: "GMT+5:30", 
     description: "The Silicon Valley of India, beautiful gardens and tech hubs.",
@@ -51,6 +57,8 @@ const GLOBAL_HUBS: CityHub[] = [
     code: "HYD", 
     x: 64, 
     y: 49, 
+    lat: 17.2403,
+    lng: 78.4294,
     country: "India", 
     timezone: "GMT+5:30", 
     description: "Historic City of Pearls, famous for biryani and high-tech parks.",
@@ -62,6 +70,8 @@ const GLOBAL_HUBS: CityHub[] = [
     code: "SIN", 
     x: 74, 
     y: 60, 
+    lat: 1.3502,
+    lng: 103.9915,
     country: "Singapore", 
     timezone: "GMT+8", 
     description: "Futuristic garden city state, financial capital of Southeast Asia.",
@@ -73,6 +83,8 @@ const GLOBAL_HUBS: CityHub[] = [
     code: "LHR", 
     x: 38, 
     y: 28, 
+    lat: 51.4700,
+    lng: -0.4543,
     country: "United Kingdom", 
     timezone: "GMT+1", 
     description: "Vibrant global cultural center, historic architecture and financial hub.",
@@ -84,6 +96,8 @@ const GLOBAL_HUBS: CityHub[] = [
     code: "JFK", 
     x: 20, 
     y: 33, 
+    lat: 40.6413,
+    lng: -73.7781,
     country: "United States", 
     timezone: "GMT-4", 
     description: "The Big Apple, spectacular skyscrapers, global media and finance capital.",
@@ -95,6 +109,8 @@ const GLOBAL_HUBS: CityHub[] = [
     code: "HND", 
     x: 86, 
     y: 38, 
+    lat: 35.5494,
+    lng: 139.7798,
     country: "Japan", 
     timezone: "GMT+9", 
     description: "High-tech metropolis blending neon skyscrapers and ancient temples.",
@@ -106,6 +122,8 @@ const GLOBAL_HUBS: CityHub[] = [
     code: "SYD", 
     x: 88, 
     y: 78, 
+    lat: -33.9461,
+    lng: 151.1772,
     country: "Australia", 
     timezone: "GMT+10", 
     description: "Stunning harbor city, famous opera house and sun-drenched beaches.",
@@ -144,6 +162,190 @@ export default function InteractiveMapPage() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
+
+  // Google Maps Style Toggle
+  const [mapStyle, setMapStyle] = useState<"hybrid" | "roadmap" | "satellite" | "terrain">("hybrid");
+
+  // Leaflet references
+  const mapInstanceRef = useRef<any>(null);
+  const [leafletLoaded, setLeafletLoaded] = useState(false);
+
+  useEffect(() => {
+    // 1. Inject Leaflet CSS
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link");
+      link.id = "leaflet-css";
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+
+    // 2. Inject Leaflet JS
+    if (!document.getElementById("leaflet-js")) {
+      const script = document.createElement("script");
+      script.id = "leaflet-js";
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.onload = () => {
+        setLeafletLoaded(true);
+      };
+      document.head.appendChild(script);
+    } else {
+      setLeafletLoaded(true);
+    }
+  }, []);
+
+  // Initialize or update the map
+  useEffect(() => {
+    if (!leafletLoaded || !GLOBAL_HUBS) return;
+
+    const L = (window as any).L;
+    if (!L) return;
+
+    // Check if map container exists in DOM
+    const container = document.getElementById("leaflet-map-viewport");
+    if (!container) return;
+
+    // Clean up old map instance if it exists
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+    }
+
+    // Initialize Leaflet map
+    const map = L.map("leaflet-map-viewport", {
+      center: [20.0, 30.0],
+      zoom: 2,
+      minZoom: 2,
+      maxZoom: 18,
+      worldCopyJump: true,
+      zoomControl: false, // Custom position Zoom controls below
+    });
+
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+
+    mapInstanceRef.current = map;
+
+    // Select Google Maps tiles URL based on selected style
+    // lyrs keys: m = roadmap (Standard Streets), s = satellite (Only), y = hybrid (Sat + Roads), t = terrain (Terrain)
+    let mapUrl = "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"; // Default Hybrid
+    if (mapStyle === "roadmap") mapUrl = "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
+    if (mapStyle === "satellite") mapUrl = "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}";
+    if (mapStyle === "terrain") mapUrl = "https://mt1.google.com/vt/lyrs=t&x={x}&y={y}&z={z}";
+
+    L.tileLayer(mapUrl, {
+      maxZoom: 20,
+      attribution: "&copy; Google Maps",
+    }).addTo(map);
+
+    // Plot hubs as custom interactive markers
+    GLOBAL_HUBS.forEach((city) => {
+      const isSelected = selectedCity?.id === city.id;
+      const isOrigin = origin?.id === city.id;
+      const isDest = destination?.id === city.id;
+
+      let colorClass = "text-white/60";
+      let coreBg = "bg-[#050a17] border-white/40";
+      let pingRing = "";
+
+      if (isOrigin) {
+        colorClass = "text-emerald-400 font-extrabold";
+        coreBg = "bg-emerald-400 border-white shadow-[0_0_10px_#10b981]";
+        pingRing = "border-emerald-400 animate-pulse";
+      } else if (isDest) {
+        colorClass = "text-amber-400 font-extrabold";
+        coreBg = "bg-amber-400 border-white shadow-[0_0_10px_#f59e0b]";
+        pingRing = "border-amber-400 animate-pulse";
+      } else if (isSelected) {
+        colorClass = "text-electric-400 font-extrabold";
+        coreBg = "bg-electric-400 border-white shadow-[0_0_10px_#0ea5e9] scale-125";
+        pingRing = "border-electric-400 animate-pulse";
+      }
+
+      // Leaflet divIcon
+      const iconHtml = `
+        <div class="relative flex flex-col items-center select-none" style="transform: translate(0, 0);">
+          ${
+            pingRing
+              ? `<div class="absolute -top-2 size-8 rounded-full border-2 ${pingRing} opacity-50 pointer-events-none"></div>`
+              : ""
+          }
+          <div class="size-3.5 rounded-full border-2 shadow-lg ${coreBg}"></div>
+          <div class="mt-1 px-1.5 py-0.5 rounded-md bg-[#0a0f26]/90 border border-white/10 backdrop-blur-sm text-[7.5px] font-mono tracking-wider font-extrabold uppercase shadow-sm ${colorClass}">
+            ${city.code}
+          </div>
+        </div>
+      `;
+
+      const customIcon = L.divIcon({
+        className: "custom-hub-icon-wrap",
+        html: iconHtml,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+      });
+
+      const marker = L.marker([city.lat, city.lng], { icon: customIcon }).addTo(map);
+      marker.on("click", () => {
+        handleSelectCity(city);
+      });
+    });
+
+    // Draw active flight route polyline
+    if (origin && destination) {
+      const routeCoords = [
+        [origin.lat, origin.lng],
+        [destination.lat, destination.lng],
+      ];
+
+      // Draw thick glowing blue underlay
+      L.polyline(routeCoords, {
+        color: "#0ea5e9",
+        weight: 6,
+        opacity: 0.25,
+      }).addTo(map);
+
+      // Draw active animating flight line
+      L.polyline(routeCoords, {
+        color: isPrivate ? "#fbbf24" : "#38bdf8",
+        weight: 3,
+        opacity: 0.9,
+        dashArray: "8, 8",
+        className: "animated-flight-line",
+      }).addTo(map);
+
+      // Fit map bounds to show full route
+      map.fitBounds(L.latLngBounds(routeCoords), {
+        padding: [60, 60],
+        animate: true,
+        duration: 1.2,
+      });
+    } else if (selectedCity) {
+      // Fly to selected city hub
+      map.flyTo([selectedCity.lat, selectedCity.lng], 4, {
+        animate: true,
+        duration: 1.5,
+      });
+    }
+
+    // Draw past travel history dashed flight paths
+    travelHistory.forEach((hist) => {
+      const oCity = GLOBAL_HUBS.find((h) => h.code === hist.originCode);
+      const dCity = GLOBAL_HUBS.find((h) => h.code === hist.destinationCode);
+      if (oCity && dCity) {
+        L.polyline(
+          [
+            [oCity.lat, oCity.lng],
+            [dCity.lat, dCity.lng],
+          ],
+          {
+            color: "#10b981", // Emerald green for past travel paths!
+            weight: 2,
+            opacity: 0.45,
+            dashArray: "3, 5",
+          }
+        ).addTo(map);
+      }
+    });
+  }, [leafletLoaded, selectedCity, origin, destination, travelHistory, mapStyle]);
 
   // Load user profile & travel history on mount
   useEffect(() => {
@@ -370,224 +572,81 @@ export default function InteractiveMapPage() {
                 Clear Route
               </button>
             )}
+            </div>
+                  {/* Google Maps Style Toggle */}
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-1 rounded-full bg-navy-950/90 border border-white/10 p-0.5 backdrop-blur-md shadow-lg">
+            {[
+              { id: "hybrid", label: "🛰️ Hybrid" },
+              { id: "roadmap", label: "🗺️ Streets" },
+              { id: "satellite", label: "🛸 Sat" },
+              { id: "terrain", label: "🏔️ Terrain" }
+            ].map((style) => (
+              <button
+                key={style.id}
+                onClick={() => setMapStyle(style.id as any)}
+                className={`px-2.5 py-1 rounded-full text-[8px] font-bold uppercase tracking-wider transition ${
+                  mapStyle === style.id
+                    ? "bg-electric-500 text-white shadow-md shadow-electric-500/20"
+                    : "text-white/40 hover:text-white/70"
+                }`}
+              >
+                {style.label}
+              </button>
+            ))}
           </div>
 
-          <div className="absolute top-4 right-4 z-20 text-right font-mono text-[8px] text-white/30 hidden sm:block leading-tight">
-            <span>RADAR UNIT #28A</span><br />
-            <span>GRID SYSTEM ACTIVE</span>
-          </div>
-
-          {/* THE SVG WORLD MAP FLIGHT TELEMETRY GRID */}
-          <div className="flex-1 min-h-[300px] lg:min-h-[450px] relative flex items-center justify-center p-2">
+          {/* THE REAL INTERACTIVE GOOGLE MAPS TELEMETRY VIEWPORT */}
+          <div className="flex-1 min-h-[300px] lg:min-h-[450px] relative">
+            <div id="leaflet-map-viewport" className="w-full h-full absolute inset-0 z-0 bg-[#070b19]" />
             
-            {/* SVG Flight Deck Board */}
-            <svg 
-              className="absolute inset-0 w-full h-full select-none" 
-              viewBox="0 0 100 100" 
-              preserveAspectRatio="none"
-            >
-              <defs>
-                {/* Neon route gradients */}
-                <linearGradient id="neon-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.8" />
-                  <stop offset="100%" stopColor="#0369a1" stopOpacity="0.2" />
-                </linearGradient>
-                <linearGradient id="neon-amber" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.8" />
-                  <stop offset="100%" stopColor="#d97706" stopOpacity="0.2" />
-                </linearGradient>
-                <linearGradient id="neon-green" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.7" />
-                  <stop offset="100%" stopColor="#047857" stopOpacity="0.1" />
-                </linearGradient>
-
-                {/* Grid line pattern */}
-                <pattern id="grid-dots" width="4" height="4" patternUnits="userSpaceOnUse">
-                  <circle cx="1" cy="1" r="0.5" fill="rgba(255,255,255,0.04)" />
-                </pattern>
-              </defs>
-
-              {/* Background pattern */}
-              <rect width="100%" height="100%" fill="url(#grid-dots)" />
-
-              {/* Draw latitude/longitude flight deck lines */}
-              <line x1="0" y1="20" x2="100" y2="20" stroke="rgba(255,255,255,0.03)" strokeWidth="0.15" />
-              <line x1="0" y1="40" x2="100" y2="40" stroke="rgba(255,255,255,0.03)" strokeWidth="0.15" />
-              <line x1="0" y1="60" x2="100" y2="60" stroke="rgba(255,255,255,0.03)" strokeWidth="0.15" />
-              <line x1="0" y1="80" x2="100" y2="80" stroke="rgba(255,255,255,0.03)" strokeWidth="0.15" />
-              <line x1="20" y1="0" x2="20" y2="100" stroke="rgba(255,255,255,0.03)" strokeWidth="0.15" />
-              <line x1="40" y1="0" x2="40" y2="100" stroke="rgba(255,255,255,0.03)" strokeWidth="0.15" />
-              <line x1="60" y1="0" x2="60" y2="100" stroke="rgba(255,255,255,0.03)" strokeWidth="0.15" />
-              <line x1="80" y1="0" x2="80" y2="100" stroke="rgba(255,255,255,0.03)" strokeWidth="0.15" />
-
-              {/* Draw abstract continent paths for aesthetic styling (cyber grid style) */}
-              {/* North America */}
-              <path d="M 5 20 Q 15 22 25 35 T 28 50 T 20 52 Z" fill="rgba(255,255,255,0.012)" stroke="rgba(255,255,255,0.02)" strokeWidth="0.1" />
-              {/* South America */}
-              <path d="M 22 55 Q 26 65 28 85 T 32 95 Z" fill="rgba(255,255,255,0.012)" stroke="rgba(255,255,255,0.02)" strokeWidth="0.1" />
-              {/* Eurasia / Africa */}
-              <path d="M 35 15 Q 50 18 68 25 T 88 35 T 92 50 T 78 68 Z" fill="rgba(255,255,255,0.012)" stroke="rgba(255,255,255,0.02)" strokeWidth="0.1" />
-              {/* Australia */}
-              <path d="M 80 72 Q 88 74 92 82 T 84 90 Z" fill="rgba(255,255,255,0.012)" stroke="rgba(255,255,255,0.02)" strokeWidth="0.1" />
-
-              {/* DRAW PREFERRED ROUTES OF SELECTED CITY (glowing cyan curves) */}
-              {selectedCity && !origin && !destination && selectedCity.preferredDestinations.map((destId) => {
-                const dest = GLOBAL_HUBS.find((h) => h.id === destId);
-                if (!dest) return null;
-                const pathStr = getSvgArcPath(selectedCity.x, selectedCity.y, dest.x, dest.y);
-                return (
-                  <g key={dest.id}>
-                    {/* Outer glowing path */}
-                    <motion.path 
-                      d={pathStr}
-                      fill="transparent"
-                      stroke="#38bdf8"
-                      strokeWidth="0.6"
-                      opacity="0.25"
-                    />
-                    {/* Animated dash line */}
-                    <motion.path 
-                      d={pathStr}
-                      fill="transparent"
-                      stroke="url(#neon-cyan)"
-                      strokeWidth="0.4"
-                      strokeDasharray="4 2"
-                      animate={{ strokeDashoffset: [-12, 0] }}
-                      transition={{ ease: "linear", duration: 1.5, repeat: Infinity }}
-                    />
-                  </g>
-                );
-              })}
-
-              {/* DRAW CURRENT ACTIVE PLANNED FLIGHT ROUTE (glowing amber animated path) */}
-              {origin && destination && (() => {
-                const pathStr = getSvgArcPath(origin.x, origin.y, destination.x, destination.y);
-                return (
-                  <g>
-                    {/* Deep glow background line */}
-                    <motion.path 
-                      d={pathStr}
-                      fill="transparent"
-                      stroke="#fbbf24"
-                      strokeWidth="1.2"
-                      opacity="0.4"
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
-                      transition={{ duration: 0.8 }}
-                    />
-                    {/* Solid line */}
-                    <motion.path 
-                      d={pathStr}
-                      fill="transparent"
-                      stroke="#fbbf24"
-                      strokeWidth="0.6"
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
-                      transition={{ duration: 0.8 }}
-                    />
-                    {/* Telemetry pulse point */}
-                    <motion.path 
-                      d={pathStr}
-                      fill="transparent"
-                      stroke="url(#neon-amber)"
-                      strokeWidth="0.5"
-                      strokeDasharray="5 3"
-                      animate={{ strokeDashoffset: [-16, 0] }}
-                      transition={{ ease: "linear", duration: 1.2, repeat: Infinity }}
-                    />
-                  </g>
-                );
-              })()}
-
-              {/* DRAW COMPLETED HISTORY FLIGHTS (glowing green dashed curves) */}
-              {travelHistory.map((item, idx) => {
-                const oCity = GLOBAL_HUBS.find((h) => h.code === item.originCode);
-                const dCity = GLOBAL_HUBS.find((h) => h.code === item.destinationCode);
-                if (!oCity || !dCity) return null;
-                const pathStr = getSvgArcPath(oCity.x, oCity.y, dCity.x, dCity.y);
-                return (
-                  <g key={`${item.id}-${idx}`}>
-                    <path 
-                      d={pathStr}
-                      fill="transparent"
-                      stroke="#10b981"
-                      strokeWidth="0.3"
-                      strokeDasharray="2 3"
-                      opacity="0.3"
-                    />
-                  </g>
-                );
-              })}
-
-            </svg>
-
-            {/* DRAW CITY INTERACTIVE PINS */}
-            {GLOBAL_HUBS.map((city) => {
-              const isSelected = selectedCity?.id === city.id;
-              const isOrigin = origin?.id === city.id;
-              const isDest = destination?.id === city.id;
-              
-              return (
-                <div
-                  key={city.id}
-                  onClick={() => handleSelectCity(city)}
-                  className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10"
-                  style={{ top: `${city.y}%`, left: `${city.x}%` }}
-                >
-                  <div className="relative group flex flex-col items-center">
-                    
-                    {/* Ring highlight animation for states */}
-                    <AnimatePresence>
-                      {(isSelected || isOrigin || isDest) && (
-                        <motion.div
-                          initial={{ scale: 0.5, opacity: 0 }}
-                          animate={{ scale: [1, 1.6, 1], opacity: [0.8, 0, 0.8] }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 2.2, repeat: Infinity }}
-                          className={`absolute inset-[-10px] rounded-full border-2 ${
-                            isOrigin 
-                              ? "border-emerald-400" 
-                              : isDest 
-                              ? "border-amber-400" 
-                              : "border-electric-400"
-                          } pointer-events-none`}
-                        />
-                      )}
-                    </AnimatePresence>
-
-                    {/* Glowing Core Pin */}
-                    <div 
-                      className={`size-3 rounded-full border-2 shadow-lg transition duration-300 ${
-                        isOrigin
-                          ? "bg-emerald-400 border-white shadow-emerald-500/40"
-                          : isDest
-                          ? "bg-amber-400 border-white shadow-amber-500/40"
-                          : isSelected
-                          ? "bg-electric-400 border-white shadow-electric-500/40 scale-125"
-                          : "bg-navy-950 border-white/40 hover:bg-white hover:scale-110"
-                      }`}
-                    />
-
-                    {/* HUD Label display */}
-                    <div className="mt-1 px-1.5 py-0.5 rounded-md bg-[#0a0f26]/80 border border-white/5 backdrop-blur-sm text-[7.5px] font-mono tracking-wider font-extrabold uppercase shadow-sm pointer-events-none">
-                      <span className={
-                        isOrigin
-                          ? "text-emerald-400"
-                          : isDest
-                          ? "text-amber-400"
-                          : isSelected
-                          ? "text-electric-400"
-                          : "text-white/60"
-                      }>
-                        {city.code}
-                      </span>
-                    </div>
-
-                  </div>
-                </div>
-              );
-            })}
-
+            {/* Custom Embedded style overrides for premium dark/cyber HUD feel */}
+            <style jsx global>{`
+              .leaflet-container {
+                background: #070b19 !important;
+                font-family: inherit;
+              }
+              .leaflet-bar {
+                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                background: rgba(10, 15, 38, 0.9) !important;
+                backdrop-filter: blur(8px);
+                border-radius: 12px !important;
+                overflow: hidden;
+                box-shadow: 0 4px 25px rgba(0, 0, 0, 0.4) !important;
+              }
+              .leaflet-bar a {
+                background: transparent !important;
+                color: rgba(255, 255, 255, 0.7) !important;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+                transition: all 0.2s;
+              }
+              .leaflet-bar a:hover {
+                color: #fff !important;
+                background: rgba(255, 255, 255, 0.08) !important;
+              }
+              .custom-hub-icon-wrap {
+                background: none !important;
+                border: none !important;
+              }
+              .animated-flight-line {
+                stroke-dasharray: 8, 8;
+                animation: flight-dash-flow 30s linear infinite;
+              }
+              @keyframes flight-dash-flow {
+                to {
+                  stroke-dashoffset: -1000;
+                }
+              }
+              /* Hide standard leaflet attribution for cockpit space styling */
+              .leaflet-control-attribution {
+                background: rgba(7, 11, 25, 0.7) !important;
+                color: rgba(255, 255, 255, 0.3) !important;
+                backdrop-filter: blur(4px);
+                font-size: 8px !important;
+                border-top-left-radius: 8px;
+                border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+                border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+              }
+            `}</style>
           </div>
 
           {/* Map Footer overlay info */}
