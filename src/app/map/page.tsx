@@ -863,9 +863,10 @@ export default function InteractiveMapPage() {
                               <p className="text-[10px] text-white/45 mt-0.5">Flight Completed: {item.completedAt}</p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <span className="text-[10px] font-bold text-emerald-400 font-mono">+{Math.round(item.duration * 0.05 * 10)} XP</span>
-                            <span className="text-[8px] font-mono bg-white/5 rounded px-1 text-white/45 block mt-1 uppercase">{item.mode}</span>
+                          <div className="text-right flex flex-col items-end gap-0.5">
+                            <span className="text-[10px] font-bold text-emerald-400 font-mono">⚡ {item.duration} mins</span>
+                            <span className="text-[10px] font-bold text-yellow-400 font-mono">🪙 {Math.round(item.duration * 3)} coins</span>
+                            <span className="text-[8px] font-mono bg-white/5 rounded px-1.5 py-0.2 text-white/45 block mt-1 uppercase">{item.mode}</span>
                           </div>
                         </div>
                       ))}
