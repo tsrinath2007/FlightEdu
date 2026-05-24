@@ -38,6 +38,9 @@ export default function DashboardPage() {
   const [flightInvites, setFlightInvites] = useState<any[]>([]);
   const [adminNotifs, setAdminNotifs] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [soundEffectsEnabled, setSoundEffectsEnabled] = useState(true);
+  const [focusRemindersEnabled, setFocusRemindersEnabled] = useState(false);
 
   // Load custom user details and avatar on user changes
   useEffect(() => {
@@ -180,6 +183,26 @@ export default function DashboardPage() {
     } catch {}
   };
 
+  useEffect(() => {
+    const sound = localStorage.getItem("sound_effects_enabled");
+    if (sound !== null) setSoundEffectsEnabled(sound === "true");
+
+    const reminders = localStorage.getItem("focus_reminders_enabled");
+    if (reminders !== null) setFocusRemindersEnabled(reminders === "true");
+  }, []);
+
+  const toggleSoundEffects = () => {
+    const nextVal = !soundEffectsEnabled;
+    setSoundEffectsEnabled(nextVal);
+    localStorage.setItem("sound_effects_enabled", String(nextVal));
+  };
+
+  const toggleFocusReminders = () => {
+    const nextVal = !focusRemindersEnabled;
+    setFocusRemindersEnabled(nextVal);
+    localStorage.setItem("focus_reminders_enabled", String(nextVal));
+  };
+
   const handleDismissAdminNotif = (notifId: string) => {
     try {
       const dismissed = JSON.parse(localStorage.getItem("dismissed_admin_notifs") || "[]") as string[];
@@ -231,6 +254,17 @@ export default function DashboardPage() {
               <span>🧊</span>
               <span>{userStreakFreezes}</span>
             </div>
+          )}
+
+          {/* Settings Button */}
+          {!loading && user && (
+            <button
+              onClick={() => setShowSettingsModal(true)}
+              className="p-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition cursor-pointer flex items-center justify-center text-white/70 hover:text-white"
+              title="Open Settings"
+            >
+              <span className="text-xs">⚙️</span>
+            </button>
           )}
 
           {/* Notifications Bell */}
@@ -417,6 +451,40 @@ export default function DashboardPage() {
           </p>
         </div>
 
+        {/* Glowing Gold Admin Coin Alerts Banner */}
+        {adminNotifs.length > 0 && (
+          <div className="mb-4 space-y-2">
+            {adminNotifs.map((notif) => (
+              <motion.div
+                key={notif.id}
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="relative flex items-center justify-between gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 border border-yellow-500/40 p-4 shadow-[0_0_15px_rgba(245,158,11,0.25)] text-left backdrop-blur-md"
+              >
+                <div className="flex items-center gap-3 relative z-10">
+                  <span className="text-2xl animate-pulse">🪙</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-yellow-400 text-sm tracking-wide leading-tight">Focus Reward Granted!</p>
+                    <p className="text-white/80 text-xs font-medium mt-0.5 leading-relaxed">
+                      You received <span className="text-yellow-300 font-extrabold">{notif.amount}</span> focus coins from Admin
+                    </p>
+                    <p className="text-[10px] text-white/55 font-mono mt-1 font-semibold italic">"{notif.reason}"</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleDismissAdminNotif(notif.id)}
+                  className="relative z-10 p-1.5 rounded-full hover:bg-white/10 transition cursor-pointer text-white/40 hover:text-white border-none bg-transparent"
+                  title="Dismiss notification"
+                >
+                  ✕
+                </button>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
         <div className="space-y-2.5">
           <AnimatePresence initial={false}>
             {studiers.map((s) => (
@@ -448,14 +516,13 @@ export default function DashboardPage() {
           </AnimatePresence>
         </div>
       </div>
-
       {/* Bottom action */}
       <div className="fixed bottom-0 left-0 right-0 z-30 flex flex-col items-center gap-3 pb-8 pt-4">
         <Link href="/journey">
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            className="flex items-center gap-2.5 rounded-full bg-white/95 px-8 py-3.5 text-base font-semibold text-gray-800 shadow-2xl backdrop-blur"
+            className="flex items-center gap-2.5 rounded-full bg-white/95 px-8 py-3.5 text-base font-semibold text-gray-800 shadow-2xl backdrop-blur cursor-pointer"
           >
             Start a journey ✈️
             <span className="flex gap-0.5">
@@ -469,6 +536,199 @@ export default function DashboardPage() {
         {/* Bottom nav */}
         <BottomNav />
       </div>
+
+      {/* Warm-themed Premium Settings Modal */}
+      <AnimatePresence>
+        {showSettingsModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md overflow-hidden rounded-3xl bg-[#FAF8F5] text-[#4A3E3D] shadow-2xl border border-[#EBE7DF]"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#EBE7DF]">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">⚙️</span>
+                  <h3 className="font-display text-lg font-bold tracking-wide">Flight Control Settings</h3>
+                </div>
+                <button
+                  onClick={() => setShowSettingsModal(false)}
+                  className="p-1 rounded-full hover:bg-[#EBE7DF] transition cursor-pointer text-[#8C7A78] border-none bg-transparent"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                {/* Profile card */}
+                <div className="flex items-center gap-3 rounded-2xl bg-white p-4 border border-[#EBE7DF]">
+                  <img
+                    src={avatarPreview || getAvatarUrl(user?.email ?? "user")}
+                    alt="avatar"
+                    className="size-12 rounded-full border border-[#EBE7DF] bg-[#FAF8F5]"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-[#4A3E3D] truncate">{displayName}</p>
+                    <p className="text-xs text-[#8C7A78] truncate">{user?.email}</p>
+                  </div>
+                  <span className="rounded-full bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider">
+                    Cadet
+                  </span>
+                </div>
+
+                {/* Section: General */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-mono tracking-widest text-[#8C7A78] uppercase font-bold">Preferences</p>
+                  <div className="space-y-2.5">
+                    {/* Language Selection */}
+                    <div className="flex items-center justify-between rounded-xl bg-white p-3.5 border border-[#EBE7DF]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">🌐</span>
+                        <span className="text-sm font-semibold">App Language</span>
+                      </div>
+                      <select 
+                        defaultValue="en"
+                        className="text-xs bg-[#FAF8F5] border border-[#EBE7DF] rounded-lg px-2 py-1 outline-none text-[#4A3E3D] font-medium"
+                      >
+                        <option value="en">English (US)</option>
+                        <option value="tr">Türkçe (TR)</option>
+                        <option value="es">Español (ES)</option>
+                        <option value="ja">日本語 (JP)</option>
+                      </select>
+                    </div>
+
+                    {/* Sound Effects Switch */}
+                    <div className="flex items-center justify-between rounded-xl bg-white p-3.5 border border-[#EBE7DF]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">🔊</span>
+                        <span className="text-sm font-semibold">Sound Effects</span>
+                      </div>
+                      <button
+                        onClick={toggleSoundEffects}
+                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none ${
+                          soundEffectsEnabled ? 'bg-amber-600' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block size-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            soundEffectsEnabled ? 'translate-x-4' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    {/* Focus Reminders Switch */}
+                    <div className="flex items-center justify-between rounded-xl bg-white p-3.5 border border-[#EBE7DF]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">🔔</span>
+                        <span className="text-sm font-semibold">Focus Reminders</span>
+                      </div>
+                      <button
+                        onClick={toggleFocusReminders}
+                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none ${
+                          focusRemindersEnabled ? 'bg-amber-600' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block size-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            focusRemindersEnabled ? 'translate-x-4' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Support */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-mono tracking-widest text-[#8C7A78] uppercase font-bold">Support & Feedback</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-[#EBE7DF] hover:bg-[#FAF8F5] transition cursor-pointer text-center text-xs font-semibold gap-1 text-[#4A3E3D]">
+                      <span>🐛</span>
+                      <span>Report Bug</span>
+                    </button>
+                    <button className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-[#EBE7DF] hover:bg-[#FAF8F5] transition cursor-pointer text-center text-xs font-semibold gap-1 text-[#4A3E3D]">
+                      <span>💡</span>
+                      <span>Share Feedback</span>
+                    </button>
+                    <button className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-[#EBE7DF] hover:bg-[#FAF8F5] transition cursor-pointer text-center text-xs font-semibold gap-1 text-[#4A3E3D]">
+                      <span>✨</span>
+                      <span>Request Feature</span>
+                    </button>
+                    <a 
+                      href="https://instagram.com" 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-[#EBE7DF] hover:bg-[#FAF8F5] transition cursor-pointer text-center text-xs font-semibold gap-1 text-[#4A3E3D]"
+                    >
+                      <span>📸</span>
+                      <span>Instagram</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* Section: About */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-mono tracking-widest text-[#8C7A78] uppercase font-bold">About Flight</p>
+                  <div className="space-y-2.5">
+                    {/* App Version */}
+                    <div className="flex items-center justify-between rounded-xl bg-white p-3.5 border border-[#EBE7DF]">
+                      <span className="text-sm font-semibold">App Version</span>
+                      <span className="text-xs font-mono text-[#8C7A78]">v1.2.0</span>
+                    </div>
+
+                    {/* Referral Code */}
+                    <div className="flex items-center justify-between rounded-xl bg-white p-3.5 border border-[#EBE7DF]">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-sm font-semibold">Referral Code</span>
+                        <span className="text-[10px] text-[#8C7A78]">Share with study buddies</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono bg-[#FAF8F5] border border-[#EBE7DF] px-2 py-1 rounded-md font-bold">
+                          FLY-CADET-77
+                        </span>
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText("FLY-CADET-77");
+                            alert("Referral code copied to clipboard!");
+                          }}
+                          className="p-1 rounded-md bg-[#FAF8F5] hover:bg-[#EBE7DF] border border-[#EBE7DF] transition cursor-pointer text-xs"
+                          title="Copy referral code"
+                        >
+                          📋
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Account Actions */}
+                <div className="pt-2 space-y-2">
+                  <button 
+                    onClick={handleSignOut}
+                    className="w-full py-3 rounded-2xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 transition cursor-pointer text-center font-bold text-sm tracking-wide"
+                  >
+                    Sign out of FlightEdu
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (confirm("Are you absolutely sure you want to delete your cadet profile? This action is permanent and cannot be undone.")) {
+                        alert("Delete account request submitted to ground control.");
+                      }
+                    }}
+                    className="w-full py-3 rounded-2xl hover:bg-red-50 text-red-600/60 hover:text-red-600 transition cursor-pointer text-center font-semibold text-xs"
+                  >
+                    Delete Account
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
