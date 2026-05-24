@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plane, Shield, Compass, Navigation, Award, Volume2, VolumeX, AlertTriangle, 
-  Play, Pause, LogOut, CheckCircle2, ChevronRight, Compass as AltimeterIcon,
+  Play, Pause, LogOut, CheckCircle2, ChevronRight, ChevronLeft, Compass as AltimeterIcon,
   Users, Info, Sparkles, User, RotateCcw, ZoomIn, ZoomOut, ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
   ShoppingBag, Heart
 } from "lucide-react";
@@ -340,6 +340,41 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     } catch (e) {
       alert("Failed to send invite");
     }
+  };
+
+  const [clapCounts, setClapCounts] = useState<Record<string, number>>({});
+  const [cheerCounts, setCheerCounts] = useState<Record<string, number>>({});
+
+  const handleClap = (seat: string) => {
+    setClapCounts(prev => ({ ...prev, [seat]: (prev[seat] || 0) + 1 }));
+    try {
+      const clapAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+      clapAudio.volume = 0.2;
+      clapAudio.play().catch(() => {});
+    } catch {}
+  };
+
+  const handleCheer = (seat: string) => {
+    setCheerCounts(prev => ({ ...prev, [seat]: (prev[seat] || 0) + 1 }));
+    try {
+      const cheerAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+      cheerAudio.volume = 0.2;
+      cheerAudio.play().catch(() => {});
+    } catch {}
+  };
+
+  const handleNextPilot = () => {
+    if (activePilots.length <= 1) return;
+    const currentIndex = activePilots.findIndex(p => p.seat === selectedSeatDetails?.seat);
+    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % activePilots.length;
+    setSelectedSeatDetails(activePilots[nextIndex]);
+  };
+
+  const handlePrevPilot = () => {
+    if (activePilots.length <= 1) return;
+    const currentIndex = activePilots.findIndex(p => p.seat === selectedSeatDetails?.seat);
+    const prevIndex = currentIndex === -1 ? activePilots.length - 1 : (currentIndex - 1 + activePilots.length) % activePilots.length;
+    setSelectedSeatDetails(activePilots[prevIndex]);
   };
 
   const syncSeatToDatabase = useCallback(async (seatNum: string, currentSubject?: string) => {
@@ -1338,70 +1373,140 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                               initial={{ opacity: 0, scale: 0.95 }}
                               animate={{ opacity: 1, scale: 1 }}
                               exit={{ opacity: 0, scale: 0.95 }}
-                              className="rounded-3xl border border-purple-500/20 bg-purple-500/5 p-5 text-center space-y-4 shadow-xl relative overflow-visible"
+                              className="bg-white/5 border border-white/10 rounded-[32px] p-6 text-center space-y-4 shadow-2xl relative overflow-visible backdrop-blur-xl max-w-sm mx-auto w-full"
                             >
-                              <div className="relative size-24 mx-auto flex items-center justify-center overflow-visible">
-                                <CadetAvatar
-                                  size="md"
-                                  hairStyle={selectedSeatDetails.avatarHair}
-                                  hairColor={selectedSeatDetails.avatarHairColor}
-                                  clothing={selectedSeatDetails.avatarClothing}
-                                  eyesStyle={selectedSeatDetails.avatarEyes}
-                                  activity={selectedSeatDetails.avatarActivity}
-                                  isActive={selectedSeatDetails.isActive}
-                                />
-                              </div>
-                              
-                              <div>
-                                <h4 className="font-display font-extrabold text-sm text-purple-300">
-                                  {selectedSeatDetails.name}
-                                </h4>
-                                <p className="text-[10px] text-white/40 font-mono mt-0.5">Study Pod {selectedSeatDetails.seat}</p>
+                              {/* Top Banner details */}
+                              <div className="flex items-center justify-between pb-1 text-left">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xl">
+                                    {selectedSeatDetails.seat.endsWith("A") ? "🇳🇱" : selectedSeatDetails.seat.endsWith("D") ? "🇮🇳" : selectedSeatDetails.seat.endsWith("C") ? "🇸🇬" : "🇺🇸"}
+                                  </span>
+                                  <div className="text-left">
+                                    <h4 className="font-display font-extrabold text-sm text-white tracking-wide leading-tight">
+                                      {selectedSeatDetails.name}
+                                    </h4>
+                                    <p className="text-[9px] text-white/40 font-mono">
+                                      @{selectedSeatDetails.userId ? `pilot_${selectedSeatDetails.userId.substring(0, 5)}` : `crew_${selectedSeatDetails.seat}`}
+                                    </p>
+                                  </div>
+                                </div>
+                                
+                                {/* Time Elapsed Badge */}
+                                <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 text-emerald-400 font-bold font-mono text-[10px] sm:text-xs shadow-[0_0_8px_rgba(16,185,129,0.15)]">
+                                  {selectedSeatDetails.focusTime}
+                                </div>
                               </div>
 
-                              <div className="space-y-2 pt-3 border-t border-white/5 text-[10px] text-left text-white/60 font-mono">
-                                <div className="flex justify-between">
-                                  <span>Task/Subject:</span>
-                                  <span className="font-bold text-white truncate max-w-[110px]">{selectedSeatDetails.subject}</span>
+                              {/* Stats Capsule Grid */}
+                              <div className="grid grid-cols-3 gap-2 bg-white/[0.02] border border-white/5 rounded-2xl p-2.5">
+                                <div className="text-center">
+                                  <p className="text-sm font-black text-white leading-none">{selectedSeatDetails.streak}d</p>
+                                  <p className="text-[7.5px] font-mono text-white/45 uppercase tracking-wider mt-1">Streak</p>
                                 </div>
-                                <div className="flex justify-between">
-                                  <span>Time Focused:</span>
-                                  <span className="text-emerald-400 font-semibold">⚡ {selectedSeatDetails.focusTime}</span>
+                                <div className="text-center border-x border-white/5">
+                                  <p className="text-sm font-black text-white leading-none">{selectedSeatDetails.focusTime}</p>
+                                  <p className="text-[7.5px] font-mono text-white/45 uppercase tracking-wider mt-1">Focused</p>
                                 </div>
-                                <div className="flex justify-between">
-                                  <span>Streak:</span>
-                                  <span className="text-white">{selectedSeatDetails.streak} days 🔥</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Total Coins:</span>
-                                  <span className="text-amber-400">🪙 {selectedSeatDetails.coins}</span>
+                                <div className="text-center">
+                                  <p className="text-sm font-black text-white leading-none">🪙 {selectedSeatDetails.coins}</p>
+                                  <p className="text-[7.5px] font-mono text-white/45 uppercase tracking-wider mt-1">Coins</p>
                                 </div>
                               </div>
-                              
+
+                              {/* Year / Cabin Class Banner */}
+                              <div className="rounded-xl bg-white/[0.04] py-1.5 px-3 text-[9px] font-bold text-white/70 font-mono uppercase tracking-wider text-center">
+                                {(() => {
+                                  const row = parseInt(selectedSeatDetails.seat.replace(/[A-Z]/g, "")) || 1;
+                                  return row <= 2 ? "First Class Suite" : row <= 8 ? "Business Class Pod" : row <= 14 ? "Premium Economy Seat" : "Economy Class Pod";
+                                })()}
+                              </div>
+
+                              {/* Current Task Capsule */}
+                              <div className="rounded-2xl border border-blue-500/10 bg-blue-500/5 p-3 space-y-1.5 text-left">
+                                <div className="flex items-center justify-between text-[7px] font-mono font-bold tracking-widest text-blue-400 uppercase">
+                                  <span>⚡ Current Task</span>
+                                  <button
+                                    onClick={() => handleClap(selectedSeatDetails.seat)}
+                                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/25 text-white font-bold hover:bg-blue-500/20 active:scale-95 transition text-[8px] cursor-pointer"
+                                  >
+                                    👏 {clapCounts[selectedSeatDetails.seat] || 1}
+                                  </button>
+                                </div>
+                                <p className="text-[10px] font-bold text-white leading-tight">
+                                  📚 {selectedSeatDetails.subject}
+                                </p>
+                              </div>
+
+                              {/* Dream Mandate Capsule */}
+                              <div className="rounded-2xl border border-amber-500/10 bg-amber-500/5 p-3 space-y-1.5 text-left">
+                                <div className="flex items-center justify-between text-[7px] font-mono font-bold tracking-widest text-amber-400 uppercase">
+                                  <span>⭐ My Dream</span>
+                                  <button
+                                    onClick={() => handleCheer(selectedSeatDetails.seat)}
+                                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-white font-bold hover:bg-amber-500/20 active:scale-95 transition text-[8px] cursor-pointer"
+                                  >
+                                    🎉 {cheerCounts[selectedSeatDetails.seat] || 3}
+                                  </button>
+                                </div>
+                                <p className="text-[9px] font-medium text-white/80 leading-normal italic">
+                                  “Fly high, reach uni, study my dream job, and conquer this study session!”
+                                </p>
+                              </div>
+
+                              {/* Action Gift button */}
                               <button
-                                onClick={() => sendFocusVibes(selectedSeatDetails.seat)}
-                                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs tracking-wider uppercase transition shadow-lg shadow-purple-600/20"
+                                onClick={() => {
+                                  sendFocusVibes(selectedSeatDetails.seat);
+                                }}
+                                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-extrabold text-[10px] uppercase tracking-wider transition duration-300 shadow-lg shadow-orange-600/15 active:scale-[0.98] cursor-pointer"
                               >
-                                <Sparkles className="size-3.5" />
-                                <span>Send Focus Vibes</span>
+                                <span>☕</span>
+                                <span>Gift Coffee Vibes</span>
                               </button>
 
+                              {/* Kick button if Host of private session */}
                               {session?.isPrivate && session.hostId === currentUser?.id && selectedSeatDetails.userId && selectedSeatDetails.userId !== currentUser?.id && (
                                 <button
                                   onClick={() => handleKickParticipant(selectedSeatDetails.userId!)}
-                                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-500/30 hover:border-red-500/50 text-red-400 font-semibold text-xs tracking-wider uppercase transition shadow-lg mt-2"
+                                  className="w-full flex items-center justify-center gap-2 py-1.5 rounded-xl bg-red-950/20 hover:bg-red-950/40 border border-red-500/20 hover:border-red-500/40 text-red-400 font-extrabold text-[8px] uppercase tracking-wider transition duration-300"
                                 >
-                                  <LogOut className="size-3.5 rotate-180" />
-                                  <span>Kick Pilot ❌</span>
+                                  <LogOut className="size-3 rotate-180" />
+                                  <span>Kick Cadet ❌</span>
                                 </button>
                               )}
+
+                              {/* Footer selectors */}
+                              <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                                <button
+                                  onClick={handlePrevPilot}
+                                  className="size-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white flex items-center justify-center transition cursor-pointer"
+                                  title="Previous Cadet"
+                                >
+                                  <ChevronLeft className="size-4" />
+                                </button>
+                                
+                                <button
+                                  onClick={() => setSelectedSeatDetails(null)}
+                                  className="px-5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white font-extrabold text-[9px] uppercase tracking-widest transition cursor-pointer"
+                                >
+                                  Close
+                                </button>
+
+                                <button
+                                  onClick={handleNextPilot}
+                                  className="size-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white flex items-center justify-center transition cursor-pointer"
+                                  title="Next Cadet"
+                                >
+                                  <ChevronRight className="size-4" />
+                                </button>
+                              </div>
                             </motion.div>
                           ) : (
                             <motion.div
                               key="empty-details"
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
-                              className="rounded-3xl border border-white/5 bg-white/4 p-5 text-center text-white/45 text-xs flex flex-col items-center justify-center min-h-[220px]"
+                              className="rounded-3xl border border-white/5 bg-white/4 p-5 text-center text-white/45 text-xs flex flex-col items-center justify-center min-h-[220px] max-w-sm mx-auto w-full"
                             >
                               <Users className="size-8 text-white/20 mb-3 animate-pulse" />
                               <p className="font-bold text-white/60">Study Partner Details</p>
