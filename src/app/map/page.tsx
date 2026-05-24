@@ -141,6 +141,11 @@ interface TravelHistoryItem {
   duration: number;
   mode: string;
   completedAt: string;
+  actualTime: number;
+  coinsEarned: number;
+  startedAt: string;
+  endedAt: string;
+  completed: boolean;
 }
 
 export default function InteractiveMapPage() {
@@ -156,6 +161,7 @@ export default function InteractiveMapPage() {
   const [travelHistory, setTravelHistory] = useState<TravelHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"details" | "routes" | "history">("details");
+  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
   
   // Session creation details
   const [sessionMode, setSessionMode] = useState<"CHILL" | "HARDCORE">("CHILL");
@@ -373,25 +379,84 @@ export default function InteractiveMapPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.history) {
-          const mapped = data.history.map((h: any) => ({
-            id: h.id,
-            origin: h.session.origin,
-            originCode: h.session.originCode,
-            destination: h.session.destination,
-            destinationCode: h.session.destinationCode,
-            transportMode: h.session.transportMode,
-            duration: h.session.duration,
-            mode: h.session.mode,
-            completedAt: h.joinedAt ? new Date(h.joinedAt).toLocaleDateString() : "Recently",
-          }));
+          const mapped = data.history.map((h: any) => {
+            const actualMinutes = Math.max(
+              h.hoursCompleted > 0 ? 1 : 0,
+              Math.round(h.hoursCompleted * 60)
+            );
+            
+            // Coins earned is based on time, capped strictly at a maximum of 100 focus coins per flight
+            const coins = Math.min(100, Math.round(actualMinutes * 1.6));
+
+            const start = h.joinedAt ? new Date(h.joinedAt) : new Date();
+            const end = h.leftAt 
+              ? new Date(h.leftAt) 
+              : new Date(start.getTime() + actualMinutes * 60000);
+
+            const formatOptions: Intl.DateTimeFormatOptions = {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            };
+
+            return {
+              id: h.id,
+              origin: h.session.origin,
+              originCode: h.session.originCode,
+              destination: h.session.destination,
+              destinationCode: h.session.destinationCode,
+              transportMode: h.session.transportMode,
+              duration: h.session.duration,
+              mode: h.session.mode,
+              completedAt: start.toLocaleDateString(),
+              actualTime: actualMinutes,
+              coinsEarned: coins,
+              startedAt: start.toLocaleString("en-US", formatOptions),
+              endedAt: end.toLocaleString("en-US", formatOptions),
+              completed: h.completed,
+            };
+          });
           setTravelHistory(mapped);
         }
       })
       .catch(() => {
         // Fallback mock history if offline
         setTravelHistory([
-          { id: "h1", origin: "Dubai", originCode: "DXB", destination: "Bengaluru", destinationCode: "BLR", transportMode: "FLIGHT", duration: 180, mode: "CHILL", completedAt: "2026-05-20" },
-          { id: "h2", origin: "Bengaluru", originCode: "BLR", destination: "Hyderabad", destinationCode: "HYD", transportMode: "FLIGHT", duration: 60, mode: "CHILL", completedAt: "2026-05-22" },
+          { 
+            id: "h1", 
+            origin: "Dubai", 
+            originCode: "DXB", 
+            destination: "Bengaluru", 
+            destinationCode: "BLR", 
+            transportMode: "FLIGHT", 
+            duration: 180, 
+            mode: "CHILL", 
+            completedAt: "May 20, 2026",
+            actualTime: 180,
+            coinsEarned: 100, // Capped at 100!
+            startedAt: "May 20, 2026, 02:30:00 PM",
+            endedAt: "May 20, 2026, 05:30:00 PM",
+            completed: true
+          },
+          { 
+            id: "h2", 
+            origin: "Bengaluru", 
+            originCode: "BLR", 
+            destination: "Hyderabad", 
+            destinationCode: "HYD", 
+            transportMode: "FLIGHT", 
+            duration: 60, 
+            mode: "CHILL", 
+            completedAt: "May 22, 2026",
+            actualTime: 25, // Ejected early after 25 mins!
+            coinsEarned: 40,
+            startedAt: "May 22, 2026, 09:15:00 AM",
+            endedAt: "May 22, 2026, 09:40:00 AM",
+            completed: false
+          },
         ]);
       })
       .finally(() => setHistoryLoading(false));
@@ -847,29 +912,113 @@ export default function InteractiveMapPage() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {travelHistory.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center justify-between p-3.5 rounded-2xl border border-emerald-500/10 bg-emerald-500/5 text-left text-xs"
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="text-base text-emerald-400">✓</span>
-                            <div>
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-bold text-white">{item.originCode}</span>
-                                <ChevronRight className="size-3 text-white/30" />
-                                <span className="font-bold text-white">{item.destinationCode}</span>
+                      {travelHistory.map((item) => {
+                        const isExpanded = expandedHistoryId === item.id;
+                        return (
+                          <div
+                            key={item.id}
+                            className="rounded-2xl border border-emerald-500/10 bg-emerald-500/5 overflow-hidden transition-all duration-300"
+                          >
+                            {/* Header Summary Row (Clickable) */}
+                            <button
+                              onClick={() => setExpandedHistoryId(isExpanded ? null : item.id)}
+                              className="w-full flex items-center justify-between p-3.5 text-left text-xs transition hover:bg-white/5 cursor-pointer"
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className={`text-base font-bold ${item.completed ? "text-emerald-400" : "text-amber-400"}`}>
+                                  {item.completed ? "✓" : "⚠️"}
+                                </span>
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-bold text-white tracking-wider">{item.originCode}</span>
+                                    <ChevronRight className="size-3 text-white/30" />
+                                    <span className="font-bold text-white tracking-wider">{item.destinationCode}</span>
+                                  </div>
+                                  <p className="text-[10px] text-white/45 mt-0.5">
+                                    {item.completed ? "Landed safely" : "Ejected early"} • {item.completedAt}
+                                  </p>
+                                </div>
                               </div>
-                              <p className="text-[10px] text-white/45 mt-0.5">Flight Completed: {item.completedAt}</p>
-                            </div>
+                              <div className="text-right flex items-center gap-2">
+                                <div className="flex flex-col items-end gap-0.5">
+                                  <span className="text-[10px] font-bold text-emerald-400 font-mono">⚡ {item.actualTime} mins</span>
+                                  <span className="text-[10px] font-bold text-yellow-400 font-mono">
+                                    🪙 {item.coinsEarned} coin{item.coinsEarned !== 1 ? "s" : ""}
+                                  </span>
+                                </div>
+                                <span className="text-white/35 text-[8px] transition duration-300" style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>
+                                  ▶
+                                </span>
+                              </div>
+                            </button>
+
+                            {/* Expandable Details Panel */}
+                            <AnimatePresence>
+                              {isExpanded && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                                  className="border-t border-emerald-500/10 bg-[#0c122c]/50 p-4 space-y-3 text-[10.5px] leading-relaxed text-white/70"
+                                >
+                                  {/* Detailed statistics grid */}
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="rounded-xl border border-white/5 bg-white/4 p-2">
+                                      <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Flight Route</p>
+                                      <p className="mt-0.5 font-bold text-white">{item.origin} → {item.destination}</p>
+                                    </div>
+                                    <div className="rounded-xl border border-white/5 bg-white/4 p-2">
+                                      <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Cabin Mode</p>
+                                      <p className="mt-0.5 font-bold text-white uppercase">{item.mode} CLASS</p>
+                                    </div>
+                                    <div className="rounded-xl border border-white/5 bg-white/4 p-2">
+                                      <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Scheduled Duration</p>
+                                      <p className="mt-0.5 font-bold text-white font-mono">{item.duration} minutes</p>
+                                    </div>
+                                    <div className="rounded-xl border border-white/5 bg-white/4 p-2">
+                                      <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Actual Focus Time</p>
+                                      <p className="mt-0.5 font-bold text-emerald-400 font-mono">{item.actualTime} minutes</p>
+                                    </div>
+                                  </div>
+
+                                  {/* Coins Earned with Cap notice */}
+                                  <div className="rounded-xl border border-white/5 bg-white/4 p-2 flex items-center justify-between">
+                                    <div>
+                                      <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Coins Claimed</p>
+                                      <p className="mt-0.5 font-bold text-yellow-400 font-mono">🪙 {item.coinsEarned} focus coins</p>
+                                    </div>
+                                    {item.coinsEarned === 100 && (
+                                      <span className="rounded bg-yellow-500/10 border border-yellow-500/30 px-2 py-0.5 text-[8px] font-bold text-yellow-400 uppercase tracking-wider">
+                                        ⚡ Max Cap Reached
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Flight Log Timeline */}
+                                  <div className="space-y-2 relative border-l border-white/10 pl-4 ml-2 mt-1">
+                                    <div className="relative">
+                                      <div className="absolute -left-[21px] top-1.5 z-10 size-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+                                      <p className="text-[8px] font-bold text-emerald-400 uppercase tracking-wider">🛫 Takeoff (Start)</p>
+                                      <p className="font-mono text-white/80">{item.startedAt}</p>
+                                    </div>
+
+                                    <div className="relative pt-2">
+                                      <div className={`absolute -left-[21px] top-3.5 z-10 size-2 rounded-full ${item.completed ? "bg-emerald-400 shadow-[0_0_8px_#34d399]" : "bg-amber-400 shadow-[0_0_8px_#fbbf24]"}`} />
+                                      <p className={`text-[8px] font-bold uppercase tracking-wider ${item.completed ? "text-emerald-400" : "text-amber-400"}`}>
+                                        {item.completed ? "🛬 Landed (Complete)" : "⚠️ Ejected Early (Terminated)"}
+                                      </p>
+                                      <p className="font-mono text-white/80">{item.endedAt}</p>
+                                    </div>
+                                  </div>
+
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+
                           </div>
-                          <div className="text-right flex flex-col items-end gap-0.5">
-                            <span className="text-[10px] font-bold text-emerald-400 font-mono">⚡ {item.duration} mins</span>
-                            <span className="text-[10px] font-bold text-yellow-400 font-mono">🪙 {Math.round(item.duration * 3)} coins</span>
-                            <span className="text-[8px] font-mono bg-white/5 rounded px-1.5 py-0.2 text-white/45 block mt-1 uppercase">{item.mode}</span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </motion.div>
