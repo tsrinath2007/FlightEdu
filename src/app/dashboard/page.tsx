@@ -662,9 +662,15 @@ export default function DashboardPage() {
                     <p className="font-bold text-[#4A3E3D] truncate">{displayName}</p>
                     <p className="text-xs text-[#8C7A78] truncate">{user?.email}</p>
                   </div>
-                  <span className="rounded-full bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider">
-                    Cadet
-                  </span>
+                  {(() => {
+                    const pilotRank = computePilotRank(completedFlightsCount, totalHours);
+                    return (
+                      <span className="rounded-full bg-amber-100 text-amber-800 text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider flex items-center gap-1 shrink-0">
+                        <span>{pilotRank.icon}</span>
+                        <span>{pilotRank.name}</span>
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 {/* Section: General */}
