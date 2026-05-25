@@ -347,20 +347,24 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
 
   const handleClap = (seat: string) => {
     setClapCounts(prev => ({ ...prev, [seat]: (prev[seat] || 0) + 1 }));
-    try {
-      const clapAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
-      clapAudio.volume = 0.2;
-      clapAudio.play().catch(() => {});
-    } catch {}
+    if (soundEffectsEnabled) {
+      try {
+        const clapAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+        clapAudio.volume = 0.2;
+        clapAudio.play().catch(() => {});
+      } catch {}
+    }
   };
 
   const handleCheer = (seat: string) => {
     setCheerCounts(prev => ({ ...prev, [seat]: (prev[seat] || 0) + 1 }));
-    try {
-      const cheerAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
-      cheerAudio.volume = 0.2;
-      cheerAudio.play().catch(() => {});
-    } catch {}
+    if (soundEffectsEnabled) {
+      try {
+        const cheerAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+        cheerAudio.volume = 0.2;
+        cheerAudio.play().catch(() => {});
+      } catch {}
+    }
   };
 
   const handleNextPilot = () => {
@@ -430,6 +434,17 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
   // Audio Ambience
   const [ambiencePlaying, setAmbiencePlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Sound Effects settings sync
+  const [soundEffectsEnabled, setSoundEffectsEnabled] = useState(false);
+  useEffect(() => {
+    const savedSound = localStorage.getItem("sound_effects_enabled");
+    if (savedSound !== null) {
+      setSoundEffectsEnabled(savedSound === "true");
+    } else {
+      setSoundEffectsEnabled(false); // Default is off as requested!
+    }
+  }, []);
 
   // Synchronize earned coins with wallet
   useEffect(() => {
@@ -622,11 +637,13 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
 
   const toggleAutopilot = () => {
     setIsActive(!isActive);
-    try {
-      const chime = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
-      chime.volume = 0.25;
-      chime.play().catch(() => {});
-    } catch (e) {}
+    if (soundEffectsEnabled) {
+      try {
+        const chime = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
+        chime.volume = 0.25;
+        chime.play().catch(() => {});
+      } catch (e) {}
+    }
   };
 
   const toggleAmbience = () => {
@@ -649,22 +666,26 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
   const handleSeatClick = (seatId: string, isOccupied: boolean, pilot?: MultiplayerPilot) => {
     if (isOccupied && pilot) {
       setSelectedSeatDetails(pilot);
-      try {
-        const tap = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
-        tap.volume = 0.15;
-        tap.play().catch(() => {});
-      } catch (e) {}
+      if (soundEffectsEnabled) {
+        try {
+          const tap = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
+          tap.volume = 0.15;
+          tap.play().catch(() => {});
+        } catch (e) {}
+      }
     } else if (!isOccupied && config) {
       setRelocatingSeat(seatId);
     }
   };
 
   const equipItem = (type: "hair" | "clothing" | "eyes" | "activity", value: string, id: string) => {
-    try {
-      const slide = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
-      slide.volume = 0.2;
-      slide.play().catch(() => {});
-    } catch (e) {}
+    if (soundEffectsEnabled) {
+      try {
+        const slide = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+        slide.volume = 0.2;
+        slide.play().catch(() => {});
+      } catch (e) {}
+    }
 
     if (type === "hair") {
       setAvatarHair(value as any);
@@ -687,11 +708,13 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
       return;
     }
 
-    try {
-      const buySound = new Audio("https://assets.mixkit.co/active_storage/sfx/2017/2017-84.wav");
-      buySound.volume = 0.3;
-      buySound.play().catch(() => {});
-    } catch (e) {}
+    if (soundEffectsEnabled) {
+      try {
+        const buySound = new Audio("https://assets.mixkit.co/active_storage/sfx/2017/2017-84.wav");
+        buySound.volume = 0.3;
+        buySound.play().catch(() => {});
+      } catch (e) {}
+    }
 
     const newCoins = walletCoins - price;
     setWalletCoins(newCoins);
@@ -706,11 +729,13 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
 
   const sendFocusVibes = (targetSeat: string) => {
     setSendingEnergy(targetSeat);
-    try {
-      const sweep = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
-      sweep.volume = 0.25;
-      sweep.play().catch(() => {});
-    } catch (e) {}
+    if (soundEffectsEnabled) {
+      try {
+        const sweep = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
+        sweep.volume = 0.25;
+        sweep.play().catch(() => {});
+      } catch (e) {}
+    }
     setTimeout(() => {
       setSendingEnergy(null);
     }, 2500);
@@ -796,11 +821,13 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
         <div
           onClick={() => {
             setSelectedSeatDetails(null);
-            try {
-              const tap = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
-              tap.volume = 0.15;
-              tap.play().catch(() => {});
-            } catch (e) {}
+            if (soundEffectsEnabled) {
+              try {
+                const tap = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
+                tap.volume = 0.15;
+                tap.play().catch(() => {});
+              } catch (e) {}
+            }
           }}
           className="relative group w-14 h-14 shrink-0 flex flex-col items-center justify-between rounded-xl p-1 border transition duration-300 cursor-pointer bg-electric-500/10 border-electric-400 shadow-[0_0_12px_rgba(56,189,248,0.3)] ring-1 ring-electric-400/30"
         >
@@ -1209,11 +1236,13 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                         <button
                           onClick={() => {
                             setIsFullscreenLounge(true);
-                            try {
-                              const slide = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
-                              slide.volume = 0.2;
-                              slide.play().catch(() => {});
-                            } catch (e) {}
+                            if (soundEffectsEnabled) {
+                              try {
+                                const slide = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+                                slide.volume = 0.2;
+                                slide.play().catch(() => {});
+                              } catch (e) {}
+                            }
                           }}
                           className="rounded-full bg-electric-500/10 border border-electric-500/25 hover:bg-electric-500/20 px-3.5 py-1 text-[10px] font-bold text-electric-400 flex items-center gap-1.5 transition shadow-[0_0_8px_rgba(14,165,233,0.1)] cursor-pointer"
                         >
@@ -1886,11 +1915,13 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                     <button
                       onClick={() => {
                         setTimerCountMode(prev => prev === "down" ? "up" : "down");
-                        try {
-                          const click = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
-                          click.volume = 0.1;
-                          click.play().catch(() => {});
-                        } catch (e) {}
+                        if (soundEffectsEnabled) {
+                          try {
+                            const click = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
+                            click.volume = 0.1;
+                            click.play().catch(() => {});
+                          } catch (e) {}
+                        }
                       }}
                       className="size-8 rounded-xl bg-white/4 hover:bg-white/8 border border-white/10 flex items-center justify-center text-sm font-black text-electric-400 tracking-wider shadow-sm transition cursor-pointer"
                       title="Toggle count up (+) vs count down (-)"
@@ -1901,11 +1932,13 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                     <div 
                       onClick={() => {
                         setTimerDisplayMode(prev => prev === "clock" ? "minutes" : "clock");
-                        try {
-                          const click = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
-                          click.volume = 0.1;
-                          click.play().catch(() => {});
-                        } catch (e) {}
+                        if (soundEffectsEnabled) {
+                          try {
+                            const click = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
+                            click.volume = 0.1;
+                            click.play().catch(() => {});
+                          } catch (e) {}
+                        }
                       }}
                       className="cursor-pointer group select-none"
                       title="Click to toggle Clock format vs Minutes format"
@@ -1937,11 +1970,13 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                   <button
                     onClick={() => {
                       setIsFullscreenLounge(false);
-                      try {
-                        const click = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
-                        click.volume = 0.2;
-                        click.play().catch(() => {});
-                      } catch (e) {}
+                      if (soundEffectsEnabled) {
+                        try {
+                          const click = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+                          click.volume = 0.2;
+                          click.play().catch(() => {});
+                        } catch (e) {}
+                      }
                     }}
                     className="rounded-full bg-red-500/10 border border-red-500/20 hover:bg-red-500/25 px-4 py-2 text-[10px] font-bold text-red-400 tracking-wider transition uppercase cursor-pointer"
                   >
@@ -2288,11 +2323,13 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                         
                         await syncSeatToDatabase(targetSeat, config.studySubject);
                         
-                        try {
-                          const slide = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
-                          slide.volume = 0.2;
-                          slide.play().catch(() => {});
-                        } catch (e) {}
+                        if (soundEffectsEnabled) {
+                          try {
+                            const slide = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+                            slide.volume = 0.2;
+                            slide.play().catch(() => {});
+                          } catch (e) {}
+                        }
                         
                         // Re-fetch participants to update local seating visual map immediately
                         fetchParticipants();

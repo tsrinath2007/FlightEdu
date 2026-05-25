@@ -39,7 +39,7 @@ export default function DashboardPage() {
   const [adminNotifs, setAdminNotifs] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [soundEffectsEnabled, setSoundEffectsEnabled] = useState(true);
+  const [soundEffectsEnabled, setSoundEffectsEnabled] = useState(false);
   const [focusRemindersEnabled, setFocusRemindersEnabled] = useState(false);
 
   // Load custom user details and avatar on user changes
@@ -213,7 +213,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const sound = localStorage.getItem("sound_effects_enabled");
-    if (sound !== null) setSoundEffectsEnabled(sound === "true");
+    if (sound !== null) {
+      setSoundEffectsEnabled(sound === "true");
+    } else {
+      setSoundEffectsEnabled(false); // Keep sound off initially when entering
+    }
 
     const reminders = localStorage.getItem("focus_reminders_enabled");
     if (reminders !== null) setFocusRemindersEnabled(reminders === "true");
@@ -675,21 +679,21 @@ export default function DashboardPage() {
                   <p className="text-[10px] font-mono tracking-widest text-[#8C7A78] uppercase font-bold">Support & Feedback</p>
                   <div className="grid grid-cols-2 gap-2">
                     <a 
-                      href={`mailto:groundcontrol@gofocusgen.app?subject=%5BBug%20Report%5D%20GoFocusGen%20Cadet%20Alert&body=Pilot%20Details%3A%0D%0A-%20Name%3A%20${encodeURIComponent(displayName)}%0D%0A-%20Email%3A%20${encodeURIComponent(user?.email || "")}%0D%0A-%20Client%20Version%3A%20v1.2.0%0D%0A%0D%0APlease%20describe%20the%20bug%20and%20steps%20to%20reproduce%3A%0D%0A`}
+                      href={`mailto:gofocusgen@gmail.com?subject=%5BBug%20Report%5D%20GoFocusGen%20Cadet%20Alert&body=Pilot%20Details%3A%0D%0A-%20Name%3A%20${encodeURIComponent(displayName)}%0D%0A-%20Email%3A%20${encodeURIComponent(user?.email || "")}%0D%0A-%20Client%20Version%3A%20v1.2.0%0D%0A%0D%0APlease%20describe%20the%20bug%20and%20steps%20to%20reproduce%3A%0D%0A`}
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-[#EBE7DF] hover:bg-[#FAF8F5] transition cursor-pointer text-center text-xs font-semibold gap-1 text-[#4A3E3D]"
                     >
                       <span>🐛</span>
                       <span>Report Bug</span>
                     </a>
                     <a 
-                      href={`mailto:groundcontrol@gofocusgen.app?subject=%5BFeedback%5D%20GoFocusGen%20Cadet%20Review&body=Pilot%20Details%3A%0D%0A-%20Name%3A%20${encodeURIComponent(displayName)}%0D%0A-%20Email%3A%20${encodeURIComponent(user?.email || "")}%0D%0A%0D%0AShare%20your%20thoughts%20or%20ideas%20here%3A%0D%0A`}
+                      href={`mailto:gofocusgen@gmail.com?subject=%5BFeedback%5D%20GoFocusGen%20Cadet%20Review&body=Pilot%20Details%3A%0D%0A-%20Name%3A%20${encodeURIComponent(displayName)}%0D%0A-%20Email%3A%20${encodeURIComponent(user?.email || "")}%0D%0A%0D%0AShare%20your%20thoughts%20or%20ideas%20here%3A%0D%0A`}
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-[#EBE7DF] hover:bg-[#FAF8F5] transition cursor-pointer text-center text-xs font-semibold gap-1 text-[#4A3E3D]"
                     >
                       <span>💡</span>
                       <span>Share Feedback</span>
                     </a>
                     <a 
-                      href={`mailto:groundcontrol@gofocusgen.app?subject=%5BFeature%20Request%5D%20GoFocusGen%20Cabin%20Upgrade&body=Pilot%20Details%3A%0D%0A-%20Name%3A%20${encodeURIComponent(displayName)}%0D%0A-%20Email%3A%20${encodeURIComponent(user?.email || "")}%0D%0A%0D%0ADescribe%20the%20new%20feature%20or%20dashboard%20upgrade%20you%20want%3A%0D%0A`}
+                      href={`mailto:gofocusgen@gmail.com?subject=%5BFeature%20Request%5D%20GoFocusGen%20Cabin%20Upgrade&body=Pilot%20Details%3A%0D%0A-%20Name%3A%20${encodeURIComponent(displayName)}%0D%0A-%20Email%3A%20${encodeURIComponent(user?.email || "")}%0D%0A%0D%0ADescribe%20the%20new%20feature%20or%20dashboard%20upgrade%20you%20want%3A%0D%0A`}
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-[#EBE7DF] hover:bg-[#FAF8F5] transition cursor-pointer text-center text-xs font-semibold gap-1 text-[#4A3E3D]"
                     >
                       <span>✨</span>

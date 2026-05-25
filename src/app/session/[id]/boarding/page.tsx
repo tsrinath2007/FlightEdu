@@ -177,6 +177,14 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
 
   // Load session data and user profile
   useEffect(() => {
+    // Load sound effects setting
+    const savedSound = localStorage.getItem("sound_effects_enabled");
+    if (savedSound !== null) {
+      setSoundOn(savedSound === "true");
+    } else {
+      setSoundOn(false); // Default is false
+    }
+
     // Attempt local storage first (highly reliable offline simulation!)
     const localData = localStorage.getItem(`flight_session_${sessionId}`);
     if (localData) {
