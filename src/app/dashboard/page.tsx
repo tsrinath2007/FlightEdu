@@ -44,12 +44,26 @@ export default function DashboardPage() {
 
   // Load custom user details and avatar on user changes
   useEffect(() => {
-    if (!user) return;
+    // A. Perform local key migration immediately to ensure any existing legacy progress is synced
+    const legacyPrefixes = ["flightedu", "focuszen", "voyageiq"];
+    const targetPrefix = "gofocusgen";
+    const keySuffixes = ["_onboarding", "_avatar", "_username", "_pilot_id", "_pilot_details"];
 
-    // 1. Initial fallbacks
-    setDisplayName(user.user_metadata?.name ?? user.email?.split("@")[0] ?? "Pilot");
+    for (const suffix of keySuffixes) {
+      const targetKey = `${targetPrefix}${suffix}`;
+      if (!localStorage.getItem(targetKey)) {
+        for (const legacyPrefix of legacyPrefixes) {
+          const legacyKey = `${legacyPrefix}${suffix}`;
+          const val = localStorage.getItem(legacyKey);
+          if (val) {
+            localStorage.setItem(targetKey, val);
+            break;
+          }
+        }
+      }
+    }
 
-    // 2. Load from localStorage cache
+    // B. Load from localStorage cache (critical for simulated sessions and instant loading)
     const savedAvatar = localStorage.getItem("gofocusgen_avatar");
     if (savedAvatar) setAvatarPreview(savedAvatar);
 
@@ -64,6 +78,20 @@ export default function DashboardPage() {
         if (parsed.streakFreezes !== undefined) setUserStreakFreezes(parsed.streakFreezes);
       } catch {}
     }
+
+    if (!user) {
+      // If we are in simulated mode, set robust default fallbacks so offline pilots have simulated coins!
+      if (typeof window !== "undefined" && window.location.search.includes("simulated=true")) {
+        if (!cachedOnboarding) {
+          setDisplayName("Alex Groves");
+          setUserCoins(10000);
+        }
+      }
+      return;
+    }
+
+    // 1. Initial fallbacks
+    setDisplayName(user.user_metadata?.name ?? user.email?.split("@")[0] ?? "Pilot");
 
     // 3. Fetch fresh data from backend DB
     fetch("/api/user/onboard")
@@ -668,7 +696,7 @@ export default function DashboardPage() {
                       <span>Request Feature</span>
                     </a>
                     <a 
-                      href="https://instagram.com/gofocusgen.space" 
+                      href="https://www.instagram.com/gofocusgen/" 
                       target="_blank" 
                       rel="noreferrer"
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-[#EBE7DF] hover:bg-[#FAF8F5] transition cursor-pointer text-center text-xs font-semibold gap-1 text-[#4A3E3D]"
