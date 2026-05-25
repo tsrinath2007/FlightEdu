@@ -301,13 +301,40 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     }
   }, [sessionId, currentUser]);
 
-  // Initialize focus timer once session is loaded (runs only once per session setup)
+  // Initialize focus timer once session and configuration are loaded (supporting persistent state across refreshes)
   useEffect(() => {
     if (session && totalDurationSeconds === 0) {
-      setSecondsRemaining(session.duration * 60);
-      setTotalDurationSeconds(session.duration * 60);
+      const totalSecs = session.duration * 60;
+      setTotalDurationSeconds(totalSecs);
+
+      // Load persistent timer settings from localStorage to withstand page refreshes
+      const savedActive = localStorage.getItem(`flight_timer_active_${sessionId}`) === "true";
+      const accumVal = Number(localStorage.getItem(`flight_timer_accumulated_elapsed_${sessionId}`)) || 0;
+      const startVal = Number(localStorage.getItem(`flight_timer_start_timestamp_${sessionId}`)) || 0;
+
+      let remaining = totalSecs - accumVal;
+      let activeState = savedActive;
+
+      if (savedActive && startVal > 0) {
+        const currentElapsed = Math.floor((Date.now() - startVal) / 1000);
+        const totalElapsed = accumVal + currentElapsed;
+        remaining = Math.max(0, totalSecs - totalElapsed);
+        if (remaining <= 0) {
+          activeState = false;
+          localStorage.setItem(`flight_timer_active_${sessionId}`, "false");
+        }
+      }
+
+      setSecondsRemaining(remaining);
+      setIsActive(activeState);
+
+      // Set initial coins earned based on accumulated progress
+      const elapsed = totalSecs - remaining;
+      const baseMul = config?.airline.baseMultiplier ?? 1.0;
+      const classMul = config?.cabinClass.priceMultiplier ?? 1.0;
+      setCoinsEarned(Number((elapsed * 0.05 * baseMul * classMul).toFixed(2)));
     }
-  }, [session, totalDurationSeconds]);
+  }, [session, totalDurationSeconds, config, sessionId]);
 
   // Fetch friends list to invite
   useEffect(() => {
@@ -559,18 +586,24 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     return () => clearInterval(interval);
   }, [sessionId, fetchParticipants]);
 
-  // Autopilot Focus Timer engine
+  // Autopilot Focus Timer engine (using precise system time intervals to prevent drift and refresh loss)
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isActive && secondsRemaining > 0) {
       timer = setInterval(() => {
-        setSecondsRemaining((prev) => prev - 1);
+        const startVal = Number(localStorage.getItem(`flight_timer_start_timestamp_${sessionId}`)) || Date.now();
+        const accumVal = Number(localStorage.getItem(`flight_timer_accumulated_elapsed_${sessionId}`)) || 0;
+        
+        const currentElapsed = Math.floor((Date.now() - startVal) / 1000);
+        const elapsed = accumVal + currentElapsed;
+        const remaining = Math.max(0, totalDurationSeconds - elapsed);
+        
+        setSecondsRemaining(remaining);
         
         const baseMul = config?.airline.baseMultiplier ?? 1.0;
         const classMul = config?.cabinClass.priceMultiplier ?? 1.0;
-        setCoinsEarned((prev) => prev + Number((0.05 * baseMul * classMul).toFixed(2)));
+        setCoinsEarned(Number((elapsed * 0.05 * baseMul * classMul).toFixed(2)));
 
-        const elapsed = totalDurationSeconds - (secondsRemaining - 1);
         if (elapsed > 5) {
           setChecklist((prev) => prev.map((item) => item.id === 2 ? { ...item, completed: true } : item));
         }
@@ -580,18 +613,26 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
         if (elapsed > 30) {
           setChecklist((prev) => prev.map((item) => item.id === 4 ? { ...item, completed: true } : item));
         }
+
+        if (remaining <= 0) {
+          setIsActive(false);
+          localStorage.setItem(`flight_timer_active_${sessionId}`, "false");
+          setFlightPhase("Flight Landed Safely! Welcome!");
+          setAltitude(0);
+          setSpeed(0);
+          syncCoinsToProfile();
+        }
       }, 1000);
     } else if (secondsRemaining === 0 && totalDurationSeconds > 0) {
       setFlightPhase("Flight Landed Safely! Welcome!");
       setAltitude(0);
       setSpeed(0);
       setIsActive(false);
-      // Sync earned coins to profile on landing
-      syncCoinsToProfile();
+      localStorage.setItem(`flight_timer_active_${sessionId}`, "false");
     }
 
     return () => clearInterval(timer);
-  }, [isActive, secondsRemaining, totalDurationSeconds, config]);
+  }, [isActive, secondsRemaining, totalDurationSeconds, config, sessionId]);
 
   // Flight Instruments Engine
   useEffect(() => {
@@ -636,7 +677,25 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
   }, [isActive, secondsRemaining, totalDurationSeconds, altitude, speed]);
 
   const toggleAutopilot = () => {
-    setIsActive(!isActive);
+    const nextActive = !isActive;
+    setIsActive(nextActive);
+    
+    try {
+      if (nextActive) {
+        localStorage.setItem(`flight_timer_active_${sessionId}`, "true");
+        localStorage.setItem(`flight_timer_start_timestamp_${sessionId}`, String(Date.now()));
+      } else {
+        localStorage.setItem(`flight_timer_active_${sessionId}`, "false");
+        const startVal = Number(localStorage.getItem(`flight_timer_start_timestamp_${sessionId}`)) || Date.now();
+        const accumVal = Number(localStorage.getItem(`flight_timer_accumulated_elapsed_${sessionId}`)) || 0;
+        const currentElapsed = Math.floor((Date.now() - startVal) / 1000);
+        localStorage.setItem(`flight_timer_accumulated_elapsed_${sessionId}`, String(accumVal + currentElapsed));
+        localStorage.removeItem(`flight_timer_start_timestamp_${sessionId}`);
+      }
+    } catch (e) {
+      console.error("Failed to save autopilot state:", e);
+    }
+
     if (soundEffectsEnabled) {
       try {
         const chime = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
@@ -805,6 +864,14 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
       // Deduct 500 focus coins for early ejection in Hardcore mode!
       finalCoins = -500;
     }
+    
+    // Clear persistent timer keys on exit to prevent leaks
+    try {
+      localStorage.removeItem(`flight_timer_active_${sessionId}`);
+      localStorage.removeItem(`flight_timer_start_timestamp_${sessionId}`);
+      localStorage.removeItem(`flight_timer_accumulated_elapsed_${sessionId}`);
+    } catch {}
+
     if (audioRef.current) audioRef.current.pause();
     await syncCoinsToProfile(finalCoins);
     router.push("/dashboard");
