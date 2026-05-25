@@ -668,7 +668,7 @@ export default function DashboardPage() {
                       <span>Request Feature</span>
                     </a>
                     <a 
-                      href="https://instagram.com/focuszen.app" 
+                      href="https://instagram.com/focuszen.space" 
                       target="_blank" 
                       rel="noreferrer"
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-[#EBE7DF] hover:bg-[#FAF8F5] transition cursor-pointer text-center text-xs font-semibold gap-1 text-[#4A3E3D]"
