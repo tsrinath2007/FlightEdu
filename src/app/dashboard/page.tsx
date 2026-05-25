@@ -285,6 +285,8 @@ export default function DashboardPage() {
     window.location.href = "/";
   }
 
+  const { weekDays, hasUsedFreezeThisWeek } = getWeeklyStreak(userStreak, userFlights);
+
   return (
     <main className="relative flex min-h-screen flex-col overflow-hidden bg-navy-950">
       {/* Globe background */}
@@ -307,23 +309,20 @@ export default function DashboardPage() {
           )}
 
           {/* Streak Display */}
-          {!loading && user && (() => {
-            const { hasUsedFreezeThisWeek } = getWeeklyStreak(userStreak, userFlights);
-            return (
-              <button
-                onClick={() => setShowStreakModal(true)}
-                className={`flex items-center gap-1.5 rounded-full px-2 py-1 font-bold text-[10px] sm:text-xs tracking-wide transition cursor-pointer select-none border ${
-                  hasUsedFreezeThisWeek
-                    ? "bg-cyan-500/15 border-cyan-500/40 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.25)] hover:bg-cyan-500/25"
-                    : "bg-orange-500/15 border-orange-500/40 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.25)] hover:bg-orange-500/25"
-                }`}
-                title={hasUsedFreezeThisWeek ? "Streak Frozen (Cold Fire Shield Active)" : "Current Study Streak"}
-              >
-                <span>{hasUsedFreezeThisWeek ? "❄️" : "🔥"}</span>
-                <span>{userStreak}d</span>
-              </button>
-            );
-          })()}
+          {!loading && user && (
+            <button
+              onClick={() => setShowStreakModal(true)}
+              className={`flex items-center gap-1.5 rounded-full px-2 py-1 font-bold text-[10px] sm:text-xs tracking-wide transition cursor-pointer select-none border ${
+                hasUsedFreezeThisWeek
+                  ? "bg-cyan-500/15 border-cyan-500/40 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.25)] hover:bg-cyan-500/25"
+                  : "bg-orange-500/15 border-orange-500/40 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.25)] hover:bg-orange-500/25"
+              }`}
+              title={hasUsedFreezeThisWeek ? "Streak Frozen (Cold Fire Shield Active)" : "Current Study Streak"}
+            >
+              <span>{hasUsedFreezeThisWeek ? "❄️" : "🔥"}</span>
+              <span>{userStreak}d</span>
+            </button>
+          )}
 
           {/* Streak Freezes Display */}
           {!loading && user && (
@@ -835,27 +834,25 @@ export default function DashboardPage() {
 
       {/* Premium Duolingo-style Streak Modal */}
       <AnimatePresence>
-        {showStreakModal && (() => {
-          const { weekDays, hasUsedFreezeThisWeek } = getWeeklyStreak(userStreak, userFlights);
-
-          const streakRanks = [
-            { days: 3, name: "Star", icon: "⭐", desc: "A bright start to your focus journey" },
-            { days: 5, name: "Superstar", icon: "🌟", desc: "Shining bright through the week" },
-            { days: 7, name: "Champion", icon: "🏆", desc: "Completed a full 7-day focus cruise" },
-            { days: 31, name: "Icon", icon: "🏅", desc: "A full month of unbreakable travel" },
-            { days: 50, name: "Hall of fame", icon: "🏛️", desc: "Entering the legends of aviation" },
-            { days: 100, name: "Invincible", icon: "🛡️", desc: "100 focus flights without interruption" },
-            { days: 150, name: "Legend", icon: "⚔️", desc: "Sword of discipline forged in focus" },
-            { days: 200, name: "Golden", icon: "🪙", desc: "Golden standard of mastery" },
-            { days: 250, name: "Visionary", icon: "🔭", desc: "Peeking far into the focus horizon" },
-            { days: 300, name: "Supreme", icon: "💎", desc: "Flawless focus diamond" },
-            { days: 365, name: "Interstellar", icon: "☀️", desc: "A full solar rotation of voyages" },
-            { days: 500, name: "Galactic", icon: "🌌", desc: "Ruling your own focus galaxy" },
-            { days: 1000, name: "Cosmic", icon: "🪐", desc: "Cosmic focus presence" },
-          ];
-
-          return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+        {showStreakModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+            {(() => {
+              const streakRanks = [
+                { days: 3, name: "Star", icon: "⭐", desc: "A bright start to your focus journey" },
+                { days: 5, name: "Superstar", icon: "🌟", desc: "Shining bright through the week" },
+                { days: 7, name: "Champion", icon: "🏆", desc: "Completed a full 7-day focus cruise" },
+                { days: 31, name: "Icon", icon: "🏅", desc: "A full month of unbreakable travel" },
+                { days: 50, name: "Hall of fame", icon: "🏛️", desc: "Entering the legends of aviation" },
+                { days: 100, name: "Invincible", icon: "🛡️", desc: "100 focus flights without interruption" },
+                { days: 150, name: "Legend", icon: "⚔️", desc: "Sword of discipline forged in focus" },
+                { days: 200, name: "Golden", icon: "🪙", desc: "Golden standard of mastery" },
+                { days: 250, name: "Visionary", icon: "🔭", desc: "Peeking far into the focus horizon" },
+                { days: 300, name: "Supreme", icon: "💎", desc: "Flawless focus diamond" },
+                { days: 365, name: "Interstellar", icon: "☀️", desc: "A full solar rotation of voyages" },
+                { days: 500, name: "Galactic", icon: "🌌", desc: "Ruling your own focus galaxy" },
+                { days: 1000, name: "Cosmic", icon: "🪐", desc: "Cosmic focus presence" },
+              ];
+              return (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -988,9 +985,10 @@ export default function DashboardPage() {
                   </button>
                 </div>
               </motion.div>
-            </div>
-          );
-        })()}
+            );
+          })()}
+          </div>
+        )}
       </AnimatePresence>
     </main>
   );
