@@ -151,6 +151,7 @@ export default function ProfilePage() {
   const [flights, setFlights] = useState<any[]>([]);
   const [flightsLoading, setFlightsLoading] = useState(true);
   const [currentPassportPage, setCurrentPassportPage] = useState(0);
+  const [currentLogPage, setCurrentLogPage] = useState(0);
   
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -704,6 +705,11 @@ export default function ProfilePage() {
   const totalStampsPages = Math.max(1, Math.ceil(flights.length / stampsPerPage));
   const displayedFlights = flights.slice(currentPassportPage * stampsPerPage, (currentPassportPage + 1) * stampsPerPage);
 
+  // Pagination for Flight Log
+  const logsPerPage = 5;
+  const totalLogPages = Math.max(1, Math.ceil(flights.length / logsPerPage));
+  const displayedLogs = flights.slice(currentLogPage * logsPerPage, (currentLogPage + 1) * logsPerPage);
+
   return (
     <main className="relative flex min-h-screen flex-col overflow-y-auto bg-navy-950 pb-32">
       {/* Background elements */}
@@ -1154,7 +1160,142 @@ export default function ProfilePage() {
               </div>
             </Card>
 
-            {/* 3. Route Mastery Badges Showcase */}
+            {/* 3. Official Pilot Flight Log Ledger */}
+            <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-md relative overflow-hidden shadow-xl">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+              
+              <div className="flex items-center justify-between border-b border-white/15 pb-4 mb-4">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Plane className="size-5 text-electric-400 animate-pulse" />
+                    Official Pilot Flight Log
+                  </h3>
+                  <p className="text-xs text-white/40 mt-0.5">Historical ledger of all successfully landed focus voyages</p>
+                </div>
+                
+                <span className="text-xs bg-navy-900/60 border border-white/10 text-white/60 font-mono px-2.5 py-1 rounded-full">
+                  Total Entries: {completedFlightsCount}
+                </span>
+              </div>
+
+              {flightsLoading ? (
+                <div className="flex flex-col items-center justify-center py-10">
+                  <Loader2 className="size-8 animate-spin text-electric-400" />
+                  <span className="text-xs text-white/40 mt-2">Loading mission ledger...</span>
+                </div>
+              ) : displayedLogs.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[500px]">
+                      <thead>
+                        <tr className="border-b border-white/10 text-[10px] uppercase font-bold tracking-wider text-white/40">
+                          <th className="py-2.5 px-3">Date & Time</th>
+                          <th className="py-2.5 px-3">Type</th>
+                          <th className="py-2.5 px-3">Route</th>
+                          <th className="py-2.5 px-3 text-right">Cruise Time</th>
+                          <th className="py-2.5 px-3 text-right">Accrued</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {displayedLogs.map((flight) => {
+                          const date = new Date(flight.session?.completedAt || flight.joinedAt);
+                          const dateStr = date.toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          }).toUpperCase();
+                          const timeStr = date.toLocaleTimeString("en-GB", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          });
+                          
+                          const origin = flight.session?.originCode || "???";
+                          const dest = flight.session?.destinationCode || "???";
+                          const duration = flight.session?.duration || 0;
+                          const tMode = flight.session?.transportMode || "FLIGHT";
+                          const coins = flight.coinsEarned || Math.round(duration * 2);
+
+                          const transportLabel = tMode === "TRAIN" ? "🚆 Train" : tMode === "BUS" ? "🚌 Bus" : tMode === "CAR" ? "🚗 Car" : "✈️ Flight";
+
+                          let formattedDuration = `${duration} mins`;
+                          if (duration >= 60) {
+                            const hrs = Math.floor(duration / 60);
+                            const mins = duration % 60;
+                            formattedDuration = mins > 0 ? `${hrs}h ${mins}m` : `${hrs} hrs`;
+                          }
+
+                          return (
+                            <tr key={flight.id} className="text-xs text-white/70 hover:bg-white/[0.02] transition-colors">
+                              <td className="py-3 px-3">
+                                <span className="font-medium text-white/95 block">{dateStr}</span>
+                                <span className="text-[10px] text-white/40 block font-mono">{timeStr}</span>
+                              </td>
+                              <td className="py-3 px-3">
+                                <span className="px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/60 font-semibold text-[10px]">
+                                  {transportLabel}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3">
+                                <span className="font-mono font-bold tracking-wider text-electric-400 bg-navy-900/60 px-2 py-0.5 rounded border border-white/5">
+                                  {origin} ➔ {dest}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-white/80">
+                                {formattedDuration}
+                              </td>
+                              <td className="py-3 px-3 text-right">
+                                <span className="text-amber-300 font-bold font-mono">
+                                  +{coins} 🪙
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Log Pagination Controls */}
+                  {totalLogPages > 1 && (
+                    <div className="flex items-center justify-between border-t border-white/10 pt-3">
+                      <Button
+                        size="sm"
+                        type="button"
+                        variant="ghost"
+                        disabled={currentLogPage === 0}
+                        onClick={() => setCurrentLogPage((p) => Math.max(0, p - 1))}
+                        className="px-3 py-1.5 h-auto text-xs font-semibold text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-20 flex items-center gap-1 cursor-pointer"
+                      >
+                        <ChevronLeft className="size-4" /> Newer Entries
+                      </Button>
+                      <span className="text-xs font-bold font-mono text-white/30">
+                        Page {currentLogPage + 1} of {totalLogPages}
+                      </span>
+                      <Button
+                        size="sm"
+                        type="button"
+                        variant="ghost"
+                        disabled={currentLogPage === totalLogPages - 1}
+                        onClick={() => setCurrentLogPage((p) => Math.min(totalLogPages - 1, p + 1))}
+                        className="px-3 py-1.5 h-auto text-xs font-semibold text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-20 flex items-center gap-1 cursor-pointer"
+                      >
+                        Older Entries <ChevronRight className="size-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="text-4xl animate-pulse mb-3">📭</div>
+                  <h4 className="text-sm font-bold text-white/60 font-sans">Flight Log Empty</h4>
+                  <p className="text-xs text-white/40 mt-1 max-w-[280px] leading-relaxed">
+                    No voyages logged on this pilot terminal. Complete focus flights from the cockpit to register entries!
+                  </p>
+                </div>
+              )}
+            </Card>
+
+            {/* 4. Route Mastery Badges Showcase */}
             <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-md relative overflow-hidden shadow-xl">
               <div className="absolute top-0 left-0 w-32 h-32 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
               
