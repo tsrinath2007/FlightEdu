@@ -13,6 +13,22 @@ const publicProfileSelection = {
   studyDuration: true,
   distractibility: true,
   callDistraction: true,
+  totalHours: true,
+  currentStreak: true,
+  longestStreak: true,
+  sessionParticipants: {
+    where: { completed: true },
+    select: {
+      session: {
+        select: {
+          originCode: true,
+          destinationCode: true,
+          duration: true,
+          completedAt: true,
+        }
+      }
+    }
+  }
 };
 
 // 1. GET: List all active friends, incoming pending requests, and outgoing pending requests
