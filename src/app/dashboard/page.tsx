@@ -889,7 +889,7 @@ export default function DashboardPage() {
                             <div
                               className={`size-9 rounded-full flex items-center justify-center text-sm font-bold transition relative border ${
                                 d.state === "completed"
-                                  ? "bg-gradient-to-br from-amber-400 to-orange-500 border-amber-300 text-white shadow-[0_0_10px_rgba(245,158,11,0.4)]"
+                                  ? "bg-gradient-to-br from-red-500 via-orange-500 to-amber-400 border-red-400 text-white shadow-[0_0_12px_rgba(239,68,68,0.45)]"
                                   : d.state === "frozen"
                                   ? "bg-gradient-to-br from-cyan-400 to-blue-500 border-cyan-300 text-white shadow-[0_0_10px_rgba(6,182,212,0.4)]"
                                   : d.isToday
@@ -1099,13 +1099,15 @@ function getWeeklyStreak(userStreak: number, flights: any[]) {
       state = "empty";
     } else if (completedDates.has(dateStr)) {
       state = "completed";
+    } else if (userStreak > 0 && d.getTime() >= streakRangeEnd.getTime() && d.getTime() <= traversalStart.getTime()) {
+      // Days inside the active streak range are completed (red/orange checkmark)
+      state = "completed";
+    } else if (userStreak > 0 && d.getTime() < streakRangeEnd.getTime() && d.getTime() >= sunday.getTime()) {
+      // Missed days prior to the active streak but within the current week are frozen (blue checkmark)
+      state = "frozen";
+      hasUsedFreezeThisWeek = true;
     } else {
-      if (userStreak > 0 && d.getTime() >= streakRangeEnd.getTime() && d.getTime() <= traversalStart.getTime()) {
-        state = "frozen";
-        hasUsedFreezeThisWeek = true;
-      } else {
-        state = "empty";
-      }
+      state = "empty";
     }
 
     return {
