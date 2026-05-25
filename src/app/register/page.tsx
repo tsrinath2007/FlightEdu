@@ -55,7 +55,7 @@ export default function RegisterPage() {
     const TAKEN_IDS = [
       "captain_emily", "cadet_liam", "copilot_sophia", "cadet_aarav", 
       "cadet_chloe", "cadet_hiroshi", "cadet_elena", "admin_pilot", 
-      "flightedu_host", "voyageiq_admin"
+      "gofocusgen_host", "gofocusgen_admin"
     ];
 
     const localTaken = localStorage.getItem("taken_pilot_ids");
@@ -153,7 +153,7 @@ export default function RegisterPage() {
       >
         <Link href="/" className="mb-8 flex items-center justify-center gap-2">
           <span className="text-3xl">🌍</span>
-          <span className="font-display text-2xl font-bold text-white">FlightEdu</span>
+          <span className="font-display text-2xl font-bold text-white">GoFocusGen</span>
         </Link>
 
         <div className="rounded-2xl border border-white/8 bg-white/4 backdrop-blur-xl p-8">

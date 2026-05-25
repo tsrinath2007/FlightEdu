@@ -435,18 +435,18 @@ export default function OnboardingPage() {
       });
 
       if (res.ok) {
-        localStorage.setItem("flightedu_onboarding", JSON.stringify(data));
+        localStorage.setItem("gofocusgen_onboarding", JSON.stringify(data));
         setStep(5); // Show boarding pass
       } else {
         console.error("Failed to submit onboarding details to DB");
         // Fallback: Proceed to show boarding pass on client anyway to preserve UX resiliency
-        localStorage.setItem("flightedu_onboarding", JSON.stringify(data));
+        localStorage.setItem("gofocusgen_onboarding", JSON.stringify(data));
         setStep(5);
       }
     } catch (err) {
       console.warn("Onboarding submit warning:", err);
       // Fallback
-      localStorage.setItem("flightedu_onboarding", JSON.stringify(data));
+      localStorage.setItem("gofocusgen_onboarding", JSON.stringify(data));
       setStep(5);
     } finally {
       setSubmitLoading(false);
@@ -476,7 +476,7 @@ export default function OnboardingPage() {
         <div className="flex items-center gap-2">
           <span className="text-2xl animate-pulse">🌍</span>
           <span className="font-display text-xl font-bold tracking-tight text-white">
-            FlightEdu
+            GoFocusGen
           </span>
         </div>
         {step > 0 && step < 5 && (
@@ -996,7 +996,7 @@ export default function OnboardingPage() {
                   <div className="rounded-xl border border-white/5 bg-gradient-to-r from-blue-950/20 to-purple-950/20 p-4 text-xs text-white/50 flex gap-3">
                     <span className="text-lg">💡</span>
                     <div>
-                      <strong className="text-white">Did you know?</strong> In FlightEdu, choosing to physically detach your phone rewards you with a <span className="text-gradient-electric font-semibold">+1.5x Multiplier bonus</span> on all earned focus mileage!
+                      <strong className="text-white">Did you know?</strong> In GoFocusGen, choosing to physically detach your phone rewards you with a <span className="text-gradient-electric font-semibold">+1.5x Multiplier bonus</span> on all earned focus mileage!
                     </div>
                   </div>
                 </div>
@@ -1240,7 +1240,7 @@ export default function OnboardingPage() {
 
       {/* Footer Info */}
       <footer className="relative z-10 mx-auto w-full max-w-4xl text-center text-[10px] text-white/20">
-        FlightEdu Pilot Registration Terminal • Cruising altitude powered by Next.js 16 & React 19 • Local coords saved safely in sandbox.
+        GoFocusGen Pilot Registration Terminal • Cruising altitude powered by Next.js 16 & React 19 • Local coords saved safely in sandbox.
       </footer>
     </main>
   );

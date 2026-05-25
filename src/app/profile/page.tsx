@@ -188,7 +188,7 @@ export default function ProfilePage() {
       const base64 = ev.target?.result as string;
       
       // Always save to localStorage first (reliable fallback)
-      localStorage.setItem("flightedu_avatar", base64);
+      localStorage.setItem("gofocusgen_avatar", base64);
       setAvatarPreview(base64);
 
       // Scale and compress image to a small, lightweight Base64 string for database storage fallback
@@ -260,15 +260,15 @@ export default function ProfilePage() {
         });
 
         // Also overwrite localStorage with the persisted remote/compressed URL for future loads
-        localStorage.setItem("flightedu_avatar", finalAvatarUrl);
+        localStorage.setItem("gofocusgen_avatar", finalAvatarUrl);
         
-        // Update flightedu_onboarding cache to prevent stale overrides on refresh
-        const cached = localStorage.getItem("flightedu_onboarding");
+        // Update gofocusgen_onboarding cache to prevent stale overrides on refresh
+        const cached = localStorage.getItem("gofocusgen_onboarding");
         if (cached) {
           try {
             const parsed = JSON.parse(cached);
             parsed.avatarUrl = finalAvatarUrl;
-            localStorage.setItem("flightedu_onboarding", JSON.stringify(parsed));
+            localStorage.setItem("gofocusgen_onboarding", JSON.stringify(parsed));
           } catch {}
         }
         
@@ -287,7 +287,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     // Load saved avatar from localStorage on mount
-    const savedAvatar = localStorage.getItem("flightedu_avatar");
+    const savedAvatar = localStorage.getItem("gofocusgen_avatar");
     if (savedAvatar) setAvatarPreview(savedAvatar);
   }, []);
 
@@ -314,7 +314,7 @@ export default function ProfilePage() {
       // 1. Read localStorage onboarding cache (always available)
       let localData: Record<string, string> = {};
       try {
-        const cached = localStorage.getItem("flightedu_onboarding");
+        const cached = localStorage.getItem("gofocusgen_onboarding");
         if (cached) localData = JSON.parse(cached) as Record<string, string>;
       } catch {}
 
@@ -363,12 +363,12 @@ export default function ProfilePage() {
             };
             setDbUser(dbProfile);
             // Persist to localStorage so next refresh is instant
-            localStorage.setItem("flightedu_onboarding", JSON.stringify(dbProfile));
+            localStorage.setItem("gofocusgen_onboarding", JSON.stringify(dbProfile));
 
             // Sync DB-authoritative avatarUrl back to cache to prevent stale reverts on refresh
             if (dbProfile.avatarUrl) {
               setAvatarPreview(dbProfile.avatarUrl);
-              localStorage.setItem("flightedu_avatar", dbProfile.avatarUrl);
+              localStorage.setItem("gofocusgen_avatar", dbProfile.avatarUrl);
             }
 
             const userPhone = dbProfile.phone || "";
@@ -618,7 +618,7 @@ export default function ProfilePage() {
                 onChange={handleAvatarChange}
               />
               <h2 className="mt-4 text-lg font-bold text-white truncate">{dbUser?.name || "Anonymous Pilot"}</h2>
-              <p className="text-xs text-white/40 truncate">{dbUser?.email || "no-email@flightedu.com"}</p>
+              <p className="text-xs text-white/40 truncate">{dbUser?.email || "no-email@gofocusgen.com"}</p>
               {dbUser?.pilotId && (
                 <p className="text-xs font-mono text-neon-400 mt-0.5 tracking-wider">@{dbUser.pilotId}</p>
               )}
@@ -984,7 +984,7 @@ export default function ProfilePage() {
                 Danger Zone
               </h3>
               <p className="text-xs text-rose-300/60 mb-4">
-                Permanently delete your FlightEdu pilot credential logs, flight metrics, and coins. This action is completely irreversible.
+                Permanently delete your GoFocusGen pilot credential logs, flight metrics, and coins. This action is completely irreversible.
               </p>
               
               <Button
@@ -1025,7 +1025,7 @@ export default function ProfilePage() {
               </div>
 
               <p className="text-sm text-white/70 leading-relaxed mb-4">
-                You are about to permanently scrap your FlightEdu profile. All flight logs, coin reserves, study analytics, and Supabase auth records will be wiped from our systems.
+                You are about to permanently scrap your GoFocusGen profile. All flight logs, coin reserves, study analytics, and Supabase auth records will be wiped from our systems.
               </p>
 
               <div className="p-3 bg-white/5 rounded-xl border border-white/10 mb-4 text-center">

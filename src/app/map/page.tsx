@@ -573,7 +573,7 @@ export default function InteractiveMapPage() {
   // Load user profile & travel history on mount
   useEffect(() => {
     // 1. Fetch user coins from local manifest or DB
-    const cached = localStorage.getItem("flightedu_onboarding");
+    const cached = localStorage.getItem("gofocusgen_onboarding");
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
@@ -762,12 +762,12 @@ export default function InteractiveMapPage() {
 
       // Deduct coins locally in cache for instant updates
       if (isPrivate) {
-        const cached = localStorage.getItem("flightedu_onboarding");
+        const cached = localStorage.getItem("gofocusgen_onboarding");
         if (cached) {
           try {
             const parsed = JSON.parse(cached);
             parsed.coins = Math.max(0, userCoins - 300);
-            localStorage.setItem("flightedu_onboarding", JSON.stringify(parsed));
+            localStorage.setItem("gofocusgen_onboarding", JSON.stringify(parsed));
           } catch {}
         }
       }
@@ -891,7 +891,7 @@ export default function InteractiveMapPage() {
 
           // Try loading current user's ID
           let myId = "";
-          const cachedUser = localStorage.getItem("flightedu_onboarding");
+          const cachedUser = localStorage.getItem("gofocusgen_onboarding");
           if (cachedUser) {
             try {
               myId = JSON.parse(cachedUser).id || "";
@@ -964,7 +964,7 @@ export default function InteractiveMapPage() {
           <span className="text-xl">🗺️</span>
           <div>
             <span className="font-display text-sm font-black text-white tracking-widest uppercase block">Radar Navigation Map</span>
-            <span className="text-[10px] text-white/40 font-mono uppercase tracking-wider block">VoyageIQ Global Flight Grid</span>
+            <span className="text-[10px] text-white/40 font-mono uppercase tracking-wider block">GoFocusGen Global Flight Grid</span>
           </div>
         </div>
 

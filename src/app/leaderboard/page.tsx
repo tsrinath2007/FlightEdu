@@ -35,7 +35,7 @@ export default function LeaderboardPage() {
   useEffect(() => {
     // Attempt to parse local user id from cached onboarding
     try {
-      const onboardCache = localStorage.getItem("flightedu_onboarding");
+      const onboardCache = localStorage.getItem("gofocusgen_onboarding");
       if (onboardCache) {
         const parsed = JSON.parse(onboardCache);
         if (parsed.id) setLocalUserId(parsed.id);

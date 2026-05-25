@@ -39,7 +39,7 @@ export default function JourneyPage() {
       })
       .catch(() => {
         // Fallback to local storage if API fails or offline
-        const cached = localStorage.getItem("flightedu_onboarding");
+        const cached = localStorage.getItem("gofocusgen_onboarding");
         if (cached) {
           try {
             const parsed = JSON.parse(cached);
@@ -112,12 +112,12 @@ export default function JourneyPage() {
 
       // Deduct coins locally in cache for instant updates
       if (isPrivate && userCoins !== null) {
-        const cached = localStorage.getItem("flightedu_onboarding");
+        const cached = localStorage.getItem("gofocusgen_onboarding");
         if (cached) {
           try {
             const parsed = JSON.parse(cached);
             parsed.coins = Math.max(0, userCoins - 300);
-            localStorage.setItem("flightedu_onboarding", JSON.stringify(parsed));
+            localStorage.setItem("gofocusgen_onboarding", JSON.stringify(parsed));
           } catch {}
         }
       }

@@ -4,14 +4,14 @@ import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: {
-    default: "FlightEdu — Study Like You're Travelling the World",
-    template: "%s | FlightEdu",
+    default: "GoFocusGen — Study Like You're Travelling the World",
+    template: "%s | GoFocusGen",
   },
   description:
     "Turn your study sessions into immersive journeys. Pick a destination, calculate your travel time, and study for the duration of your simulated flight.",
   keywords: ["study", "productivity", "gamification", "focus", "travel"],
   openGraph: {
-    title: "FlightEdu",
+    title: "GoFocusGen",
     description: "Study Like You're Travelling the World",
     type: "website",
   },

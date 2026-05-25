@@ -73,7 +73,7 @@ export default function LoginPage() {
         {/* Logo */}
         <Link href="/" className="mb-8 flex items-center justify-center gap-2">
           <span className="text-3xl">🌍</span>
-          <span className="font-display text-2xl font-bold text-white">FlightEdu</span>
+          <span className="font-display text-2xl font-bold text-white">GoFocusGen</span>
         </Link>
 
         <div className="rounded-2xl border border-white/8 bg-white/4 backdrop-blur-xl p-8">

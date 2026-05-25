@@ -224,7 +224,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
         
         // Replace mock pilots with real ones
         if (data.session.participants) {
-          const localUser = localStorage.getItem("flightedu_onboarding");
+          const localUser = localStorage.getItem("gofocusgen_onboarding");
           let myId = currentUser?.id || "";
           if (!myId && localUser) {
             try {
@@ -448,7 +448,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     // Load wallet from profile (DB-persisted coins or localStorage onboarding cache)
     let profileCoins = 0;
     try {
-      const cached = localStorage.getItem("flightedu_onboarding");
+      const cached = localStorage.getItem("gofocusgen_onboarding");
       if (cached) {
         const parsed = JSON.parse(cached);
         profileCoins = Number(parsed.coins) || 0;
@@ -729,12 +729,12 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
 
     // Persist earned coins back to the localStorage profile cache
     try {
-      const cached = localStorage.getItem("flightedu_onboarding");
+      const cached = localStorage.getItem("gofocusgen_onboarding");
       if (cached) {
         const parsed = JSON.parse(cached);
         const currentCoins = Number(parsed.coins) || 0;
         parsed.coins = Math.max(0, currentCoins + finalCoins);
-        localStorage.setItem("flightedu_onboarding", JSON.stringify(parsed));
+        localStorage.setItem("gofocusgen_onboarding", JSON.stringify(parsed));
       }
     } catch {}
     // Also try DB sync with keepalive to prevent browser cancel on page navigation
@@ -1198,7 +1198,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-display font-extrabold text-md text-white tracking-wide">
-                          VoyageIQ Executive Lounge Cabin
+                          GoFocusGen Executive Lounge Cabin
                         </h3>
                         <p className="text-xs text-white/45 mt-0.5">
                           Study live with fellow pilot cadets! Select study pods to inspect stats and customize your spiky chibi avatar.
@@ -1530,7 +1530,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                         <div className="flex items-center gap-3">
                           <ShoppingBag className="size-5 text-electric-400" />
                           <div>
-                            <h4 className="font-display font-extrabold text-sm text-white">VoyageIQ Duty Free Store Closet</h4>
+                            <h4 className="font-display font-extrabold text-sm text-white">GoFocusGen Duty Free Store Closet</h4>
                             <p className="text-[10px] text-white/40">Personalize your spiky chibi study cadet hair, outfit, eyes, and study emotes!</p>
                           </div>
                         </div>

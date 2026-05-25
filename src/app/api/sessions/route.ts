@@ -5,7 +5,7 @@ import { nanoid } from "@/lib/nanoid";
 
 export async function POST(request: Request) {
   let userId: string | null = null;
-  let userEmail: string = "guest@flightedu.com";
+  let userEmail: string = "guest@gofocusgen.com";
   let userName: string = "Simulated Guest";
 
   try {
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         userId = user.id;
-        userEmail = user.email || "guest@flightedu.com";
+        userEmail = user.email || "guest@gofocusgen.com";
         userName = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split("@")[0] || "Pilot";
       }
     }

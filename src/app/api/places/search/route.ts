@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     try {
       const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&featuretype=city`;
       const res = await fetch(url, {
-        headers: { "User-Agent": "FlightEdu/1.0" },
+        headers: { "User-Agent": "GoFocusGen/1.0" },
       });
       const data = await res.json() as Array<{
         place_id: number; display_name: string; lat: string; lon: string; address?: { country?: string; country_code?: string };

@@ -141,7 +141,7 @@ export default function LandingPortalPage() {
         <div className="flex items-center gap-2">
           <span className="text-2xl">🌍</span>
           <span className="font-display text-xl font-bold tracking-tight text-white">
-            FlightEdu
+            GoFocusGen
           </span>
         </div>
         <div className="flex items-center gap-4">
@@ -301,7 +301,7 @@ export default function LandingPortalPage() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-white/5 py-8 text-center font-display">
         <p className="text-xs text-white/20">
-          FlightEdu — Study Like You&apos;re Travelling the World • Powered by Google OAuth &amp; Supabase
+          GoFocusGen — Study Like You&apos;re Travelling the World • Powered by Google OAuth &amp; Supabase
         </p>
         <p className="mt-2 text-xs text-white/30">
           Built by{" "}

@@ -211,7 +211,7 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
     }
 
     // Load active profile details
-    const localUser = localStorage.getItem("flightedu_onboarding");
+    const localUser = localStorage.getItem("gofocusgen_onboarding");
     if (localUser) {
       try {
         const parsed = JSON.parse(localUser);
@@ -740,7 +740,7 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
                     />
                   </div>
                   <span className="text-[8px] font-mono text-white/30 tracking-[0.4em] uppercase mt-2">
-                    FlightEdu-{sessionId.substring(0, 8).toUpperCase()}
+                    GoFocusGen-{sessionId.substring(0, 8).toUpperCase()}
                   </span>
                 </div>
 

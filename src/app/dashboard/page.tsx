@@ -50,10 +50,10 @@ export default function DashboardPage() {
     setDisplayName(user.user_metadata?.name ?? user.email?.split("@")[0] ?? "Pilot");
 
     // 2. Load from localStorage cache
-    const savedAvatar = localStorage.getItem("flightedu_avatar");
+    const savedAvatar = localStorage.getItem("gofocusgen_avatar");
     if (savedAvatar) setAvatarPreview(savedAvatar);
 
-    const cachedOnboarding = localStorage.getItem("flightedu_onboarding");
+    const cachedOnboarding = localStorage.getItem("gofocusgen_onboarding");
     if (cachedOnboarding) {
       try {
         const parsed = JSON.parse(cachedOnboarding);
@@ -79,9 +79,9 @@ export default function DashboardPage() {
           if (data.user.streakFreezes !== undefined) setUserStreakFreezes(data.user.streakFreezes);
           if (data.user.avatarUrl) {
             setAvatarPreview(data.user.avatarUrl);
-            localStorage.setItem("flightedu_avatar", data.user.avatarUrl);
+            localStorage.setItem("gofocusgen_avatar", data.user.avatarUrl);
           }
-          localStorage.setItem("flightedu_onboarding", JSON.stringify(data.user));
+          localStorage.setItem("gofocusgen_onboarding", JSON.stringify(data.user));
         }
       })
       .catch(() => {});
@@ -228,7 +228,7 @@ export default function DashboardPage() {
       <header className="relative z-40 flex items-center justify-between px-5 pt-5 pb-3">
         <div className="flex items-center gap-2">
           <span className="text-2xl">🌍</span>
-          <span className="font-display text-lg font-bold text-white tracking-wide">FlightEdu</span>
+          <span className="font-display text-lg font-bold text-white tracking-wide">GoFocusGen</span>
         </div>
 
         <div className="flex items-center gap-2 md:gap-3 relative">
@@ -551,7 +551,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#EBE7DF]">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">⚙️</span>
-                  <h3 className="font-display text-lg font-bold tracking-wide">FocusZen Settings</h3>
+                  <h3 className="font-display text-lg font-bold tracking-wide">GoFocusGen Settings</h3>
                 </div>
                 <button
                   onClick={() => setShowSettingsModal(false)}
@@ -647,28 +647,28 @@ export default function DashboardPage() {
                   <p className="text-[10px] font-mono tracking-widest text-[#8C7A78] uppercase font-bold">Support & Feedback</p>
                   <div className="grid grid-cols-2 gap-2">
                     <a 
-                      href={`mailto:groundcontrol@focuszen.app?subject=%5BBug%20Report%5D%20FocusZen%20Cadet%20Alert&body=Pilot%20Details%3A%0D%0A-%20Name%3A%20${encodeURIComponent(displayName)}%0D%0A-%20Email%3A%20${encodeURIComponent(user?.email || "")}%0D%0A-%20Client%20Version%3A%20v1.2.0%0D%0A%0D%0APlease%20describe%20the%20bug%20and%20steps%20to%20reproduce%3A%0D%0A`}
+                      href={`mailto:groundcontrol@gofocusgen.app?subject=%5BBug%20Report%5D%20GoFocusGen%20Cadet%20Alert&body=Pilot%20Details%3A%0D%0A-%20Name%3A%20${encodeURIComponent(displayName)}%0D%0A-%20Email%3A%20${encodeURIComponent(user?.email || "")}%0D%0A-%20Client%20Version%3A%20v1.2.0%0D%0A%0D%0APlease%20describe%20the%20bug%20and%20steps%20to%20reproduce%3A%0D%0A`}
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-[#EBE7DF] hover:bg-[#FAF8F5] transition cursor-pointer text-center text-xs font-semibold gap-1 text-[#4A3E3D]"
                     >
                       <span>🐛</span>
                       <span>Report Bug</span>
                     </a>
                     <a 
-                      href={`mailto:groundcontrol@focuszen.app?subject=%5BFeedback%5D%20FocusZen%20Cadet%20Review&body=Pilot%20Details%3A%0D%0A-%20Name%3A%20${encodeURIComponent(displayName)}%0D%0A-%20Email%3A%20${encodeURIComponent(user?.email || "")}%0D%0A%0D%0AShare%20your%20thoughts%20or%20ideas%20here%3A%0D%0A`}
+                      href={`mailto:groundcontrol@gofocusgen.app?subject=%5BFeedback%5D%20GoFocusGen%20Cadet%20Review&body=Pilot%20Details%3A%0D%0A-%20Name%3A%20${encodeURIComponent(displayName)}%0D%0A-%20Email%3A%20${encodeURIComponent(user?.email || "")}%0D%0A%0D%0AShare%20your%20thoughts%20or%20ideas%20here%3A%0D%0A`}
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-[#EBE7DF] hover:bg-[#FAF8F5] transition cursor-pointer text-center text-xs font-semibold gap-1 text-[#4A3E3D]"
                     >
                       <span>💡</span>
                       <span>Share Feedback</span>
                     </a>
                     <a 
-                      href={`mailto:groundcontrol@focuszen.app?subject=%5BFeature%20Request%5D%20FocusZen%20Cabin%20Upgrade&body=Pilot%20Details%3A%0D%0A-%20Name%3A%20${encodeURIComponent(displayName)}%0D%0A-%20Email%3A%20${encodeURIComponent(user?.email || "")}%0D%0A%0D%0ADescribe%20the%20new%20feature%20or%20dashboard%20upgrade%20you%20want%3A%0D%0A`}
+                      href={`mailto:groundcontrol@gofocusgen.app?subject=%5BFeature%20Request%5D%20GoFocusGen%20Cabin%20Upgrade&body=Pilot%20Details%3A%0D%0A-%20Name%3A%20${encodeURIComponent(displayName)}%0D%0A-%20Email%3A%20${encodeURIComponent(user?.email || "")}%0D%0A%0D%0ADescribe%20the%20new%20feature%20or%20dashboard%20upgrade%20you%20want%3A%0D%0A`}
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-[#EBE7DF] hover:bg-[#FAF8F5] transition cursor-pointer text-center text-xs font-semibold gap-1 text-[#4A3E3D]"
                     >
                       <span>✨</span>
                       <span>Request Feature</span>
                     </a>
                     <a 
-                      href="https://instagram.com/focuszen.space" 
+                      href="https://instagram.com/gofocusgen.space" 
                       target="_blank" 
                       rel="noreferrer"
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-[#EBE7DF] hover:bg-[#FAF8F5] transition cursor-pointer text-center text-xs font-semibold gap-1 text-[#4A3E3D]"
@@ -720,7 +720,7 @@ export default function DashboardPage() {
                     onClick={handleSignOut}
                     className="w-full py-3 rounded-2xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 transition cursor-pointer text-center font-bold text-sm tracking-wide"
                   >
-                    Sign out of FocusZen
+                    Sign out of GoFocusGen
                   </button>
                   <button 
                     onClick={() => {
