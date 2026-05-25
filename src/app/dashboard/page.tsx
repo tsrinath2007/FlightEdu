@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { Button } from "@/components/ui/button";
 import { formatDuration } from "@/lib/utils";
+import { computePilotRank } from "@/lib/pilotRank";
 
 const SAMPLE_STUDIERS = [
   { id: "1", name: "Arjun", country: "India", flag: "🇮🇳", subject: "Calculus", seconds: 7380 },
@@ -41,6 +42,10 @@ export default function DashboardPage() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [soundEffectsEnabled, setSoundEffectsEnabled] = useState(false);
   const [focusRemindersEnabled, setFocusRemindersEnabled] = useState(false);
+
+  // Travel Achievements Progress States
+  const [totalHours, setTotalHours] = useState<number>(0);
+  const [completedFlightsCount, setCompletedFlightsCount] = useState<number>(0);
 
   // Load custom user details and avatar on user changes
   useEffect(() => {
@@ -76,6 +81,8 @@ export default function DashboardPage() {
         if (parsed.coins !== undefined) setUserCoins(parsed.coins);
         if (parsed.currentStreak !== undefined) setUserStreak(parsed.currentStreak);
         if (parsed.streakFreezes !== undefined) setUserStreakFreezes(parsed.streakFreezes);
+        if (parsed.totalHours !== undefined) setTotalHours(parsed.totalHours);
+        if (parsed.completedFlightsCount !== undefined) setCompletedFlightsCount(parsed.completedFlightsCount);
       } catch {}
     }
 
@@ -85,6 +92,8 @@ export default function DashboardPage() {
         if (!cachedOnboarding) {
           setDisplayName("Alex Groves");
           setUserCoins(10000);
+          setCompletedFlightsCount(12); // Simulated flight log
+          setTotalHours(24.5);
         }
       }
       return;
@@ -105,11 +114,30 @@ export default function DashboardPage() {
           if (data.user.coins !== undefined) setUserCoins(data.user.coins);
           if (data.user.currentStreak !== undefined) setUserStreak(data.user.currentStreak);
           if (data.user.streakFreezes !== undefined) setUserStreakFreezes(data.user.streakFreezes);
+          if (data.user.totalHours !== undefined) setTotalHours(data.user.totalHours);
           if (data.user.avatarUrl) {
             setAvatarPreview(data.user.avatarUrl);
             localStorage.setItem("gofocusgen_avatar", data.user.avatarUrl);
           }
           localStorage.setItem("gofocusgen_onboarding", JSON.stringify(data.user));
+        }
+      })
+      .catch(() => {});
+
+    // 3b. Fetch completed flights count for dynamic rank progression
+    fetch("/api/user/flights")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.flights) {
+          setCompletedFlightsCount(data.flights.length);
+          try {
+            const cached = localStorage.getItem("gofocusgen_onboarding");
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              parsed.completedFlightsCount = data.flights.length;
+              localStorage.setItem("gofocusgen_onboarding", JSON.stringify(parsed));
+            }
+          } catch {}
         }
       })
       .catch(() => {});
@@ -449,21 +477,28 @@ export default function DashboardPage() {
           })()}
 
           {/* User Details (Redirects to Profile) */}
-          {!loading && user && (
-            <button
-              onClick={() => router.push("/profile")}
-              className="flex items-center gap-2 hover:opacity-80 transition cursor-pointer bg-transparent border-none p-0 text-left outline-none"
-            >
-              <img
-                src={avatarPreview || getAvatarUrl(user.email ?? "user")}
-                alt="avatar"
-                className="size-8 rounded-full border border-white/20 bg-white/10"
-              />
-              <span className="hidden text-sm font-medium text-white/80 sm:block">
-                {displayName}
-              </span>
-            </button>
-          )}
+          {!loading && user && (() => {
+            const pilotRank = computePilotRank(completedFlightsCount, totalHours);
+            return (
+              <button
+                onClick={() => router.push("/profile")}
+                className="flex items-center gap-2 hover:opacity-80 transition cursor-pointer bg-transparent border-none p-0 text-left outline-none"
+              >
+                <img
+                  src={avatarPreview || getAvatarUrl(user.email ?? "user")}
+                  alt="avatar"
+                  className="size-8 rounded-full border border-white/20 bg-white/10"
+                />
+                <span className="hidden text-sm font-medium text-white/80 sm:flex items-center gap-1.5">
+                  <span className="text-sm shrink-0">{pilotRank.icon}</span>
+                  <span className="font-mono text-[9px] uppercase font-bold text-electric-400 bg-electric-500/10 border border-electric-500/25 px-1.5 py-0.5 rounded leading-none">
+                    {pilotRank.name}
+                  </span>
+                  <span className="truncate max-w-[90px]">{displayName}</span>
+                </span>
+              </button>
+            );
+          })()}
           
           <button
             onClick={handleSignOut}

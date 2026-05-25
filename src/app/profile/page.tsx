@@ -21,11 +21,17 @@ import {
   Smartphone,
   CheckCircle2,
   AlertTriangle,
+  Plane,
+  Globe,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import { computePilotRank } from "@/lib/pilotRank";
 
 interface ProfileDetails {
   id: string;
@@ -42,6 +48,10 @@ interface ProfileDetails {
   coins: number;
   avatarUrl?: string;
   onboarded: boolean;
+  totalHours?: number;
+  currentStreak?: number;
+  longestStreak?: number;
+  createdAt?: string;
 }
 
 function getAvatarUrl(seed: string) {
@@ -136,6 +146,11 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [dbUser, setDbUser] = useState<ProfileDetails | null>(null);
   const [isGoogleUser, setIsGoogleUser] = useState(false);
+  
+  // Flight & Achievements state
+  const [flights, setFlights] = useState<any[]>([]);
+  const [flightsLoading, setFlightsLoading] = useState(true);
+  const [currentPassportPage, setCurrentPassportPage] = useState(0);
   
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -430,6 +445,31 @@ export default function ProfilePage() {
     loadProfile();
   }, [router]);
 
+  useEffect(() => {
+    async function loadFlights() {
+      try {
+        const res = await fetch("/api/user/flights");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.flights) {
+            setFlights(data.flights);
+            localStorage.setItem("gofocusgen_flights", JSON.stringify(data.flights));
+          }
+        } else {
+          const cached = localStorage.getItem("gofocusgen_flights");
+          if (cached) setFlights(JSON.parse(cached));
+        }
+      } catch (err) {
+        console.warn("Failed to load flights:", err);
+        const cached = localStorage.getItem("gofocusgen_flights");
+        if (cached) setFlights(JSON.parse(cached));
+      } finally {
+        setFlightsLoading(false);
+      }
+    }
+    loadFlights();
+  }, []);
+ 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaveLoading(true);
@@ -537,6 +577,132 @@ export default function ProfilePage() {
       </div>
     );
   }
+
+  // --- Aviation Ranks & Achievements Computations ---
+  const ASIAN_AIRPORTS = new Set([
+    "BLR", "DEL", "BOM", "HYD", "MAA", "CCU", "COK", "AMD", "GOI", "PNQ", "TRV", "BDQ", "CCJ", "COB", "GAU", "JAI", "LKO", "NAG", "PAT", "IXC", "IXJ", "SXR",
+    "SIN", "BKK", "DMK", "HKT", "CNX", "KUL", "BKI", "PEN", "CGK", "DPS", "SUB", "SGN", "HAN", "DAD", "MNL", "CEB", "RGN", "PNH", "REP", "LPQ", "VTE", "BWN",
+    "DXB", "AUH", "SHJ", "DOH", "MCT", "RUH", "JED", "DMM", "MED", "KWI", "BAH", "TLV", "AMM", "BEY", "MCT", "SLL", "THR", "IKA", "BGW", "EBL",
+    "CMB", "DAC", "KTM", "MLE", "ISB", "LHE", "KHI", "TAS", "ALA", "NQZ", "FRU", "DYU", "ASB", "KBL",
+    "IST", "SAW", "ESB", "AYT", "ADB", "NRT", "HND", "KIX", "ITM", "FUK", "CTS", "NGO", "OKA", "PEK", "PKX", "PVG", "SHA", "CAN", "SZX", "CTU", "KMG", "XIY", "HGH", "WUH", "HKG", "TPE", "TSA", "ICN", "GMP", "PUS", "CJU"
+  ]);
+
+  const uniqueAirports = new Set<string>();
+  let asiaRoutesCount = 0;
+  let maxFlightDuration = 0;
+  let hasRedEye = false;
+
+  flights.forEach((f) => {
+    const origin = f.session?.originCode || "";
+    const dest = f.session?.destinationCode || "";
+    const duration = f.session?.duration || 0;
+    const completedAt = f.session?.completedAt || f.joinedAt;
+
+    if (origin) uniqueAirports.add(origin);
+    if (dest) uniqueAirports.add(dest);
+
+    if (ASIAN_AIRPORTS.has(origin) || ASIAN_AIRPORTS.has(dest)) {
+      asiaRoutesCount++;
+    }
+
+    if (duration > maxFlightDuration) {
+      maxFlightDuration = duration;
+    }
+
+    if (completedAt) {
+      const date = new Date(completedAt);
+      const hour = date.getHours();
+      if (hour >= 0 && hour <= 5) {
+        hasRedEye = true;
+      }
+    }
+  });
+
+  const uniqueAirportsCount = uniqueAirports.size;
+  const totalHours = dbUser?.totalHours ?? 0;
+  const completedFlightsCount = flights.length;
+  
+  const rankInfo = computePilotRank(completedFlightsCount, totalHours, uniqueAirportsCount);
+
+  // Badge list definitions
+  const badgesData = [
+    {
+      id: "silk_road",
+      name: "Silk Road Scholar",
+      icon: "🕌",
+      desc: "Complete 10 study flights to or from Asian destinations.",
+      current: asiaRoutesCount,
+      target: 10,
+      unlocked: asiaRoutesCount >= 10,
+      progressText: `${asiaRoutesCount}/10 routes`,
+      color: "from-amber-500/20 to-orange-500/20 text-amber-300 border-amber-500/30 shadow-amber-500/10",
+    },
+    {
+      id: "transatlantic",
+      name: "Transatlantic Grind",
+      icon: "🌊",
+      desc: "Complete a continuous cruise session of 8 hours (480 minutes) or more.",
+      current: maxFlightDuration,
+      target: 480,
+      unlocked: maxFlightDuration >= 480,
+      progressText: maxFlightDuration >= 480 ? "Unlocked" : `${Math.round(maxFlightDuration)}/480 mins`,
+      color: "from-blue-500/20 to-sky-500/20 text-sky-300 border-blue-500/30 shadow-blue-500/10",
+    },
+    {
+      id: "frequent_flyer",
+      name: "Frequent Flyer",
+      icon: "🔥",
+      desc: "Maintain an active focus study streak of 7 days or more.",
+      current: dbUser?.currentStreak ?? 0,
+      target: 7,
+      unlocked: (dbUser?.currentStreak ?? 0) >= 7 || (dbUser?.longestStreak ?? 0) >= 7,
+      progressText: `Streak: ${dbUser?.currentStreak ?? 0}/7 days`,
+      color: "from-rose-500/20 to-red-500/20 text-rose-300 border-rose-500/30 shadow-rose-500/10",
+    },
+    {
+      id: "around_the_world",
+      name: "Around The World",
+      icon: "🌍",
+      desc: "Explore the globe by studying in 15 or more unique airports.",
+      current: uniqueAirportsCount,
+      target: 15,
+      unlocked: uniqueAirportsCount >= 15,
+      progressText: `${uniqueAirportsCount}/15 airports`,
+      color: "from-emerald-500/20 to-teal-500/20 text-emerald-300 border-emerald-500/30 shadow-emerald-500/10",
+    },
+    {
+      id: "red_eye",
+      name: "Red-Eye Warrior",
+      icon: "🦉",
+      desc: "Navigate through the dark hours by landing a study run between 00:00 and 05:00 AM.",
+      current: hasRedEye ? 1 : 0,
+      target: 1,
+      unlocked: hasRedEye,
+      progressText: hasRedEye ? "Unlocked" : "0/1 flight",
+      color: "from-purple-500/20 to-indigo-500/20 text-purple-300 border-purple-500/30 shadow-purple-500/10",
+    },
+  ];
+
+  // Helper to check if flight has an exotic route
+  const isExoticRoute = (origin: string, destination: string, duration: number) => {
+    if (duration >= 240) return true;
+    const interContinentalPairs = [
+      ["JFK", "SYD"], ["SYD", "JFK"],
+      ["BLR", "NRT"], ["NRT", "BLR"],
+      ["LHR", "SIN"], ["SIN", "LHR"],
+      ["DXB", "JFK"], ["JFK", "DXB"],
+      ["SIN", "JFK"], ["JFK", "SIN"],
+      ["LAX", "NRT"], ["NRT", "LAX"],
+      ["HND", "LHR"], ["LHR", "HND"],
+      ["CDG", "SIN"], ["SIN", "CDG"]
+    ];
+    return interContinentalPairs.some(([o, d]) => origin === o && destination === d);
+  };
+
+  // Pagination for Passport Stamps
+  const stampsPerPage = 4;
+  const totalStampsPages = Math.max(1, Math.ceil(flights.length / stampsPerPage));
+  const displayedFlights = flights.slice(currentPassportPage * stampsPerPage, (currentPassportPage + 1) * stampsPerPage);
 
   return (
     <main className="relative flex min-h-screen flex-col overflow-y-auto bg-navy-950 pb-32">
@@ -704,6 +870,380 @@ export default function ProfilePage() {
 
           {/* Onboarding flight manifest details (Right Panel) */}
           <div className="md:col-span-2 space-y-6">
+            {/* 1. Aviation Rank Card */}
+            <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-md relative overflow-hidden shadow-xl">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-electric-500/10 rounded-full blur-3xl pointer-events-none" />
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="size-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/15 text-3xl shadow-inner">
+                    {rankInfo.icon}
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-electric-400">Aviation Rank</span>
+                    <h4 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+                      {rankInfo.name}
+                      {rankInfo.name !== "Student Pilot" && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-electric-500/10 border border-electric-500/20 text-electric-300 font-semibold uppercase tracking-wider">Active</span>
+                      )}
+                    </h4>
+                  </div>
+                </div>
+                
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-white/30 block mb-0.5">Flight Metrics</span>
+                  <span className="text-xs font-mono text-white/70">
+                    ✈️ {completedFlightsCount} flights • ⏱️ {Math.round(totalHours)} hrs
+                  </span>
+                </div>
+              </div>
+              
+              <p className="text-sm text-white/70 mb-5 leading-relaxed">{rankInfo.desc}</p>
+              
+              {rankInfo.nextRank ? (
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-medium">
+                    <span className="text-white/40">Next Level: <strong className="text-white font-semibold">{rankInfo.nextRank}</strong></span>
+                    <span className="text-electric-300 font-mono text-[11px] bg-electric-500/10 px-2 py-0.5 rounded border border-electric-500/20">{rankInfo.nextRankReq}</span>
+                  </div>
+                  <div className="w-full h-3 bg-navy-950 rounded-full overflow-hidden border border-white/10 p-0.5 shadow-inner">
+                    <motion.div 
+                      className="h-full bg-gradient-to-r from-electric-500 via-indigo-500 to-purple-500 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${rankInfo.progressPercent}%` }}
+                      transition={{ duration: 1.2, ease: "easeOut" }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-white/30 font-medium">
+                    <span>Current Rank: {rankInfo.name}</span>
+                    <span>Progress: {rankInfo.progressPercent}%</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 p-3.5 text-amber-300 shadow-lg shadow-amber-500/5">
+                  <Sparkles className="size-5 shrink-0 text-amber-400 animate-pulse" />
+                  <span className="text-xs font-bold tracking-wide">Commander tier unlocked! You have achieved master status. 🚀</span>
+                </div>
+              )}
+            </Card>
+
+            {/* 2. Digital Passport Booklet */}
+            <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-md relative overflow-hidden shadow-xl">
+              <div className="flex items-center justify-between border-b border-white/15 pb-4 mb-5">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Globe className="size-5 text-electric-400 animate-pulse" />
+                    Digital Flight Passport
+                  </h3>
+                  <p className="text-xs text-white/40 mt-0.5">Your official visa booklet & landing records</p>
+                </div>
+                
+                {completedFlightsCount > 0 && (
+                  <div className="flex items-center gap-2 bg-navy-900/60 border border-white/10 px-3 py-1 rounded-full text-xs text-white/60 font-medium">
+                    📖 Stamps: <strong className="text-white">{completedFlightsCount}</strong>
+                  </div>
+                )}
+              </div>
+
+              {/* Physical-style booklet wrapper */}
+              <div className="bg-[#2f1f17] border-4 border-[#1e140f] rounded-2xl p-2.5 sm:p-4 shadow-2xl relative overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_100%)] pointer-events-none" />
+                
+                {/* Vintage Leather spine line */}
+                <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 bg-black/40 hidden md:block" />
+                <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-1 border-r border-dashed border-white/10 hidden md:block" />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* LEFT PAGE: Biodata */}
+                  <div className="bg-[#f5ebd6] text-[#423329] border border-[#dcd0b8] rounded-xl p-4 sm:p-5 relative overflow-hidden shadow-inner flex flex-col justify-between min-h-[300px]">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-black/5 rounded-bl-full pointer-events-none flex items-center justify-center font-serif text-[60px] font-bold opacity-10 text-[#423329]">
+                      GFG
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center justify-between border-b border-[#423329]/20 pb-2 mb-3">
+                        <span className="font-serif font-bold text-xs uppercase tracking-wider text-[#7c6352]">GoFocusGen Space Fleet</span>
+                        <span className="font-mono text-[9px] font-bold bg-[#423329]/10 px-1.5 py-0.5 rounded text-[#423329]/70">
+                          PASSPORT NO: GFG-{dbUser?.id?.substring(0, 8).toUpperCase()}
+                        </span>
+                      </div>
+                      
+                      <div className="flex gap-4">
+                        {/* Avatar box */}
+                        <div className="size-16 sm:size-20 bg-[#ebdcb8] border-2 border-[#c5b597] rounded-lg p-1 shrink-0 overflow-hidden shadow-md">
+                          <img
+                            src={avatarPreview || dbUser?.avatarUrl || getAvatarUrl(dbUser?.email || "pilot")}
+                            alt="biodata avatar"
+                            className="size-full object-cover rounded grayscale contrast-125 mix-blend-multiply"
+                          />
+                        </div>
+                        
+                        <div className="space-y-1.5 min-w-0 flex-1">
+                          <div>
+                            <span className="text-[8px] uppercase tracking-wider text-[#8b7260] block font-bold">Pilot Name / Nom</span>
+                            <span className="text-xs font-bold text-[#2d221b] truncate block font-sans tracking-wide uppercase">
+                              {dbUser?.name || "Anonymous Pilot"}
+                            </span>
+                          </div>
+                          
+                          <div>
+                            <span className="text-[8px] uppercase tracking-wider text-[#8b7260] block font-bold">Pilot Code ID</span>
+                            <span className="text-xs font-mono font-bold text-[#2d221b] truncate block tracking-wider">
+                              @{dbUser?.pilotId || "UNLICENSED"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3 mt-4 border-t border-dashed border-[#423329]/20 pt-3">
+                        <div>
+                          <span className="text-[8px] uppercase tracking-wider text-[#8b7260] block font-bold">Authority / Autorité</span>
+                          <span className="text-[10px] font-bold text-[#2d221b]">GFG Control</span>
+                        </div>
+                        <div>
+                          <span className="text-[8px] uppercase tracking-wider text-[#8b7260] block font-bold">Active Rank</span>
+                          <span className="text-[10px] font-bold text-[#2d221b] flex items-center gap-1 font-serif">
+                            {rankInfo.icon} {rankInfo.name}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[8px] uppercase tracking-wider text-[#8b7260] block font-bold">Total Landings</span>
+                          <span className="text-[10px] font-bold text-[#2d221b] font-mono">{completedFlightsCount} flights</span>
+                        </div>
+                        <div>
+                          <span className="text-[8px] uppercase tracking-wider text-[#8b7260] block font-bold">Issue Date / Émission</span>
+                          <span className="text-[10px] font-bold text-[#2d221b] font-mono">
+                            {dbUser?.createdAt ? new Date(dbUser.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase() : "26 MAY 2026"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 pt-2 border-t border-[#423329]/10 text-center">
+                      <span className="font-mono text-[7px] text-[#8b7260] tracking-widest block font-bold uppercase">
+                        P&lt;GFGPILOT&lt;&lt;{dbUser?.name?.replace(/\s+/g, "").toUpperCase() || "ANONYMOUS"}&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* RIGHT PAGE: Visa Stamps */}
+                  <div className="bg-[#f5ebd6] text-[#423329] border border-[#dcd0b8] rounded-xl p-4 sm:p-5 relative overflow-hidden shadow-inner flex flex-col justify-between min-h-[300px]">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.01)_0%,transparent_100%)] pointer-events-none" />
+                    
+                    <div>
+                      <div className="flex items-center justify-between border-b border-[#423329]/20 pb-2 mb-3">
+                        <span className="font-serif font-bold text-xs uppercase tracking-wider text-[#7c6352]">Visa Stamp Entries</span>
+                        <span className="font-serif font-bold text-[10px] text-[#7c6352]/70">
+                          Page {currentPassportPage + 1} of {totalStampsPages}
+                        </span>
+                      </div>
+
+                      {flightsLoading ? (
+                        <div className="flex flex-col items-center justify-center min-h-[180px] w-full">
+                          <Loader2 className="size-6 animate-spin text-[#7c6352]" />
+                          <span className="text-[10px] text-[#7c6352]/70 mt-2">Reading stamp booklet...</span>
+                        </div>
+                      ) : displayedFlights.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-3 pb-3">
+                          {displayedFlights.map((flight, idx) => {
+                            const origin = flight.session?.originCode || "???";
+                            const dest = flight.session?.destinationCode || "???";
+                            const destCity = flight.session?.destination?.split(",")[0]?.toUpperCase() || "UNKNOWN";
+                            const duration = flight.session?.duration || 0;
+                            const tMode = flight.session?.transportMode || "FLIGHT";
+                            const dateStr = flight.session?.completedAt || flight.joinedAt
+                              ? new Date(flight.session?.completedAt || flight.joinedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
+                              : "UNKNOWN";
+
+                            // Generate nice deterministic ink colors
+                            const isExotic = isExoticRoute(origin, dest, duration);
+                            const inkColorStyles = isExotic
+                              ? "border-2 border-amber-600/75 text-amber-800 bg-amber-500/5 font-bold shadow-[inset_0_0_10px_rgba(245,158,11,0.2)] sparkle-pulse"
+                              : idx % 4 === 0
+                              ? "border-2 border-[#5a4ba1]/70 text-[#5a4ba1] bg-[#5a4ba1]/5"
+                              : idx % 4 === 1
+                              ? "border-2 border-[#2b7a78]/70 text-[#2b7a78] bg-[#2b7a78]/5"
+                              : idx % 4 === 2
+                              ? "border-2 border-[#823329]/70 text-[#823329] bg-[#823329]/5"
+                              : "border-2 border-[#3e6b4d]/70 text-[#3e6b4d] bg-[#3e6b4d]/5";
+
+                            // Dynamic tilt rotation
+                            const rotateDeg = ((idx * 9 + currentPassportPage * 13) % 12) - 6;
+                            const transportEmoji = tMode === "TRAIN" ? "🚆" : tMode === "BUS" ? "🚌" : tMode === "CAR" ? "🚗" : "✈️";
+
+                            return (
+                              <motion.div
+                                key={flight.id}
+                                className={`rounded-full p-2 text-center flex flex-col items-center justify-center aspect-square relative shadow-sm border-dashed select-none ${inkColorStyles}`}
+                                style={{ transform: `rotate(${rotateDeg}deg)` }}
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ duration: 0.3, delay: idx * 0.05 }}
+                              >
+                                {isExotic && (
+                                  <div className="absolute -top-1 -right-1 text-[9px] animate-pulse">⭐</div>
+                                )}
+                                <span className="text-[7px] font-bold tracking-widest font-mono opacity-80 uppercase block">
+                                  {origin} ➔ {dest}
+                                </span>
+                                <span className="text-[12px] font-black tracking-wide my-0.5 block leading-none font-sans">
+                                  {dest}
+                                </span>
+                                <span className="text-[6px] font-extrabold max-w-[70px] truncate block leading-tight font-serif">
+                                  {destCity}
+                                </span>
+                                <span className="text-[6px] font-mono mt-0.5 block opacity-90 font-bold border-t border-[#423329]/10 pt-0.5 leading-none">
+                                  {transportEmoji} {dateStr}
+                                </span>
+                              </motion.div>
+                            );
+                          })}
+                          
+                          {/* Dotted placeholders for empty slots */}
+                          {Array.from({ length: stampsPerPage - displayedFlights.length }).map((_, placeholderIdx) => (
+                            <div
+                              key={`placeholder-${placeholderIdx}`}
+                              className="rounded-full border border-dashed border-[#423329]/15 aspect-square flex flex-col items-center justify-center select-none text-[8px] text-[#423329]/25 font-bold uppercase tracking-wider text-center p-2"
+                            >
+                              <span>Stamp Slot</span>
+                              <span className="text-xs mt-1">🧭</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center min-h-[180px] w-full text-center p-4">
+                          <div className="text-3xl animate-bounce mb-2">✈️</div>
+                          <span className="text-xs font-bold text-[#7c6352] uppercase tracking-wider block">No visa entries</span>
+                          <p className="text-[10px] text-[#7c6352]/70 mt-1 max-w-[170px] leading-relaxed">
+                            Take off on a focus study flight from the cockpit to receive your first landing stamp!
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Pagination Controls */}
+                    {totalStampsPages > 1 && (
+                      <div className="flex items-center justify-between border-t border-[#423329]/10 pt-2.5">
+                        <Button
+                          size="sm"
+                          type="button"
+                          variant="ghost"
+                          disabled={currentPassportPage === 0}
+                          onClick={() => setCurrentPassportPage((p) => Math.max(0, p - 1))}
+                          className="px-2 py-1 h-auto text-[10px] font-bold text-[#7c6352] hover:text-[#423329] hover:bg-black/5 disabled:opacity-20 flex items-center gap-1"
+                        >
+                          <ChevronLeft className="size-3" /> Prev
+                        </Button>
+                        <span className="text-[10px] font-bold font-mono text-[#7c6352]/70">
+                          {currentPassportPage + 1} / {totalStampsPages}
+                        </span>
+                        <Button
+                          size="sm"
+                          type="button"
+                          variant="ghost"
+                          disabled={currentPassportPage === totalStampsPages - 1}
+                          onClick={() => setCurrentPassportPage((p) => Math.min(totalStampsPages - 1, p + 1))}
+                          className="px-2 py-1 h-auto text-[10px] font-bold text-[#7c6352] hover:text-[#423329] hover:bg-black/5 disabled:opacity-20 flex items-center gap-1"
+                        >
+                          Next <ChevronRight className="size-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* 3. Route Mastery Badges Showcase */}
+            <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-md relative overflow-hidden shadow-xl">
+              <div className="absolute top-0 left-0 w-32 h-32 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+              
+              <div className="flex items-center justify-between border-b border-white/15 pb-4 mb-5">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Award className="size-5 text-electric-400" />
+                    Route Mastery Showcase
+                  </h3>
+                  <p className="text-xs text-white/40 mt-0.5">Global travel focus milestones and achievements</p>
+                </div>
+                
+                <span className="text-xs bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold px-3 py-1 rounded-full">
+                  ⭐ Unlocked: {badgesData.filter(b => b.unlocked).length} / 5
+                </span>
+              </div>
+
+              {/* Badges Case Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {badgesData.map((badge) => {
+                  const percent = Math.min(100, Math.round((badge.current / badge.target) * 100));
+
+                  return (
+                    <motion.div
+                      key={badge.id}
+                      className={`p-4 rounded-xl border relative overflow-hidden transition-all duration-300 flex flex-col justify-between min-h-[140px] ${
+                        badge.unlocked
+                          ? "bg-gradient-to-br from-indigo-950/40 via-navy-950/30 to-purple-950/40 border-purple-500/30 text-white shadow-lg shadow-purple-500/5 hover:border-purple-500/50 hover:shadow-purple-500/10 group"
+                          : "bg-white/[0.01] border-white/5 opacity-55 hover:opacity-75 transition-opacity"
+                      }`}
+                      whileHover={badge.unlocked ? { y: -2, scale: 1.01 } : {}}
+                    >
+                      {/* Decorative unlocked ring glow */}
+                      {badge.unlocked && (
+                        <div className="absolute -top-10 -right-10 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition pointer-events-none" />
+                      )}
+
+                      <div className="flex gap-3">
+                        <div className={`size-11 rounded-xl flex items-center justify-center border text-2xl shrink-0 ${
+                          badge.unlocked
+                            ? "bg-purple-500/15 border-purple-500/30 text-white"
+                            : "bg-white/5 border-white/10 text-white/30 grayscale"
+                        }`}>
+                          {badge.icon}
+                        </div>
+                        
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-sm font-bold tracking-wide truncate text-white font-sans">
+                            {badge.name}
+                          </h4>
+                          <p className="text-[11px] text-white/50 leading-relaxed mt-0.5">
+                            {badge.desc}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-white/5">
+                        <div className="flex items-center justify-between text-[10px] font-mono mb-1 text-white/40">
+                          <span>Status</span>
+                          <span className={badge.unlocked ? "text-purple-300 font-bold" : "text-white/60"}>
+                            {badge.progressText}
+                          </span>
+                        </div>
+                        
+                        <div className="w-full h-1.5 bg-navy-950 rounded-full overflow-hidden border border-white/5 p-0.5">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              badge.unlocked
+                                ? "bg-gradient-to-r from-purple-500 to-electric-400"
+                                : "bg-white/10"
+                            }`}
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Check star decoration */}
+                      {badge.unlocked && (
+                        <div className="absolute top-2 right-2 text-xs text-amber-400">
+                          ⭐
+                        </div>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </Card>
+
+            {/* 4. Onboarding flight manifest details Card */}
             <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-md relative overflow-hidden">
               <div className="flex items-center justify-between border-b border-white/15 pb-4 mb-5">
                 <div>
