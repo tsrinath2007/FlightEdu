@@ -11,6 +11,7 @@ import { useUser } from "@/hooks/useUser";
 import { Button } from "@/components/ui/button";
 import { formatDuration } from "@/lib/utils";
 import { computePilotRank } from "@/lib/pilotRank";
+import Logo from "@/components/brand/Logo";
 
 const SAMPLE_STUDIERS = [
   { id: "1", name: "Arjun", country: "India", flag: "🇮🇳", subject: "Calculus", seconds: 7380 },
@@ -295,8 +296,7 @@ export default function DashboardPage() {
       {/* Header */}
       <header className="relative z-40 flex items-center justify-between px-5 pt-5 pb-3">
         <div className="flex items-center gap-2">
-          <span className="text-2xl">🌍</span>
-          <span className="font-display text-lg font-bold text-white tracking-wide">GoFocusGen</span>
+          <Logo layout="horizontal" size="md" />
         </div>
 
         <div className="flex items-center gap-2 md:gap-3 relative">

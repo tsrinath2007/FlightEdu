@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import Logo from "@/components/brand/Logo";
 
 const FEATURES = [
   {
@@ -139,10 +140,7 @@ export default function LandingPortalPage() {
       {/* Navigation */}
       <nav className="relative z-10 mx-auto flex max-w-6xl items-center justify-between py-4">
         <div className="flex items-center gap-2">
-          <span className="text-2xl">🌍</span>
-          <span className="font-display text-xl font-bold tracking-tight text-white">
-            GoFocusGen
-          </span>
+          <Logo layout="horizontal" size="md" />
         </div>
         <div className="flex items-center gap-4">
           <Button

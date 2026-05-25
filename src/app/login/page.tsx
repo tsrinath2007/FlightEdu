@@ -7,6 +7,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import Logo from "@/components/brand/Logo";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -71,9 +72,8 @@ export default function LoginPage() {
         className="relative z-10 w-full max-w-md"
       >
         {/* Logo */}
-        <Link href="/" className="mb-8 flex items-center justify-center gap-2">
-          <span className="text-3xl">🌍</span>
-          <span className="font-display text-2xl font-bold text-white">GoFocusGen</span>
+        <Link href="/" className="mb-8 block">
+          <Logo layout="vertical" size="lg" />
         </Link>
 
         <div className="rounded-2xl border border-white/8 bg-white/4 backdrop-blur-xl p-8">
