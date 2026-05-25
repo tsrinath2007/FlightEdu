@@ -312,27 +312,11 @@ export default function DashboardPage() {
           {!loading && user && (
             <button
               onClick={() => setShowStreakModal(true)}
-              className={`flex items-center gap-1.5 rounded-full px-2 py-1 font-bold text-[10px] sm:text-xs tracking-wide transition cursor-pointer select-none border ${
-                hasUsedFreezeThisWeek
-                  ? "bg-cyan-500/15 border-cyan-500/40 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.25)] hover:bg-cyan-500/25"
-                  : "bg-orange-500/15 border-orange-500/40 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.25)] hover:bg-orange-500/25"
-              }`}
-              title={hasUsedFreezeThisWeek ? "Streak Frozen (Cold Fire Shield Active)" : "Current Study Streak"}
+              className="flex items-center gap-1.5 rounded-full bg-orange-500/10 border border-orange-500/30 px-2.5 py-1 text-orange-400 font-bold text-[10px] sm:text-xs tracking-wide shadow-[0_0_8px_rgba(249,115,22,0.15)] hover:bg-orange-500/20 transition cursor-pointer select-none"
+              title="Current Daily Streak"
             >
-              <span>{hasUsedFreezeThisWeek ? "❄️" : "🔥"}</span>
+              <span>🔥</span>
               <span>{userStreak}d</span>
-            </button>
-          )}
-
-          {/* Streak Freezes Display */}
-          {!loading && user && (
-            <button
-              onClick={() => setShowStreakModal(true)}
-              className="flex items-center gap-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 px-2.5 py-1 text-cyan-400 font-bold text-[10px] sm:text-xs tracking-wide shadow-[0_0_8px_rgba(6,182,212,0.15)] hover:bg-cyan-500/20 transition cursor-pointer select-none"
-              title="Streak Freezes Available"
-            >
-              <span>🧊</span>
-              <span>{userStreakFreezes}</span>
             </button>
           )}
 
@@ -868,37 +852,40 @@ export default function DashboardPage() {
                 </button>
 
                 {/* Glow Background Overlay */}
-                <div className={`absolute top-0 left-0 right-0 h-44 bg-gradient-to-b ${hasUsedFreezeThisWeek ? 'from-cyan-500/20' : 'from-orange-500/20'} to-transparent pointer-events-none`} />
+                <div className="absolute top-0 left-0 right-0 h-44 bg-gradient-to-b from-orange-500/20 to-transparent pointer-events-none" />
 
                 <div className="p-6 space-y-6 overflow-y-auto flex-1">
-                  {/* Large Streak Flame Display */}
-                  <div className="flex flex-col items-center pt-4">
-                    {hasUsedFreezeThisWeek ? <FlameIceIcon /> : <FlameStandardIcon />}
-                    <h2 className="text-3xl font-extrabold tracking-tight mt-3 text-center">
-                      {userStreak}-day win streak
-                    </h2>
-                    <p className={`text-sm mt-1 text-center font-medium ${hasUsedFreezeThisWeek ? 'text-cyan-400' : 'text-orange-400'}`}>
-                      {hasUsedFreezeThisWeek ? "Streak frozen! Icy shields active" : "You're heating up!"}
-                    </p>
-                    <p className="text-xs text-white/50 mt-1 text-center max-w-[280px]">
-                      {hasUsedFreezeThisWeek
-                        ? "A streak freeze was activated to protect your focus engines. Complete a session to warm them back up!"
-                        : "Complete a daily focus flight to warm your engines and extend your travel streak."}
-                    </p>
+                  {/* Large Streak Display - Two Column Layout as per screenshot */}
+                  <div className="flex items-center justify-between px-2 pt-6 pb-2">
+                    <div className="space-y-1">
+                      <h2 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500">
+                        {userStreak}-day streak
+                      </h2>
+                      <p className="text-base font-bold text-white/95">
+                        You're heating up!
+                      </p>
+                    </div>
+                    <div>
+                      <FlameStandardIcon />
+                    </div>
                   </div>
 
                   {/* Horizontal Weekly Progress Tracker Grid */}
                   <div className="bg-white/5 border border-white/10 rounded-2xl p-4 relative overflow-hidden">
                     <p className="text-[9px] font-mono tracking-widest text-white/40 uppercase font-bold text-center mb-3">Weekly Tracker Dashboard</p>
                     
-                    <div className="relative flex items-center justify-between w-full px-2 mt-4">
-                      {/* Connecting Line */}
-                      <div className="absolute left-6 right-6 h-[2px] bg-white/10 z-0" />
+                    <div className="relative flex items-center justify-between w-full px-2 mt-4 pb-1">
+                      {/* Connecting Line (Aligned perfectly to the center of the dots at the bottom!) */}
+                      <div className="absolute left-6 right-6 bottom-[18px] h-[2px] bg-white/10 z-0" />
                       
                       {weekDays.map((d, idx) => {
                         return (
                           <div key={idx} className="flex flex-col items-center z-10 relative">
-                            {/* Circle Dot */}
+                            {/* Day name (S M T W T F S) on TOP as per screenshot */}
+                            <span className={`text-[11px] mb-2 font-extrabold tracking-wider ${d.isToday ? 'text-white' : 'text-white/40'}`}>
+                              {d.dayName}
+                            </span>
+                            {/* Circle Dot below the day name */}
                             <div
                               className={`size-9 rounded-full flex items-center justify-center text-sm font-bold transition relative border ${
                                 d.state === "completed"
@@ -913,32 +900,20 @@ export default function DashboardPage() {
                               {d.state === "completed" ? (
                                 "✓"
                               ) : d.state === "frozen" ? (
-                                "❄️"
+                                "✓"
                               ) : d.isToday ? (
                                 <span className="absolute inset-0 rounded-full border border-white/30 animate-ping opacity-75" />
                               ) : null}
-                              {d.state === "empty" && d.dayName}
                             </div>
-                            <span className={`text-[10px] mt-1.5 font-bold ${d.isToday ? 'text-white font-extrabold' : 'text-white/40'}`}>
-                              {d.dayName}
-                            </span>
                           </div>
                         );
                       })}
                     </div>
-                  </div>
 
-                  {/* Streak Freeze Sub-info */}
-                  <div className="flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 p-3.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-xl">🧊</span>
-                      <div>
-                        <span className="text-xs font-bold text-white block">Streak Freezes</span>
-                        <span className="text-[10px] text-white/40 font-medium leading-none">Keeps streak alive if a day is missed</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 px-3 py-1 rounded-full text-xs font-bold font-mono">
-                      {userStreakFreezes} / 3 Available
+                    {/* Streak Freezes Available Segment (Premium layout with custom checklist icon matching screenshot!) */}
+                    <div className="flex items-center gap-3 mt-6 justify-center text-sm font-semibold border-t border-white/5 pt-4 text-white/90">
+                      <StreakFreezeIcon />
+                      <span>{userStreakFreezes} {userStreakFreezes === 1 ? 'streak freeze' : 'streak freezes'} ready to use</span>
                     </div>
                   </div>
 
@@ -1143,6 +1118,25 @@ function getWeeklyStreak(userStreak: number, flights: any[]) {
 
   return { weekDays: result, hasUsedFreezeThisWeek };
 }
+
+const StreakFreezeIcon = () => (
+  <div className="relative size-7 flex items-center justify-center">
+    {/* Icy Glow / Shards */}
+    <svg className="absolute -bottom-1 size-8 overflow-visible" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Small ice crystal shards at the bottom */}
+      <path d="M6 20L8 26L10 20Z" fill="#22D3EE" opacity="0.8" />
+      <path d="M12 22L14 30L16 22Z" fill="#38BDF8" />
+      <path d="M18 21L20 28L22 21Z" fill="#0EA5E9" opacity="0.9" />
+      <path d="M24 20L25 25L26 20Z" fill="#06B6D4" opacity="0.7" />
+    </svg>
+    {/* Blue circle with white checkmark */}
+    <div className="size-6 rounded-full bg-gradient-to-br from-cyan-400 via-sky-500 to-blue-600 flex items-center justify-center border border-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.5)] z-10">
+      <svg className="size-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+    </div>
+  </div>
+);
 
 const FlameStandardIcon = () => (
   <svg className="size-16 filter drop-shadow-[0_0_15px_rgba(245,158,11,0.6)] animate-pulse" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
