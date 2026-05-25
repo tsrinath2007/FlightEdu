@@ -46,6 +46,9 @@ export default function DashboardPage() {
   // Travel Achievements Progress States
   const [totalHours, setTotalHours] = useState<number>(0);
   const [completedFlightsCount, setCompletedFlightsCount] = useState<number>(0);
+  const [userFlights, setUserFlights] = useState<any[]>([]);
+  const [userLongestStreak, setUserLongestStreak] = useState<number>(0);
+  const [showStreakModal, setShowStreakModal] = useState<boolean>(false);
 
   // Load custom user details and avatar on user changes
   useEffect(() => {
@@ -80,6 +83,7 @@ export default function DashboardPage() {
         if (parsed.avatarUrl) setAvatarPreview(parsed.avatarUrl);
         if (parsed.coins !== undefined) setUserCoins(parsed.coins);
         if (parsed.currentStreak !== undefined) setUserStreak(parsed.currentStreak);
+        if (parsed.longestStreak !== undefined) setUserLongestStreak(parsed.longestStreak);
         if (parsed.streakFreezes !== undefined) setUserStreakFreezes(parsed.streakFreezes);
         if (parsed.totalHours !== undefined) setTotalHours(parsed.totalHours);
         if (parsed.completedFlightsCount !== undefined) setCompletedFlightsCount(parsed.completedFlightsCount);
@@ -113,6 +117,7 @@ export default function DashboardPage() {
           if (data.user.name) setDisplayName(data.user.name);
           if (data.user.coins !== undefined) setUserCoins(data.user.coins);
           if (data.user.currentStreak !== undefined) setUserStreak(data.user.currentStreak);
+          if (data.user.longestStreak !== undefined) setUserLongestStreak(data.user.longestStreak);
           if (data.user.streakFreezes !== undefined) setUserStreakFreezes(data.user.streakFreezes);
           if (data.user.totalHours !== undefined) setTotalHours(data.user.totalHours);
           if (data.user.avatarUrl) {
@@ -130,6 +135,7 @@ export default function DashboardPage() {
       .then((data) => {
         if (data.flights) {
           setCompletedFlightsCount(data.flights.length);
+          setUserFlights(data.flights);
           try {
             const cached = localStorage.getItem("gofocusgen_onboarding");
             if (cached) {
@@ -301,19 +307,34 @@ export default function DashboardPage() {
           )}
 
           {/* Streak Display */}
-          {!loading && user && (
-            <div className="flex items-center gap-1 rounded-full bg-orange-500/10 border border-orange-500/30 px-2 py-1 text-orange-400 font-bold text-[10px] sm:text-xs tracking-wide shadow-[0_0_8px_rgba(249,115,22,0.15)] select-none" title="Current Daily Streak">
-              <span>🔥</span>
-              <span>{userStreak}d</span>
-            </div>
-          )}
+          {!loading && user && (() => {
+            const { hasUsedFreezeThisWeek } = getWeeklyStreak(userStreak, userFlights);
+            return (
+              <button
+                onClick={() => setShowStreakModal(true)}
+                className={`flex items-center gap-1.5 rounded-full px-2 py-1 font-bold text-[10px] sm:text-xs tracking-wide transition cursor-pointer select-none border ${
+                  hasUsedFreezeThisWeek
+                    ? "bg-cyan-500/15 border-cyan-500/40 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.25)] hover:bg-cyan-500/25"
+                    : "bg-orange-500/15 border-orange-500/40 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.25)] hover:bg-orange-500/25"
+                }`}
+                title={hasUsedFreezeThisWeek ? "Streak Frozen (Cold Fire Shield Active)" : "Current Study Streak"}
+              >
+                <span>{hasUsedFreezeThisWeek ? "❄️" : "🔥"}</span>
+                <span>{userStreak}d</span>
+              </button>
+            );
+          })()}
 
           {/* Streak Freezes Display */}
           {!loading && user && (
-            <div className="flex items-center gap-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 px-2 py-1 text-cyan-400 font-bold text-[10px] sm:text-xs tracking-wide shadow-[0_0_8px_rgba(6,182,212,0.15)] select-none" title="Streak Freezes Available">
+            <button
+              onClick={() => setShowStreakModal(true)}
+              className="flex items-center gap-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 px-2.5 py-1 text-cyan-400 font-bold text-[10px] sm:text-xs tracking-wide shadow-[0_0_8px_rgba(6,182,212,0.15)] hover:bg-cyan-500/20 transition cursor-pointer select-none"
+              title="Streak Freezes Available"
+            >
               <span>🧊</span>
               <span>{userStreakFreezes}</span>
-            </div>
+            </button>
           )}
 
           {/* Settings Button */}
@@ -805,6 +826,166 @@ export default function DashboardPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Premium Duolingo-style Streak Modal */}
+      <AnimatePresence>
+        {showStreakModal && (() => {
+          const { weekDays, hasUsedFreezeThisWeek } = getWeeklyStreak(userStreak, userFlights);
+
+          const streakRanks = [
+            { days: 3, name: "Star", icon: "⭐", desc: "A bright start to your focus journey" },
+            { days: 5, name: "Superstar", icon: "🌟", desc: "Shining bright through the week" },
+            { days: 7, name: "Champion", icon: "🏆", desc: "Completed a full 7-day focus cruise" },
+            { days: 31, name: "Icon", icon: "🏅", desc: "A full month of unbreakable travel" },
+            { days: 50, name: "Hall of fame", icon: "🏛️", desc: "Entering the legends of aviation" },
+            { days: 100, name: "Invincible", icon: "🛡️", desc: "100 focus flights without interruption" },
+            { days: 150, name: "Legend", icon: "⚔️", desc: "Sword of discipline forged in focus" },
+            { days: 200, name: "Golden", icon: "🪙", desc: "Golden standard of mastery" },
+            { days: 250, name: "Visionary", icon: "🔭", desc: "Peeking far into the focus horizon" },
+            { days: 300, name: "Supreme", icon: "💎", desc: "Flawless focus diamond" },
+            { days: 365, name: "Interstellar", icon: "☀️", desc: "A full solar rotation of voyages" },
+            { days: 500, name: "Galactic", icon: "🌌", desc: "Ruling your own focus galaxy" },
+            { days: 1000, name: "Cosmic", icon: "🪐", desc: "Cosmic focus presence" },
+          ];
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative w-full max-w-md overflow-hidden rounded-3xl bg-[#0c1220] text-white shadow-2xl border border-white/10 flex flex-col max-h-[85vh]"
+              >
+                {/* Close Button */}
+                <button
+                  onClick={() => setShowStreakModal(false)}
+                  className="absolute top-4 right-4 z-10 size-8 flex items-center justify-center rounded-full bg-white/5 border border-white/10 hover:bg-white/15 transition cursor-pointer text-white"
+                >
+                  ✕
+                </button>
+
+                {/* Glow Background Overlay */}
+                <div className={`absolute top-0 left-0 right-0 h-44 bg-gradient-to-b ${hasUsedFreezeThisWeek ? 'from-cyan-500/20' : 'from-orange-500/20'} to-transparent pointer-events-none`} />
+
+                <div className="p-6 space-y-6 overflow-y-auto flex-1">
+                  {/* Large Streak Flame Display */}
+                  <div className="flex flex-col items-center pt-4">
+                    {hasUsedFreezeThisWeek ? <FlameIceIcon /> : <FlameStandardIcon />}
+                    <h2 className="text-3xl font-extrabold tracking-tight mt-3 text-center">
+                      {userStreak}-day win streak
+                    </h2>
+                    <p className={`text-sm mt-1 text-center font-medium ${hasUsedFreezeThisWeek ? 'text-cyan-400' : 'text-orange-400'}`}>
+                      {hasUsedFreezeThisWeek ? "Streak frozen! Icy shields active" : "You're heating up!"}
+                    </p>
+                    <p className="text-xs text-white/50 mt-1 text-center max-w-[280px]">
+                      {hasUsedFreezeThisWeek
+                        ? "A streak freeze was activated to protect your focus engines. Complete a session to warm them back up!"
+                        : "Complete a daily focus flight to warm your engines and extend your travel streak."}
+                    </p>
+                  </div>
+
+                  {/* Horizontal Weekly Progress Tracker Grid */}
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 relative overflow-hidden">
+                    <p className="text-[9px] font-mono tracking-widest text-white/40 uppercase font-bold text-center mb-3">Weekly Tracker Dashboard</p>
+                    
+                    <div className="relative flex items-center justify-between w-full px-2 mt-4">
+                      {/* Connecting Line */}
+                      <div className="absolute left-6 right-6 h-[2px] bg-white/10 z-0" />
+                      
+                      {weekDays.map((d, idx) => {
+                        return (
+                          <div key={idx} className="flex flex-col items-center z-10 relative">
+                            {/* Circle Dot */}
+                            <div
+                              className={`size-9 rounded-full flex items-center justify-center text-sm font-bold transition relative border ${
+                                d.state === "completed"
+                                  ? "bg-gradient-to-br from-amber-400 to-orange-500 border-amber-300 text-white shadow-[0_0_10px_rgba(245,158,11,0.4)]"
+                                  : d.state === "frozen"
+                                  ? "bg-gradient-to-br from-cyan-400 to-blue-500 border-cyan-300 text-white shadow-[0_0_10px_rgba(6,182,212,0.4)]"
+                                  : d.isToday
+                                  ? "bg-[#0c1220] border-white/30 text-white/70"
+                                  : "bg-white/5 border-white/10 text-white/20"
+                              }`}
+                            >
+                              {d.state === "completed" ? (
+                                "✓"
+                              ) : d.state === "frozen" ? (
+                                "❄️"
+                              ) : d.isToday ? (
+                                <span className="absolute inset-0 rounded-full border border-white/30 animate-ping opacity-75" />
+                              ) : null}
+                              {d.state === "empty" && d.dayName}
+                            </div>
+                            <span className={`text-[10px] mt-1.5 font-bold ${d.isToday ? 'text-white font-extrabold' : 'text-white/40'}`}>
+                              {d.dayName}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Streak Freeze Sub-info */}
+                  <div className="flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 p-3.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xl">🧊</span>
+                      <div>
+                        <span className="text-xs font-bold text-white block">Streak Freezes</span>
+                        <span className="text-[10px] text-white/40 font-medium leading-none">Keeps streak alive if a day is missed</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 px-3 py-1 rounded-full text-xs font-bold font-mono">
+                      {userStreakFreezes} / 3 Available
+                    </div>
+                  </div>
+
+                  {/* Horizontal Scrollable Achievements Grid */}
+                  <div className="space-y-2">
+                    <h3 className="text-center font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">
+                      Streak Milestones Chest
+                    </h3>
+
+                    {/* Scroll Container */}
+                    <div className="flex gap-3 overflow-x-auto py-2.5 px-1 scrollbar-none snap-x snap-mandatory">
+                      {streakRanks.map((badge) => {
+                        const isUnlocked = Math.max(userStreak, userLongestStreak) >= badge.days;
+                        return (
+                          <div
+                            key={badge.days}
+                            className={`flex-shrink-0 w-28 rounded-2xl p-3 border flex flex-col items-center text-center justify-between aspect-[3/4] snap-start transition ${
+                              isUnlocked
+                                ? "bg-gradient-to-b from-purple-500/15 to-indigo-500/5 border-purple-500/30 text-white shadow-lg"
+                                : "bg-white/[0.01] border-white/5 opacity-30 grayscale"
+                            }`}
+                          >
+                            <span className="text-3xl my-auto animate-pulse">{badge.icon}</span>
+                            <div className="space-y-0.5">
+                              <span className="text-[10px] font-extrabold block text-white">{badge.name}</span>
+                              <span className="text-[8px] font-mono tracking-wide bg-white/5 px-1.5 py-0.5 rounded text-white/60 font-semibold">{badge.days} days</span>
+                            </div>
+                            <span className={`text-[8px] font-bold mt-2 ${isUnlocked ? 'text-green-400' : 'text-white/30'}`}>
+                              {isUnlocked ? "Unlocked! 🔓" : "Locked 🔒"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 border-t border-white/10 bg-white/[0.02]">
+                  <button
+                    onClick={() => setShowStreakModal(false)}
+                    className="w-full py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white transition text-xs font-semibold uppercase tracking-wider cursor-pointer text-center"
+                  >
+                    Close Cockpit
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
+      </AnimatePresence>
     </main>
   );
 }
@@ -895,3 +1076,102 @@ function GlobeBackground() {
     </div>
   );
 }
+
+function getWeeklyStreak(userStreak: number, flights: any[]) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  const currentDayOfWeek = now.getDay();
+  const sunday = new Date(today.getTime() - currentDayOfWeek * 24 * 60 * 60 * 1000);
+  
+  const weekDays = [];
+  for (let i = 0; i < 7; i++) {
+    const dayDate = new Date(sunday.getTime() + i * 24 * 60 * 60 * 1000);
+    weekDays.push(dayDate);
+  }
+
+  const completedDates = new Set<string>();
+  flights.forEach((f) => {
+    const compAt = f.session?.completedAt;
+    if (compAt) {
+      const d = new Date(compAt);
+      const dateStr = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      completedDates.add(dateStr);
+    }
+  });
+
+  const todayStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+  const completedToday = completedDates.has(todayStr);
+
+  const traversalStart = completedToday ? today : new Date(today.getTime() - 24 * 60 * 60 * 1000);
+  const streakRangeEnd = new Date(traversalStart.getTime() - (userStreak - 1) * 24 * 60 * 60 * 1000);
+
+  let hasUsedFreezeThisWeek = false;
+
+  const result = weekDays.map((d, index) => {
+    const dateStr = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    const dayName = ["S", "M", "T", "W", "T", "F", "S"][index];
+    const isToday = dateStr === todayStr;
+    const isFuture = d.getTime() > today.getTime();
+    
+    let state: "completed" | "frozen" | "empty" = "empty";
+    
+    if (isFuture) {
+      state = "empty";
+    } else if (completedDates.has(dateStr)) {
+      state = "completed";
+    } else {
+      if (userStreak > 0 && d.getTime() >= streakRangeEnd.getTime() && d.getTime() <= traversalStart.getTime()) {
+        state = "frozen";
+        hasUsedFreezeThisWeek = true;
+      } else {
+        state = "empty";
+      }
+    }
+
+    return {
+      dayName,
+      date: d,
+      state,
+      isToday,
+    };
+  });
+
+  return { weekDays: result, hasUsedFreezeThisWeek };
+}
+
+const FlameStandardIcon = () => (
+  <svg className="size-16 filter drop-shadow-[0_0_15px_rgba(245,158,11,0.6)] animate-pulse" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M17.657 16.657L13.414 20.9C12.633 21.681 11.367 21.681 10.586 20.9L6.343 16.657C3.219 13.533 3.219 8.467 6.343 5.343C6.49 5.196 6.721 5.148 6.918 5.219C7.115 5.291 7.243 5.469 7.243 5.679V7.414C7.243 8.351 7.615 9.25 8.278 9.914L10.586 12.222C11.367 13.003 12.633 13.003 13.414 12.222L15.722 9.914C16.385 9.25 16.757 8.351 16.757 7.414V5.679C16.757 5.469 16.885 5.291 17.082 5.219C17.279 5.148 17.51 5.196 17.657 5.343C20.781 8.467 20.781 13.533 17.657 16.657Z" fill="url(#flameGrad)" />
+    <path d="M14.828 14.828L12.707 16.95C12.316 17.341 11.684 17.341 11.293 16.95L9.172 14.828C7.61 13.266 7.61 10.734 9.172 9.172C9.245 9.099 9.36 9.075 9.459 9.11C9.557 9.146 9.621 9.235 9.621 9.34V10.207C9.621 10.676 9.807 11.125 10.138 11.457L11.293 12.611C11.684 13.002 12.316 13.002 12.707 12.611L13.862 11.457C14.193 11.125 14.379 10.676 14.379 10.207V9.34C14.379 9.235 14.443 9.146 14.541 9.11C14.64 9.075 14.755 9.099 14.828 9.172C16.39 10.734 16.39 13.266 14.828 14.828Z" fill="url(#innerFlameGrad)" />
+    <defs>
+      <linearGradient id="flameGrad" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stopColor="#F97316" />
+        <stop offset="50%" stopColor="#EA580C" />
+        <stop offset="100%" stopColor="#DC2626" />
+      </linearGradient>
+      <linearGradient id="innerFlameGrad" x1="12" y1="8" x2="12" y2="18" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stopColor="#FDE047" />
+        <stop offset="100%" stopColor="#F97316" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
+const FlameIceIcon = () => (
+  <svg className="size-16 filter drop-shadow-[0_0_15px_rgba(6,182,212,0.6)] animate-pulse" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M17.657 16.657L13.414 20.9C12.633 21.681 11.367 21.681 10.586 20.9L6.343 16.657C3.219 13.533 3.219 8.467 6.343 5.343C6.49 5.196 6.721 5.148 6.918 5.219C7.115 5.291 7.243 5.469 7.243 5.679V7.414C7.243 8.351 7.615 9.25 8.278 9.914L10.586 12.222C11.367 13.003 12.633 13.003 13.414 12.222L15.722 9.914C16.385 9.25 16.757 8.351 16.757 7.414V5.679C16.757 5.469 16.885 5.291 17.082 5.219C17.279 5.148 17.51 5.196 17.657 5.343C20.781 8.467 20.781 13.533 17.657 16.657Z" fill="url(#flameIceGrad)" />
+    <path d="M14.828 14.828L12.707 16.95C12.316 17.341 11.684 17.341 11.293 16.95L9.172 14.828C7.61 13.266 7.61 10.734 9.172 9.172C9.245 9.099 9.36 9.075 9.459 9.11C9.557 9.146 9.621 9.235 9.621 9.34V10.207C9.621 10.676 9.807 11.125 10.138 11.457L11.293 12.611C11.684 13.002 12.316 13.002 12.707 12.611L13.862 11.457C14.193 11.125 14.379 10.676 14.379 10.207V9.34C14.379 9.235 14.443 9.146 14.541 9.11C14.64 9.075 14.755 9.099 14.828 9.172C16.39 10.734 16.39 13.266 14.828 14.828Z" fill="url(#innerFlameIceGrad)" />
+    <defs>
+      <linearGradient id="flameIceGrad" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stopColor="#00D2FF" />
+        <stop offset="50%" stopColor="#0088FF" />
+        <stop offset="100%" stopColor="#0044FF" />
+      </linearGradient>
+      <linearGradient id="innerFlameIceGrad" x1="12" y1="8" x2="12" y2="18" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stopColor="#E0F7FA" />
+        <stop offset="100%" stopColor="#00E5FF" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
