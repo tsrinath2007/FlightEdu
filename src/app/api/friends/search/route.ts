@@ -41,6 +41,11 @@ export async function GET(request: Request) {
         totalHours: true,
         currentStreak: true,
         longestStreak: true,
+        badges: {
+          include: {
+            badge: true,
+          },
+        },
         sessionParticipants: {
           where: { completed: true },
           select: {

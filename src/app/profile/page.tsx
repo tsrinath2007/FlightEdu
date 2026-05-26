@@ -150,6 +150,7 @@ export default function ProfilePage() {
   // Flight & Achievements state
   const [flights, setFlights] = useState<any[]>([]);
   const [flightsLoading, setFlightsLoading] = useState(true);
+  const [dbBadges, setDbBadges] = useState<any[]>([]);
   const [currentPassportPage, setCurrentPassportPage] = useState(0);
   const [currentLogPage, setCurrentLogPage] = useState(0);
   
@@ -470,6 +471,23 @@ export default function ProfilePage() {
     }
     loadFlights();
   }, []);
+
+  useEffect(() => {
+    async function loadBadges() {
+      try {
+        const res = await fetch("/api/user/badges");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.badges) {
+            setDbBadges(data.badges);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load badges:", err);
+      }
+    }
+    loadBadges();
+  }, []);
  
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -682,6 +700,26 @@ export default function ProfilePage() {
       progressText: hasRedEye ? "Unlocked" : "0/1 flight",
       color: "from-purple-500/20 to-indigo-500/20 text-purple-300 border-purple-500/30 shadow-purple-500/10",
     },
+  ];
+
+  // Filter custom badges from the database (granted via table editor or custom routes)
+  const customDbBadges = dbBadges.filter(
+    (dbB) => !["silk_road", "transatlantic", "frequent_flyer", "around_the_world", "red_eye"].includes(dbB.badgeId)
+  );
+
+  const allBadgesToDisplay = [
+    ...badgesData,
+    ...customDbBadges.map((dbB) => ({
+      id: dbB.badge.id,
+      name: dbB.badge.name,
+      icon: dbB.badge.icon,
+      desc: dbB.badge.description,
+      current: 1,
+      target: 1,
+      unlocked: true,
+      progressText: "Unlocked",
+      color: "from-[#00c8a0]/20 to-teal-500/20 text-[#00c8a0] border-[#00c8a0]/30 shadow-[#00c8a0]/10",
+    })),
   ];
 
   // Helper to check if flight has an exotic route
@@ -1309,13 +1347,13 @@ export default function ProfilePage() {
                 </div>
                 
                 <span className="text-xs bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold px-3 py-1 rounded-full">
-                  ⭐ Unlocked: {badgesData.filter(b => b.unlocked).length} / 5
+                  ⭐ Unlocked: {allBadgesToDisplay.filter(b => b.unlocked).length} / {allBadgesToDisplay.length}
                 </span>
               </div>
 
               {/* Badges Case Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {badgesData.map((badge) => {
+                {allBadgesToDisplay.map((badge) => {
                   const percent = Math.min(100, Math.round((badge.current / badge.target) * 100));
 
                   return (

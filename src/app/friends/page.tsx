@@ -35,6 +35,16 @@ interface PublicUser {
   totalHours?: number;
   currentStreak?: number;
   longestStreak?: number;
+  badges?: Array<{
+    badgeId: string;
+    badge: {
+      id: string;
+      name: string;
+      description: string;
+      icon: string;
+      requirement: string;
+    };
+  }>;
   sessionParticipants?: Array<{
     session: {
       originCode: string;
@@ -110,6 +120,16 @@ function getFriendRankAndBadges(user: PublicUser) {
   if ((user.currentStreak || 0) >= 7 || (user.longestStreak || 0) >= 7) unlockedBadges.push("🔥");
   if (uniqueAirportsCount >= 15) unlockedBadges.push("🌍");
   if (hasRedEye) unlockedBadges.push("🦉");
+
+  // Include custom database badges (granted via table editor or auto-grant)
+  if (user.badges && Array.isArray(user.badges)) {
+    user.badges.forEach((ub: any) => {
+      const icon = ub.badge?.icon;
+      if (icon && !["silk_road", "transatlantic", "frequent_flyer", "around_the_world", "red_eye"].includes(ub.badgeId) && !unlockedBadges.includes(icon)) {
+        unlockedBadges.push(icon);
+      }
+    });
+  }
 
   return { rank, unlockedBadges, completedFlightsCount, uniqueAirportsCount };
 }

@@ -16,6 +16,11 @@ const publicProfileSelection = {
   totalHours: true,
   currentStreak: true,
   longestStreak: true,
+  badges: {
+    include: {
+      badge: true,
+    },
+  },
   sessionParticipants: {
     where: { completed: true },
     select: {
