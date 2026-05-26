@@ -523,27 +523,6 @@ export default function LandingPortalPage() {
         </div>
       </section>
 
-      {/* Instagram Community Section (Added Instagram feature!) */}
-      <section className="relative z-10 mx-auto max-w-4xl px-4 pb-20 pt-8 text-center">
-        <Card className="p-8 border border-pink-500/10 bg-pink-500/5 hover:border-pink-500/20 transition-all rounded-[32px] overflow-hidden relative shadow-xl">
-          <div className="absolute top-0 right-0 size-32 bg-pink-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 size-24 bg-yellow-500/5 rounded-full blur-2xl pointer-events-none" />
-          <span className="text-4xl mb-3 block">📸</span>
-          <h3 className="font-display text-xl font-bold text-white mb-2">Join the Cabin Club on Instagram</h3>
-          <p className="text-xs text-white/60 max-w-md mx-auto mb-6 leading-relaxed">
-            Get weekly study checklists, scenic aviation routes, wallpaper mockups, and connect with thousands of other co-pilots worldwide.
-          </p>
-          <a
-            href="https://www.instagram.com/voyage_iq/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 hover:opacity-90 text-white font-extrabold text-xs uppercase tracking-widest transition shadow-lg shadow-pink-500/10 active:scale-95 cursor-pointer"
-          >
-            <span>Follow @voyage_iq</span>
-            <span>✈️</span>
-          </a>
-        </Card>
-      </section>
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-white/5 py-8 text-center font-display">
