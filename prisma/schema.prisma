@@ -38,6 +38,8 @@ model User {
   leaderboardEntries  LeaderboardEntry[]
   sentFriendships     Friendship[]         @relation("SentFriendships")
   receivedFriendships Friendship[]         @relation("ReceivedFriendships")
+  sentMessages        ChatMessage[]        @relation("SentMessages")
+  receivedMessages    ChatMessage[]        @relation("ReceivedMessages")
 }
 
 model Session {
@@ -162,4 +164,17 @@ model Friendship {
   receiver User @relation("ReceivedFriendships", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
+}
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  content    String
+  createdAt  DateTime @default(now())
+
+  sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, receiverId])
 }

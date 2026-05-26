@@ -7,7 +7,7 @@ import {
   Plane, Shield, Compass, Navigation, Award, Volume2, VolumeX, AlertTriangle, 
   Play, Pause, LogOut, CheckCircle2, ChevronRight, ChevronLeft, Compass as AltimeterIcon,
   Users, Info, Sparkles, User, RotateCcw, ZoomIn, ZoomOut, ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
-  ShoppingBag, Heart
+  ShoppingBag, Heart, Send
 } from "lucide-react";
 import { CadetAvatar, HairStyle, ClothingStyle, EyesStyle, ActivityType } from "@/components/journey/CadetAvatar";
 
@@ -133,6 +133,25 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
   const [relocatingSeat, setRelocatingSeat] = useState<string | null>(null);
 
   const [currentUser, setCurrentUser] = useState<any>(null);
+  
+  const [friends, setFriends] = useState<any[]>([]);
+  const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
+  const [outgoingRequests, setOutgoingRequests] = useState<any[]>([]);
+  const [selectedChatFriend, setSelectedChatFriend] = useState<any | null>(null);
+
+  const fetchFriendships = useCallback(async () => {
+    try {
+      const res = await fetch("/api/friends/request");
+      if (res.ok) {
+        const data = await res.json();
+        setFriends(data.friends || []);
+        setIncomingRequests(data.incoming || []);
+        setOutgoingRequests(data.outgoing || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch friendships inside session:", err);
+    }
+  }, []);
 
   useEffect(() => {
     fetch("/api/user/onboard")
@@ -579,12 +598,16 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     fetchParticipants();
   }, [sessionId, fetchParticipants, syncSeatToDatabase]);
 
-  // Dynamic Polling for Multiplayer Cabin Participants
+  // Dynamic Polling for Multiplayer Cabin Participants and Friendships
   useEffect(() => {
     fetchParticipants();
-    const interval = setInterval(fetchParticipants, 5000);
+    fetchFriendships();
+    const interval = setInterval(() => {
+      fetchParticipants();
+      fetchFriendships();
+    }, 5000);
     return () => clearInterval(interval);
-  }, [sessionId, fetchParticipants]);
+  }, [sessionId, fetchParticipants, fetchFriendships]);
 
   // Autopilot Focus Timer engine (using precise system time intervals to prevent drift and refresh loss)
   useEffect(() => {
@@ -1560,6 +1583,105 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                                 <span>Gift Coffee Vibes</span>
                               </button>
 
+                              {/* Co-Pilot Seating Actions (Friend Requests & Direct Chats) */}
+                              {selectedSeatDetails.userId && currentUser && selectedSeatDetails.userId !== currentUser.id && (() => {
+                                const isFriend = friends.some((f) => f.user.id === selectedSeatDetails.userId);
+                                const isIncoming = incomingRequests.some((r) => r.user.id === selectedSeatDetails.userId);
+                                const isOutgoing = outgoingRequests.some((r) => r.user.id === selectedSeatDetails.userId);
+
+                                if (isFriend) {
+                                  return (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedChatFriend({
+                                          id: selectedSeatDetails.userId,
+                                          name: selectedSeatDetails.name,
+                                          pilotId: `seat_${selectedSeatDetails.seat}`,
+                                        });
+                                      }}
+                                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-electric-500 to-indigo-600 hover:from-electric-400 hover:to-indigo-500 text-white font-extrabold text-[10px] uppercase tracking-wider transition duration-300 shadow-lg shadow-electric-500/15 active:scale-[0.98] cursor-pointer"
+                                    >
+                                      <span>💬</span>
+                                      <span>Open Wingman Chat</span>
+                                    </button>
+                                  );
+                                }
+
+                                if (isIncoming) {
+                                  return (
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={async () => {
+                                          try {
+                                            const res = await fetch("/api/friends/request", {
+                                              method: "PUT",
+                                              headers: { "Content-Type": "application/json" },
+                                              body: JSON.stringify({ senderId: selectedSeatDetails.userId }),
+                                            });
+                                            if (res.ok) {
+                                              fetchFriendships();
+                                            }
+                                          } catch (e) {}
+                                        }}
+                                        className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[9px] uppercase tracking-wider transition cursor-pointer text-center"
+                                      >
+                                        Accept ✅
+                                      </button>
+                                      <button
+                                        onClick={async () => {
+                                          try {
+                                            const res = await fetch("/api/friends/request", {
+                                              method: "DELETE",
+                                              headers: { "Content-Type": "application/json" },
+                                              body: JSON.stringify({ otherUserId: selectedSeatDetails.userId }),
+                                            });
+                                            if (res.ok) {
+                                              fetchFriendships();
+                                            }
+                                          } catch (e) {}
+                                        }}
+                                        className="flex-1 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white/70 font-extrabold text-[9px] uppercase tracking-wider transition cursor-pointer text-center"
+                                      >
+                                        Ignore ❌
+                                      </button>
+                                    </div>
+                                  );
+                                }
+
+                                if (isOutgoing) {
+                                  return (
+                                    <button
+                                      disabled
+                                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-white/5 border border-white/10 text-yellow-400/50 font-extrabold text-[10px] uppercase tracking-wider cursor-not-allowed"
+                                    >
+                                      <span>⏳</span>
+                                      <span>Co-Pilot Request Sent</span>
+                                    </button>
+                                  );
+                                }
+
+                                return (
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        const res = await fetch("/api/friends/request", {
+                                          method: "POST",
+                                          headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify({ receiverId: selectedSeatDetails.userId }),
+                                        });
+                                        if (res.ok) {
+                                          fetchFriendships();
+                                        }
+                                      } catch (e) {}
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-electric-500/10 border border-electric-400/30 hover:bg-electric-500/20 text-electric-400 font-extrabold text-[10px] uppercase tracking-wider transition duration-300 active:scale-[0.98] cursor-pointer"
+                                  >
+                                    <span>✈️</span>
+                                    <span>Send Co-Pilot Request</span>
+                                  </button>
+                                );
+                              })()}
+
                               {/* Kick button if Host of private session */}
                               {session?.isPrivate && session.hostId === currentUser?.id && selectedSeatDetails.userId && selectedSeatDetails.userId !== currentUser?.id && (
                                 <button
@@ -2418,6 +2540,202 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Wingman Chat Drawer inside Cockpit Room */}
+      <AnimatePresence>
+        {selectedChatFriend && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-sm text-white"
+          >
+            {/* Backdrop click close */}
+            <div 
+              className="absolute inset-0 cursor-pointer" 
+              onClick={() => setSelectedChatFriend(null)} 
+            />
+
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-white/10 bg-[#0a0f1d] shadow-2xl"
+            >
+              {/* Space glow header lines */}
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-electric-500 via-indigo-500 to-purple-500" />
+              <div className="absolute top-[3px] left-0 right-0 h-20 bg-gradient-to-b from-electric-500/10 to-transparent pointer-events-none" />
+
+              {/* Header */}
+              <header className="flex items-center justify-between border-b border-white/10 px-6 py-4.5 bg-[#0d1428]/60 backdrop-blur-md">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-full border border-electric-400/40 bg-white/5 shadow-[0_0_10px_rgba(56,189,248,0.15)] flex items-center justify-center text-xl">
+                    👤
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="font-display text-sm font-bold text-white tracking-wide truncate">
+                      {selectedChatFriend.name}
+                    </h2>
+                    <p className="text-[9px] font-mono text-neon-400">
+                      {selectedChatFriend.pilotId}
+                    </p>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => setSelectedChatFriend(null)}
+                  className="rounded-full bg-white/5 border border-white/10 p-2 text-white/70 hover:bg-white/10 hover:text-white transition cursor-pointer"
+                >
+                  ✕
+                </button>
+              </header>
+
+              {/* Chat message thread container with polling */}
+              <FriendsChatThread friendId={selectedChatFriend.id} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
+  );
+}
+
+interface FriendsChatThreadProps {
+  friendId: string;
+}
+
+function FriendsChatThread({ friendId }: FriendsChatThreadProps) {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [typedMessage, setTypedMessage] = useState("");
+  const [loadingChat, setLoadingChat] = useState(true);
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchChat = async () => {
+      try {
+        const res = await fetch(`/api/chat?otherUserId=${friendId}`);
+        if (res.ok && active) {
+          const data = await res.json();
+          setMessages(data.messages || []);
+        }
+      } catch (err) {
+        console.error("Failed to load messages:", err);
+      } finally {
+        if (active) setLoadingChat(false);
+      }
+    };
+
+    fetchChat();
+    // Poll every 3 seconds for new messages
+    const interval = setInterval(fetchChat, 3000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [friendId]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!typedMessage.trim() || sending) return;
+
+    const content = typedMessage.trim();
+    setTypedMessage("");
+    setSending(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receiverId: friendId, content }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.message) {
+          setMessages((prev) => [...prev, data.message]);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to send message:", err);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <>
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        {loadingChat ? (
+          <div className="flex h-full items-center justify-center">
+            <span className="size-6 animate-spin rounded-full border-2 border-electric-400 border-t-transparent" />
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center text-center text-white/30 space-y-2">
+            <span className="text-3xl">🚀</span>
+            <p className="text-sm font-semibold">Start of Flight Logs</p>
+            <p className="text-xs max-w-xs leading-relaxed">
+              Direct connection secure. Direct messages exchanged here are kept strictly between accepted co-pilots.
+            </p>
+          </div>
+        ) : (
+          messages.map((m) => {
+            const isMe = m.senderId !== friendId;
+            return (
+              <div
+                key={m.id}
+                className={`flex w-full ${isMe ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm shadow-md leading-relaxed ${
+                    isMe
+                      ? "bg-gradient-to-r from-electric-500 to-indigo-600 text-white font-medium rounded-tr-none"
+                      : "bg-white/5 border border-white/10 text-white/95 rounded-tl-none"
+                  }`}
+                >
+                  <p>{m.content}</p>
+                  <span className="block mt-1 text-[8px] opacity-40 text-right font-mono">
+                    {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input console */}
+      <form onSubmit={handleSendMessage} className="border-t border-white/10 p-4 bg-[#0d1428]/45">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Broadcast focus coordinate..."
+            value={typedMessage}
+            onChange={(e) => setTypedMessage(e.target.value)}
+            disabled={sending}
+            className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs text-white placeholder-white/30 focus:border-electric-400 focus:outline-none backdrop-blur-sm"
+          />
+          <button
+            type="submit"
+            disabled={!typedMessage.trim() || sending}
+            className="rounded-xl bg-electric-500 hover:bg-electric-600 p-2.5 text-white transition disabled:opacity-40 flex items-center justify-center cursor-pointer"
+          >
+            {sending ? (
+              <span className="size-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : (
+              <Send className="size-4" />
+            )}
+          </button>
+        </div>
+      </form>
+    </>
   );
 }
