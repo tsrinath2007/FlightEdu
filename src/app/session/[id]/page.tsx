@@ -121,6 +121,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
   const [walletCoins, setWalletCoins] = useState(0);
   const [customizeTab, setCustomizeTab] = useState<"daily" | "emotes" | "skins" | "owned">("emotes");
   const [sendingEnergy, setSendingEnergy] = useState<string | null>(null);
+  const [activeAmenities, setActiveAmenities] = useState<Record<string, boolean>>({});
 
   // Fullscreen Immersive states
   const [isFullscreenLounge, setIsFullscreenLounge] = useState(false);
@@ -1002,6 +1003,97 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
 
   const progressPercent = ((totalDurationSeconds - secondsRemaining) / totalDurationSeconds) * 100;
 
+  // Dynamic airline theme configuration resolving
+  const airlineId = config?.airline?.id || "airindia";
+  const airlineHsl = (config?.airline as any)?.hslColor || (
+    airlineId === "emirates" ? "hsl(0, 100%, 60%)" :
+    airlineId === "singapore" ? "hsl(45, 100%, 55%)" :
+    airlineId === "qatar" ? "hsl(330, 80%, 50%)" :
+    airlineId === "airindia" ? "hsl(20, 100%, 60%)" :
+    "hsl(215, 100%, 60%)"
+  );
+  const airlineAbbrev = (config?.airline as any)?.abbrev || (
+    airlineId === "emirates" ? "AE" :
+    airlineId === "singapore" ? "SG" :
+    airlineId === "qatar" ? "QA" :
+    "IN"
+  );
+
+  const airlineTheme = React.useMemo(() => {
+    switch (airlineId) {
+      case "emirates":
+        return {
+          textColor: "text-red-400",
+          borderColor: "border-red-500/20",
+          hslColor: airlineHsl,
+          bgPattern: "from-red-950/20 to-navy-950/40 border-red-500/20 shadow-red-500/5",
+          menuLabel: "🍷 Emirates Luxury Amenities & Dining",
+          items: ["Beluga Caviar Tasting", "Arabic Mezze Board", "Dom Pérignon Champagne", "Focus Espresso Blend"],
+          icon: "🍽️",
+          perkText: "+2.5x Ultimate Focus Multiplier Active",
+        };
+      case "singapore":
+        return {
+          textColor: "text-amber-400",
+          borderColor: "border-amber-500/20",
+          hslColor: airlineHsl,
+          bgPattern: "from-amber-950/20 to-navy-950/40 border-amber-500/20 shadow-amber-500/5",
+          menuLabel: "🍸 Singapore 'Book the Cook' Services",
+          items: ["Lobster Thermidor", "Signature Chicken Satay", "Classic Singapore Sling (0%)", "Premium Jasmine Tea"],
+          icon: "🍽️",
+          perkText: "+2.2x High-Comfort Focus Multiplier Active",
+        };
+      case "qatar":
+        return {
+          textColor: "text-rose-400",
+          borderColor: "border-rose-500/20",
+          hslColor: airlineHsl,
+          bgPattern: "from-rose-950/20 to-navy-950/40 border-rose-500/20 shadow-rose-500/5",
+          menuLabel: "🥂 Qatar Airways Qsuite Conveniences",
+          items: ["Toggle Qsuite Partition", "Rosewater Mint Mocktail", "Saffron Rice & Kofta", "Artisan French Press"],
+          icon: "🚪",
+          perkText: "+2.0x World's Best Focus Multiplier Active",
+        };
+      case "airindia":
+        return {
+          textColor: "text-orange-400",
+          borderColor: "border-orange-500/20",
+          hslColor: airlineHsl,
+          bgPattern: "from-orange-950/20 to-navy-950/40 border-orange-500/20 shadow-orange-500/5",
+          menuLabel: "🕌 Air India Maharaja Hospitality",
+          items: ["Royal Spiced Saffron Chai", "Maharaja Rich Butter Chicken", "Traditional Sitar Ambience", "Warm Kaju Katli Tray"],
+          icon: "☕",
+          perkText: "+1.8x Indian Delicacies Focus Multiplier Active",
+        };
+      default: // indigo
+        return {
+          textColor: "text-blue-400",
+          borderColor: "border-blue-500/20",
+          hslColor: airlineHsl,
+          bgPattern: "from-blue-950/20 to-navy-950/40 border-blue-500/20 shadow-blue-500/5",
+          menuLabel: "✈️ IndiGo 6E Swift Telemetry & Bites",
+          items: ["6E Cookie & Salted Nuts", "Vibrant Mint Lemonade", "On-Time Performance Guarantee", "Multi-Airport Gate Stats"],
+          icon: "🍪",
+          perkText: "+1.5x Agile On-Time Focus Multiplier Active",
+        };
+    }
+  }, [airlineId, airlineHsl]);
+
+  const toggleAmenity = (item: string) => {
+    setActiveAmenities(prev => ({
+      ...prev,
+      [item]: !prev[item]
+    }));
+    
+    if (soundEffectsEnabled) {
+      try {
+        const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
+        audio.volume = 0.15;
+        audio.play().catch(() => {});
+      } catch {}
+    }
+  };
+
 
 
   return (
@@ -1013,7 +1105,22 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
       {/* Holographic flight status bar */}
       <div className={`relative z-10 w-full bg-gradient-to-r ${config.airline.color} border-b border-white/10 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 backdrop-blur-md`}>
         <div className="flex items-center gap-3">
-          <span className="text-3xl filter drop-shadow-md">{config.airline.logo}</span>
+          {airlineAbbrev ? (
+            <div
+              className="flex size-10 items-center justify-center rounded-xl border font-display font-extrabold text-sm tracking-widest transition duration-300"
+              style={{
+                color: airlineHsl,
+                borderColor: `${airlineHsl}50`,
+                backgroundColor: `${airlineHsl}15`,
+                boxShadow: `0 0 12px ${airlineHsl}25`,
+                textShadow: `0 0 4px ${airlineHsl}40`,
+              }}
+            >
+              {airlineAbbrev}
+            </div>
+          ) : (
+            <span className="text-3xl filter drop-shadow-md">{config.airline.logo}</span>
+          )}
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-display font-extrabold text-sm uppercase tracking-wider text-white">
@@ -1217,6 +1324,56 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
               </button>
             </div>
 
+            {/* Dynamic Airline Service Control Deck */}
+            {config?.airline?.id && (
+              <div
+                className="rounded-3xl border p-6 backdrop-blur-md transition-all duration-500"
+                style={{
+                  borderColor: airlineTheme.hslColor ? `${airlineTheme.hslColor}30` : "rgba(255,255,255,0.1)",
+                  backgroundColor: airlineTheme.hslColor ? `${airlineTheme.hslColor}05` : "rgba(255,255,255,0.02)",
+                  boxShadow: airlineTheme.hslColor ? `0 0 25px ${airlineTheme.hslColor}08` : "none"
+                }}
+              >
+                <div className="flex items-center gap-2.5 mb-4">
+                  <span className="text-xl animate-bounce">{airlineTheme.icon || "✈️"}</span>
+                  <h3 className={`font-display text-xs font-black tracking-widest uppercase ${airlineTheme.textColor}`}>
+                    {airlineTheme.menuLabel}
+                  </h3>
+                </div>
+                
+                <p className="text-[10px] text-white/50 leading-relaxed mb-4">
+                  Experience dynamic amenities curated specifically for your {config.airline.name} focus flight:
+                </p>
+
+                <div className="space-y-2">
+                  {airlineTheme.items.map((item, i) => {
+                    const isAmenityActive = !!activeAmenities[item];
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => toggleAmenity(item)}
+                        className={`w-full flex items-center justify-between p-3.5 rounded-xl border text-xs font-bold tracking-wide transition duration-300 cursor-pointer ${
+                          isAmenityActive
+                            ? `bg-emerald-500/10 border-emerald-400/40 text-emerald-400 shadow-md shadow-emerald-500/5`
+                            : "bg-white/4 border-white/5 text-white/70 hover:bg-white/8 hover:text-white"
+                        }`}
+                      >
+                        <span>{item}</span>
+                        <span className="text-[9px] font-mono tracking-widest uppercase opacity-80">
+                          {isAmenityActive ? "Active" : "Select"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 pt-3.5 border-t border-white/5 flex items-center gap-2 text-[9px] font-extrabold text-emerald-400 tracking-wider uppercase">
+                  <Sparkles className="size-3.5 text-emerald-400 animate-pulse flex-shrink-0" />
+                  <span>{airlineTheme.perkText}</span>
+                </div>
+              </div>
+            )}
+
           </div>
 
           {/* Right Column: HUD Focus clock & 3D Interactive Seating Chart */}
@@ -1250,7 +1407,15 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
             </div>
 
             {/* Central Console Display (Dynamic Tab Panels) */}
-            <div className="rounded-3xl border border-white/10 bg-navy-900/20 p-8 backdrop-blur-md min-h-[520px] relative overflow-hidden shadow-2xl flex flex-col justify-between">
+            <div
+              className="rounded-3xl border bg-navy-900/20 p-8 backdrop-blur-md min-h-[520px] relative overflow-hidden shadow-2xl flex flex-col justify-between transition-all duration-500"
+              style={{
+                borderColor: airlineHsl ? `${airlineHsl}25` : "rgba(255,255,255,0.1)",
+                boxShadow: airlineHsl 
+                  ? `0 0 40px ${airlineHsl}10, inset 0 0 20px ${airlineHsl}05`
+                  : "none"
+              }}
+            >
               
               <AnimatePresence mode="wait">
                 {/* PANEL A: AUTOPILOT CHRONOMETER TIMER */}
