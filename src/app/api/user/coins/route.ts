@@ -73,7 +73,7 @@ export async function POST(request: Request) {
         }
       }
 
-      const newCoins = Math.max(0, dbUser.coins + amount);
+      const newCoins = dbUser.coins + amount;
 
       // 1. Update the SessionParticipant focus logs if flight is connected
       if (sessionId) {

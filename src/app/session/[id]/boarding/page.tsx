@@ -25,11 +25,14 @@ const AIRLINES = [
     id: "emirates",
     name: "Emirates",
     logo: "🇦🇪",
+    abbrev: "AE",
+    cost: 800,
+    hslColor: "hsl(0, 100%, 60%)",
     code: "EK",
     color: "from-red-600/30 to-red-950/20",
     glow: "shadow-red-500/20 border-red-500/30",
     textGlow: "text-red-400",
-    badge: "First Class Luxury",
+    badge: "First class luxury",
     perk: "+2.5x Coins & Fine Dining",
     baseMultiplier: 2.5,
   },
@@ -37,11 +40,14 @@ const AIRLINES = [
     id: "singapore",
     name: "Singapore Airlines",
     logo: "🇸🇬",
+    abbrev: "SG",
+    cost: 650,
+    hslColor: "hsl(45, 100%, 55%)",
     code: "SQ",
     color: "from-amber-500/30 to-amber-950/20",
     glow: "shadow-amber-500/20 border-amber-500/30",
     textGlow: "text-amber-400",
-    badge: "5-Star Premium Service",
+    badge: "5-Star premium service",
     perk: "+2.2x Coins & Comfort Cabins",
     baseMultiplier: 2.2,
   },
@@ -49,11 +55,14 @@ const AIRLINES = [
     id: "qatar",
     name: "Qatar Airways",
     logo: "🇶🇦",
+    abbrev: "QA",
+    cost: 550,
+    hslColor: "hsl(330, 80%, 50%)",
     code: "QR",
     color: "from-rose-800/30 to-rose-950/20",
     glow: "shadow-rose-500/20 border-rose-500/30",
     textGlow: "text-rose-400",
-    badge: "World's Best Business Class",
+    badge: "World's best business class",
     perk: "+2.0x Coins & Elite Lounges",
     baseMultiplier: 2.0,
   },
@@ -61,11 +70,14 @@ const AIRLINES = [
     id: "airindia",
     name: "Air India",
     logo: "🇮🇳",
+    abbrev: "IN",
+    cost: 300,
+    hslColor: "hsl(20, 100%, 60%)",
     code: "AI",
     color: "from-saffron-500/30 to-orange-950/20",
     glow: "shadow-orange-500/20 border-orange-500/30",
     textGlow: "text-orange-400",
-    badge: "Global Indian Spirit",
+    badge: "Global Indian spirit",
     perk: "+1.8x Coins & Indian Delicacies",
     baseMultiplier: 1.8,
   },
@@ -73,11 +85,14 @@ const AIRLINES = [
     id: "indigo",
     name: "IndiGo",
     logo: "🇮🇳",
+    abbrev: "IN",
+    cost: 0,
+    hslColor: "hsl(215, 100%, 60%)",
     code: "6E",
     color: "from-blue-600/30 to-blue-950/20",
     glow: "shadow-blue-500/20 border-blue-500/30",
     textGlow: "text-blue-400",
-    badge: "On-Time & Affordable",
+    badge: "On-time & affordable",
     perk: "+1.5x Coins & Super Fast Entry",
     baseMultiplier: 1.5,
   },
@@ -87,7 +102,8 @@ const CABIN_CLASSES = [
   {
     id: "first",
     name: "First Class Suite",
-    desc: "Your private sanctuary in the clouds. Ultimate luxury.",
+    desc: "Row 1 · seats A-B",
+    cost: 500,
     priceMultiplier: 2.5,
     perks: ["Private Suite Door", "Holographic Focus Shield (100%)", "Double Coins", "Row 1 Assigned"],
     seatSuffix: "A",
@@ -95,7 +111,8 @@ const CABIN_CLASSES = [
   {
     id: "business",
     name: "Business Class",
-    desc: "Lie-flat seating, gourmet ambient menu & workspace.",
+    desc: "Row 4–8 · seats A-F",
+    cost: 300,
     priceMultiplier: 1.8,
     perks: ["Workspace Console", "Enhanced Focus Shield (70%)", "+80% Coins", "Row 4-8 Assigned"],
     seatSuffix: "F",
@@ -103,7 +120,8 @@ const CABIN_CLASSES = [
   {
     id: "premium",
     name: "Premium Economy",
-    desc: "Extra legroom, noise-canceling setup & priority lane.",
+    desc: "Row 12–16 · seats A-F",
+    cost: 150,
     priceMultiplier: 1.3,
     perks: ["Extra Wide Seat", "Standard Focus Shield (40%)", "+30% Coins", "Row 12-16 Assigned"],
     seatSuffix: "D",
@@ -111,7 +129,8 @@ const CABIN_CLASSES = [
   {
     id: "economy",
     name: "Economy Class",
-    desc: "Comfortable ergonomic seat with full study cockpit utilities.",
+    desc: "Row 24–38 · seats A-F",
+    cost: 0,
     priceMultiplier: 1.0,
     perks: ["Standard Cockpit Utilities", "Eco-Takeoff Mode", "Base Coins Reward", "Row 24-38 Assigned"],
     seatSuffix: "J",
@@ -174,6 +193,7 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
 
   const [passengerName, setPassengerName] = useState("Pilot Cadet");
   const [studySubject, setStudySubject] = useState("");
+  const [userCoins, setUserCoins] = useState<number>(0);
 
   // Load session data and user profile
   useEffect(() => {
@@ -234,6 +254,7 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
         if (data.user) {
           if (data.user.name) setPassengerName(data.user.name);
           if (data.user.studyTime) setStudySubject(data.user.studyTime);
+          if (typeof data.user.coins === "number") setUserCoins(data.user.coins);
         }
       })
       .catch(() => {});
@@ -277,7 +298,7 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
     setSeatNumber(`${row}${suffix}`);
   }, [selectedAirline, selectedClass, selectedAircraft]);
 
-  const handleTakeOff = () => {
+  const handleTakeOff = async () => {
     if (!studySubject.trim()) {
       alert("⚠️ Declaring your focus subject is mandatory before boarding the flight.");
       return;
@@ -291,6 +312,31 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
         audio.volume = 0.3;
         audio.play().catch(() => {});
       } catch (e) {}
+    }
+
+    // Deduct coins from database balance
+    const totalCost = selectedAirline.cost + selectedClass.cost;
+    if (totalCost > 0) {
+      try {
+        const res = await fetch("/api/user/coins", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            coinsEarned: -totalCost,
+            sessionId,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data.coins === "number") {
+            setUserCoins(data.coins);
+          }
+        }
+      } catch (err) {
+        console.error("Deducting coins failed:", err);
+      }
     }
 
     // Save final flight configuration to localStorage for client-side persistence
@@ -404,20 +450,26 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
             </p>
           </div>
 
-          <button
-            onClick={() => setSoundOn(!soundOn)}
-            className="flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white/70 hover:bg-white/10 transition"
-          >
-            {soundOn ? (
-              <>
-                <Volume2 className="size-4 text-electric-400" /> Sound Effects: On
-              </>
-            ) : (
-              <>
-                <VolumeX className="size-4 text-white/40" /> Sound Effects: Off
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-4 self-start md:self-center">
+            <div className="flex items-center gap-2 rounded-full border border-yellow-500/20 bg-yellow-500/5 px-4 py-2 text-xs font-semibold text-yellow-400 backdrop-blur-md">
+              🪙 {userCoins.toLocaleString()} Coins
+            </div>
+            
+            <button
+              onClick={() => setSoundOn(!soundOn)}
+              className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white/70 hover:bg-white/10 transition"
+            >
+              {soundOn ? (
+                <>
+                  <Volume2 className="size-4 text-electric-400" /> Sound Effects: On
+                </>
+              ) : (
+                <>
+                  <VolumeX className="size-4 text-white/40" /> Sound Effects: Off
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Dynamic Dual Grid Column */}
@@ -451,19 +503,45 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
                       }`}
                     >
                       <div className="flex items-center gap-4 relative z-10">
-                        <span className="text-3xl filter drop-shadow-md">{airline.logo}</span>
+                        {/* Custom Abbreviation Box with Neon HSL styling */}
+                        <div
+                          className={`flex size-12 items-center justify-center rounded-xl border font-display font-extrabold text-sm tracking-widest transition duration-300 ${
+                            isSelected
+                              ? "border-current bg-white/10"
+                              : "border-white/10 bg-white/5"
+                          }`}
+                          style={{
+                            color: airline.hslColor,
+                            boxShadow: isSelected
+                              ? `0 0 15px ${airline.hslColor}`
+                              : `0 0 4px ${airline.hslColor}30`,
+                            textShadow: isSelected
+                              ? `0 0 8px ${airline.hslColor}`
+                              : "none",
+                          }}
+                        >
+                          {airline.abbrev}
+                        </div>
                         <div>
                           <p className={`font-display font-bold text-sm ${isSelected ? airline.textGlow : "text-white/90"}`}>
                             {airline.name}
                           </p>
-                          <p className="text-xs text-white/50">{airline.badge}</p>
+                          <p className="text-xs text-white/50">
+                            {airline.badge} · {airline.code} flight
+                          </p>
                         </div>
                       </div>
-                      <div className="text-right relative z-10">
-                        <span className="text-xs font-mono bg-white/5 rounded-md px-2 py-0.5 text-white/70 block mb-1">
-                          {airline.code} Flight
-                        </span>
-                        <span className="text-[10px] font-semibold text-emerald-400 tracking-wider uppercase block">
+                      <div className="text-right relative z-10 flex flex-col items-end gap-1.5">
+                        {airline.cost > 0 ? (
+                          <span className="text-xs font-mono bg-yellow-500/10 border border-yellow-500/20 rounded-md px-2 py-0.5 text-yellow-400 font-bold">
+                            🪙 {airline.cost} per session
+                          </span>
+                        ) : (
+                          <span className="text-xs font-mono bg-emerald-500/10 border border-emerald-500/20 rounded-md px-2 py-0.5 text-emerald-400 font-bold">
+                            Free
+                          </span>
+                        )}
+                        <span className="text-[9px] font-semibold text-emerald-400 tracking-wider uppercase block">
                           {airline.perk}
                         </span>
                       </div>
@@ -501,17 +579,32 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
                         <p className={`font-display font-extrabold text-sm ${isSelected ? "text-electric-400" : "text-white"}`}>
                           {cabin.name}
                         </p>
-                        <span className="text-xs font-mono text-white/40">x{cabin.priceMultiplier.toFixed(1)}</span>
+                        {cabin.cost > 0 ? (
+                          <span className="text-xs font-mono bg-yellow-500/10 border border-yellow-500/20 rounded-md px-1.5 py-0.5 text-yellow-400 font-bold">
+                            🪙 {cabin.cost}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-mono bg-emerald-500/10 border border-emerald-500/20 rounded-md px-1.5 py-0.5 text-emerald-400 font-bold">
+                            Free
+                          </span>
+                        )}
                       </div>
-                      <p className="text-xs text-white/50 mb-4 line-clamp-2 h-8">{cabin.desc}</p>
+                      <p className="text-xs text-white/50 mb-4 h-5">{cabin.desc}</p>
                       
-                      <div className="space-y-1 border-t border-white/5 pt-3">
-                        {cabin.perks.map((perk, i) => (
-                          <div key={i} className="flex items-center gap-1.5 text-[10px] text-white/60">
-                            <Sparkles className="size-2.5 text-electric-400 flex-shrink-0" />
-                            <span className="truncate">{perk}</span>
-                          </div>
-                        ))}
+                      <div className="space-y-2 border-t border-white/5 pt-3">
+                        {cabin.perks.map((perk, i) => {
+                          let Icon = Sparkles;
+                          if (perk.toLowerCase().includes("shield")) Icon = Shield;
+                          else if (perk.toLowerCase().includes("coin") || perk.toLowerCase().includes("multiplier")) Icon = Award;
+                          else if (perk.toLowerCase().includes("row") || perk.toLowerCase().includes("seat")) Icon = Star;
+                          
+                          return (
+                            <div key={i} className="flex items-center gap-2 text-xs text-white/70">
+                              <Icon className="size-3.5 text-electric-400 flex-shrink-0" />
+                              <span className="truncate">{perk}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </button>
                   );
@@ -621,8 +714,19 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
               
               {/* Top Banner */}
               <div className={`p-4 bg-gradient-to-r ${selectedAirline.color} border-b border-white/10 flex items-center justify-between`}>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{selectedAirline.logo}</span>
+                <div className="flex items-center gap-3">
+                  {/* Custom Abbreviation Box on the Ticket */}
+                  <div
+                    className="flex size-7 items-center justify-center rounded-lg border font-display font-extrabold text-[10px] tracking-wider"
+                    style={{
+                      color: selectedAirline.hslColor,
+                      borderColor: `${selectedAirline.hslColor}40`,
+                      backgroundColor: `${selectedAirline.hslColor}10`,
+                      boxShadow: `0 0 8px ${selectedAirline.hslColor}20`,
+                    }}
+                  >
+                    {selectedAirline.abbrev}
+                  </div>
                   <span className="font-display font-bold text-xs uppercase tracking-widest text-white/80">
                     {selectedAirline.name}
                   </span>
@@ -707,6 +811,20 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
                   <div className="col-span-2 border-t border-white/5 pt-3">
                     <p className="text-[9px] font-mono tracking-widest text-white/35 uppercase">Study Focus</p>
                     <p className="font-bold text-yellow-400 mt-0.5 truncate">📚 {studySubject || "Focus Study"}</p>
+                  </div>
+                  <div className="col-span-2 border-t border-white/5 pt-3 flex justify-between items-center">
+                    <div>
+                      <p className="text-[9px] font-mono tracking-widest text-white/35 uppercase">Ticket Price Summary</p>
+                      <p className="text-white/60 text-[10px] mt-0.5">
+                        {selectedAirline.name} ({selectedAirline.cost === 0 ? "Free" : `${selectedAirline.cost} coins`}) + Upgrade ({selectedClass.cost === 0 ? "Free" : `${selectedClass.cost} coins`})
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-mono tracking-widest text-white/35 uppercase">Total Billing</p>
+                      <p className="font-bold text-yellow-400 mt-0.5 text-sm">
+                        🪙 {selectedAirline.cost + selectedClass.cost}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
