@@ -92,12 +92,18 @@ const INITIAL_MULTIPLAYER_PILOTS: MultiplayerPilot[] = [
 
 export default function CockpitPage({ params: paramsPromise }: CockpitPageProps) {
   const router = useRouter();
-  const params = paramsPromise ? React.use(paramsPromise) : { id: "" };
+  // Safely unwrap Next.js dynamic params, avoiding crashes if passed as a plain object or undefined
+  const params = paramsPromise
+    ? (typeof (paramsPromise as any).then === "function"
+      ? React.use(paramsPromise)
+      : (paramsPromise as any))
+    : { id: "" };
   const sessionId = (params?.id || "").replace(/[^a-zA-Z0-9\-]/g, "");
 
   // Configurations
   const [session, setSession] = useState<FlightSession | null>(null);
   const [config, setConfig] = useState<FlightConfig | null>(null);
+  const [sessionNotFound, setSessionNotFound] = useState(false);
 
   // Focus Timer States
   const [secondsRemaining, setSecondsRemaining] = useState(0);
@@ -264,7 +270,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
           const filteredParticipants = data.session.participants.filter(p => p.userId !== myId && p.isAccepted);
           
           const mapped = filteredParticipants.map((p, idx) => {
-            const u = p.user;
+            const u = p.user || {};
             
             // Prioritize database-persisted seat, fallback to static seat assignment
             let seat = p.seat;
@@ -287,7 +293,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
               avatarEyes: "glossy" as EyesStyle,
               avatarActivity: "LAPTOP" as ActivityType,
               isActive: true,
-              userId: u.id,
+              userId: u.id || p.userId,
             };
           });
           
@@ -300,8 +306,13 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
             setMultiplayerPilots([...mapped, ...activeSimulated]);
           }
         }
+        setSessionNotFound(false);
       } else {
-        throw new Error();
+        if (res.status === 404) {
+          setSessionNotFound(true);
+        } else {
+          throw new Error();
+        }
       }
     } catch (err) {
       setSession((prev) => {
@@ -1013,6 +1024,32 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     }
   };
 
+  if (sessionNotFound) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-navy-950 text-white px-4">
+        <div className="max-w-md w-full text-center space-y-6 bg-white/4 border border-white/5 backdrop-blur-md rounded-3xl p-8 shadow-2xl z-10">
+          <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto text-red-400">
+            <AlertTriangle className="size-8 animate-pulse" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-white">Telemetry Connection Lost</h1>
+            <p className="text-sm text-white/60 font-mono">Flight Session #{sessionId || "Unknown"} could not be found or has expired.</p>
+          </div>
+          <div className="h-px bg-white/10" />
+          <p className="text-xs text-white/45">
+            This session may have been deleted by the host or is no longer active on our telemetry grid.
+          </p>
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="w-full py-3.5 rounded-2xl bg-electric-500 hover:bg-electric-600 active:scale-[0.98] font-bold text-sm tracking-wider transition-all shadow-[0_0_15px_rgba(14,165,233,0.3)] cursor-pointer"
+          >
+            Return to Flight Command
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   if (!session || !config) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-navy-950 text-white">
@@ -1117,16 +1154,6 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     }
   };
 
-  if (!session || !config) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-navy-950 text-white">
-        <div className="text-center">
-          <div className="size-12 rounded-full border-2 border-electric-500 border-t-transparent animate-spin mx-auto mb-4" />
-          <p className="font-display text-lg tracking-wider text-white/60">Preparing Telemetry Cabin...</p>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-navy-950 text-white pb-16">
@@ -1806,9 +1833,9 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
 
                               {/* Co-Pilot Seating Actions (Friend Requests & Direct Chats) */}
                               {selectedSeatDetails.userId && currentUser && selectedSeatDetails.userId !== currentUser.id && (() => {
-                                const isFriend = friends.some((f) => f.user.id === selectedSeatDetails.userId);
-                                const isIncoming = incomingRequests.some((r) => r.user.id === selectedSeatDetails.userId);
-                                const isOutgoing = outgoingRequests.some((r) => r.user.id === selectedSeatDetails.userId);
+                                const isFriend = friends.some((f) => f.user?.id === selectedSeatDetails.userId);
+                                const isIncoming = incomingRequests.some((r) => r.user?.id === selectedSeatDetails.userId);
+                                const isOutgoing = outgoingRequests.some((r) => r.user?.id === selectedSeatDetails.userId);
 
                                 if (isFriend) {
                                   return (
