@@ -587,7 +587,7 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
           comfort: "★★★★★",
           shield: "Dynamic Pressure Optimization (+45%)",
         },
-        seatNumber: "12D",
+        seatNumber: "26B",
         flightNumber: "AI 350",
         gateNumber: "T-03",
         studySubject: "Focus Study",
@@ -757,6 +757,29 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
         } catch (e) {}
       }
     } else if (!isOccupied && config) {
+      // Validate ticket cabin class matching before relocating
+      const getCabinClassOfSeat = (seat: string): string => {
+        const row = parseInt(seat);
+        if (row === 1 || row === 2) return "first";
+        if (row === 4 || row === 8) return "business";
+        if (row === 14) return "premium";
+        return "economy";
+      };
+
+      const seatClass = getCabinClassOfSeat(seatId);
+      const ticketedClass = config.cabinClass.id;
+
+      if (seatClass !== ticketedClass) {
+        const classNames: Record<string, string> = {
+          first: "First Class Suite",
+          business: "Business Class Pod",
+          premium: "Premium Economy",
+          economy: "Economy Class"
+        };
+        alert(`⚠️ Upgrade Required! Your ticket is for ${config.cabinClass.name}. You cannot sit in a ${classNames[seatClass] || "different"} seat. Please exit focus mode and purchase an upgrade in the lounge!`);
+        return;
+      }
+
       setRelocatingSeat(seatId);
     }
   };

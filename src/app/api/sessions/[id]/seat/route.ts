@@ -15,6 +15,30 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Ensure the Session exists in the database first (resilient to simulated/mock routes)
+    try {
+      const dbSession = await prisma.session.findUnique({
+        where: { id: sessionId }
+      });
+      if (!dbSession) {
+        await prisma.session.create({
+          data: {
+            id: sessionId,
+            hostId: user.id,
+            origin: "Dubai Intl Airport",
+            originCode: "DXB",
+            destination: "Changi Airport",
+            destinationCode: "SIN",
+            transportMode: "FLIGHT",
+            duration: 360,
+            mode: "CHILL",
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("Failed to ensure Session record exists, proceeding anyway:", e);
+    }
+
     const { seatNumber, studySubject } = await request.json() as {
       seatNumber: string;
       studySubject?: string;
