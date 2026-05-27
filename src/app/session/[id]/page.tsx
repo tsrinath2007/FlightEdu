@@ -92,8 +92,8 @@ const INITIAL_MULTIPLAYER_PILOTS: MultiplayerPilot[] = [
 
 export default function CockpitPage({ params: paramsPromise }: CockpitPageProps) {
   const router = useRouter();
-  const params = React.use(paramsPromise);
-  const sessionId = params.id;
+  const params = paramsPromise ? React.use(paramsPromise) : { id: "" };
+  const sessionId = (params?.id || "").replace(/[^a-zA-Z0-9\-]/g, "");
 
   // Configurations
   const [session, setSession] = useState<FlightSession | null>(null);
@@ -1117,7 +1117,16 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     }
   };
 
-
+  if (!session || !config) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-navy-950 text-white">
+        <div className="text-center">
+          <div className="size-12 rounded-full border-2 border-electric-500 border-t-transparent animate-spin mx-auto mb-4" />
+          <p className="font-display text-lg tracking-wider text-white/60">Preparing Telemetry Cabin...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-navy-950 text-white pb-16">
@@ -1639,11 +1648,35 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
 
                           <div className="h-px bg-white/5 my-1" />
 
-                          {/* 3. ECONOMY CLASS (Rows 14-32) */}
+                          {/* 3. PREMIUM ECONOMY CLASS (Row 14) */}
+                          <div className="space-y-2">
+                            <p className="text-[7px] font-mono font-extrabold tracking-[0.2em] uppercase text-center text-teal-400">✦ Premium Economy ✦</p>
+                            
+                            {[14].map((rowNum) => (
+                              <div key={rowNum} className="flex items-center justify-center gap-3">
+                                {/* Left Seats: A, B */}
+                                <div className="flex gap-1.5">
+                                  {renderSeat(`${rowNum}A`)}
+                                  {renderSeat(`${rowNum}B`)}
+                                </div>
+                                {/* Center Aisle */}
+                                <div className="w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-[9px] font-mono text-white/30 font-bold select-none">{rowNum}</div>
+                                {/* Right Seats: D, J */}
+                                <div className="flex gap-1.5">
+                                  {renderSeat(`${rowNum}D`)}
+                                  {renderSeat(`${rowNum}J`)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="h-px bg-white/5 my-1" />
+
+                          {/* 4. ECONOMY CLASS (Rows 26-32) */}
                           <div className="space-y-2">
                             <p className="text-[7px] font-mono font-extrabold tracking-[0.2em] uppercase text-center text-white/30">✦ Main Cabin Economy ✦</p>
                             
-                            {[14, 26, 32].map((rowNum) => (
+                            {[26, 32].map((rowNum) => (
                               <div key={rowNum} className="flex items-center justify-center gap-3">
                                 {/* Left Seats: A, B */}
                                 <div className="flex gap-1.5">
@@ -2439,10 +2472,30 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
 
                       <div className="h-px bg-white/5 my-1.5" />
 
-                      {/* 3. ECONOMY CLASS (Rows 14-32) */}
+                      {/* 3. PREMIUM ECONOMY CLASS (Row 14) */}
+                      <div className="space-y-2">
+                        <p className="text-[7.5px] font-mono font-extrabold tracking-[0.25em] uppercase text-center text-teal-400">✦ Premium Economy ✦</p>
+                        {[14].map((rowNum) => (
+                          <div key={rowNum} className="flex items-center justify-center gap-4">
+                            <div className="flex gap-2">
+                              {renderSeat(`${rowNum}A`)}
+                              {renderSeat(`${rowNum}B`)}
+                            </div>
+                            <div className="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-white/35 font-bold select-none">{rowNum}</div>
+                            <div className="flex gap-2">
+                              {renderSeat(`${rowNum}D`)}
+                              {renderSeat(`${rowNum}J`)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="h-px bg-white/5 my-1.5" />
+
+                      {/* 4. ECONOMY CLASS (Rows 26-32) */}
                       <div className="space-y-2">
                         <p className="text-[7.5px] font-mono font-extrabold tracking-[0.25em] uppercase text-center text-white/30">✦ Main Cabin Economy ✦</p>
-                        {[14, 26, 32].map((rowNum) => (
+                        {[26, 32].map((rowNum) => (
                           <div key={rowNum} className="flex items-center justify-center gap-4">
                             <div className="flex gap-2">
                               {renderSeat(`${rowNum}A`)}

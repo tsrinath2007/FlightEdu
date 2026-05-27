@@ -4,6 +4,31 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_PATHS = ["/", "/login", "/register", "/auth", "/demo"];
 
 export async function proxy(request: NextRequest) {
+  const url = request.nextUrl.clone();
+  const pathname = url.pathname;
+
+  // 1. Correct CUID keyboard Shift-7 slashes (e.g. converting cmpnntz0k000004l//700lmqiy back to cmpnntz0k000004l7700lmqiy)
+  if (pathname.includes("/session/")) {
+    const restOfPath = pathname.slice(pathname.indexOf("/session/") + "/session/".length);
+    const isBoarding = restOfPath.toLowerCase().endsWith("/boarding");
+    const cuidPart = isBoarding 
+      ? restOfPath.slice(0, -"/boarding".length) 
+      : restOfPath;
+    
+    if (cuidPart.includes("/")) {
+      const cleanCuid = cuidPart.replace(/\//g, "7");
+      url.pathname = `/session/${cleanCuid}${isBoarding ? "/boarding" : ""}`;
+      return NextResponse.redirect(url, 301);
+    }
+  }
+
+  // 2. Collapse multiple consecutive slashes (e.g. //) in path to a single slash
+  if (pathname.includes("//")) {
+    const cleanPath = pathname.replace(/\/+/g, "/");
+    url.pathname = cleanPath;
+    return NextResponse.redirect(url, 301);
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -29,7 +54,6 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some((p) =>
     pathname === p || pathname.startsWith(p + "/")
   );

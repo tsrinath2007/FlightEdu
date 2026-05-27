@@ -61,16 +61,35 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Assign an available seat
+    // 3. Assign an available seat, prioritizing Economy seats by default
     const occupiedSeats = session.participants.map(p => p.seat).filter(Boolean) as string[];
-    const allSeats = [
-      "1A", "1D", "2A", "2D",
-      "4A", "4C", "4F", "8A", "8C", "8F",
-      "12A", "12B", "12D", "12J", "14A", "14B", "14D", "14J",
-      "26A", "26B", "26D", "26J", "32A", "32B", "32D", "32J"
+    const economySeats = [
+      "26A", "26B", "26D", "26J",
+      "32A", "32B", "32D", "32J"
     ];
-    const availableSeats = allSeats.filter(s => !occupiedSeats.includes(s));
-    const seatNumber = availableSeats[Math.floor(Math.random() * availableSeats.length)] || "12B";
+    const premiumEconomySeats = [
+      "12A", "12B", "12D", "12J",
+      "14A", "14B", "14D", "14J"
+    ];
+    const businessSeats = [
+      "4A", "4C", "4F", "8A", "8C", "8F"
+    ];
+    const firstClassSeats = [
+      "1A", "1D", "2A", "2D"
+    ];
+
+    let availableSeats = economySeats.filter(s => !occupiedSeats.includes(s));
+    if (availableSeats.length === 0) {
+      availableSeats = premiumEconomySeats.filter(s => !occupiedSeats.includes(s));
+    }
+    if (availableSeats.length === 0) {
+      availableSeats = businessSeats.filter(s => !occupiedSeats.includes(s));
+    }
+    if (availableSeats.length === 0) {
+      availableSeats = firstClassSeats.filter(s => !occupiedSeats.includes(s));
+    }
+
+    const seatNumber = availableSeats[Math.floor(Math.random() * availableSeats.length)] || "32B";
 
     // 4. Create participant record depending on privacy level
     const autoAccept = !session.isPrivate; // Public = auto-accept, Private = pending

@@ -178,8 +178,8 @@ const AIRCRAFT_MODELS = [
 
 export default function BoardingPage({ params: paramsPromise }: BoardingPageProps) {
   const router = useRouter();
-  const params = React.use(paramsPromise);
-  const sessionId = params.id;
+  const params = paramsPromise ? React.use(paramsPromise) : { id: "" };
+  const sessionId = (params?.id || "").replace(/[^a-zA-Z0-9\-]/g, "");
 
   const [session, setSession] = useState<FlightSession | null>(null);
   const [selectedAirline, setSelectedAirline] = useState(AIRLINES[0]);
@@ -354,6 +354,22 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
     localStorage.setItem(`flight_config_${sessionId}`, JSON.stringify(flightConfig));
     if (session) {
       localStorage.setItem(`flight_session_${sessionId}`, JSON.stringify(session));
+    }
+
+    // Proactively sync and reserve the chosen seat in the database immediately during check-in!
+    try {
+      await fetch(`/api/sessions/${sessionId}/seat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          seatNumber,
+          studySubject: studySubject.trim(),
+        }),
+      });
+    } catch (err) {
+      console.warn("Pre-flight seat reservation sync failed:", err);
     }
 
     setTimeout(() => {
