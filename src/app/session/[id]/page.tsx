@@ -350,8 +350,8 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
 
       // Set initial coins earned based on accumulated progress
       const elapsed = totalSecs - remaining;
-      const baseMul = config?.airline.baseMultiplier ?? 1.0;
-      const classMul = config?.cabinClass.priceMultiplier ?? 1.0;
+      const baseMul = config?.airline?.baseMultiplier ?? 1.0;
+      const classMul = config?.cabinClass?.priceMultiplier ?? 1.0;
       setCoinsEarned(Number((elapsed * 0.05 * baseMul * classMul).toFixed(2)));
     }
   }, [session, totalDurationSeconds, config, sessionId]);
@@ -624,8 +624,8 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
         
         setSecondsRemaining(remaining);
         
-        const baseMul = config?.airline.baseMultiplier ?? 1.0;
-        const classMul = config?.cabinClass.priceMultiplier ?? 1.0;
+        const baseMul = config?.airline?.baseMultiplier ?? 1.0;
+        const classMul = config?.cabinClass?.priceMultiplier ?? 1.0;
         setCoinsEarned(Number((elapsed * 0.05 * baseMul * classMul).toFixed(2)));
 
         if (elapsed > 5) {
