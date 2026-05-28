@@ -11,6 +11,162 @@ import {
 } from "lucide-react";
 import { CadetAvatar, HairStyle, ClothingStyle, EyesStyle, ActivityType } from "@/components/journey/CadetAvatar";
 
+const AIRLINES = [
+  {
+    id: "emirates",
+    name: "Emirates",
+    logo: "🇦🇪",
+    abbrev: "AE",
+    cost: 800,
+    hslColor: "hsl(0, 100%, 60%)",
+    code: "EK",
+    color: "from-red-600/30 to-red-950/20",
+    glow: "shadow-red-500/20 border-red-500/30",
+    textGlow: "text-red-400",
+    badge: "First class luxury",
+    perk: "+2.5x Coins & Fine Dining",
+    baseMultiplier: 2.5,
+  },
+  {
+    id: "singapore",
+    name: "Singapore Airlines",
+    logo: "🇸🇬",
+    abbrev: "SG",
+    cost: 650,
+    hslColor: "hsl(45, 100%, 55%)",
+    code: "SQ",
+    color: "from-amber-500/30 to-amber-950/20",
+    glow: "shadow-amber-500/20 border-amber-500/30",
+    textGlow: "text-amber-400",
+    badge: "5-Star premium service",
+    perk: "+2.2x Coins & Comfort Cabins",
+    baseMultiplier: 2.2,
+  },
+  {
+    id: "qatar",
+    name: "Qatar Airways",
+    logo: "🇶🇦",
+    abbrev: "QA",
+    cost: 550,
+    hslColor: "hsl(330, 80%, 50%)",
+    code: "QR",
+    color: "from-rose-800/30 to-rose-950/20",
+    glow: "shadow-rose-500/20 border-rose-500/30",
+    textGlow: "text-rose-400",
+    badge: "World's best business class",
+    perk: "+2.0x Coins & Elite Lounges",
+    baseMultiplier: 2.0,
+  },
+  {
+    id: "airindia",
+    name: "Air India",
+    logo: "🇮🇳",
+    abbrev: "IN",
+    cost: 300,
+    hslColor: "hsl(20, 100%, 60%)",
+    code: "AI",
+    color: "from-saffron-500/30 to-orange-950/20",
+    glow: "shadow-orange-500/20 border-orange-500/30",
+    textGlow: "text-orange-400",
+    badge: "Global Indian spirit",
+    perk: "+1.8x Coins & Indian Delicacies",
+    baseMultiplier: 1.8,
+  },
+  {
+    id: "indigo",
+    name: "IndiGo",
+    logo: "🇮🇳",
+    abbrev: "IN",
+    cost: 0,
+    hslColor: "hsl(215, 100%, 60%)",
+    code: "6E",
+    color: "from-blue-600/30 to-blue-950/20",
+    glow: "shadow-blue-500/20 border-blue-500/30",
+    textGlow: "text-blue-400",
+    badge: "On-time & affordable",
+    perk: "+1.5x Coins & Super Fast Entry",
+    baseMultiplier: 1.5,
+  },
+];
+
+const CABIN_CLASSES = [
+  {
+    id: "first",
+    name: "First Class Suite",
+    desc: "Row 1 · seats A-B",
+    cost: 500,
+    priceMultiplier: 2.5,
+    perks: ["Private Suite Door", "Holographic Focus Shield (100%)", "Double Coins", "Row 1 Assigned"],
+    seatSuffix: "A",
+  },
+  {
+    id: "business",
+    name: "Business Class",
+    desc: "Row 4–8 · seats A-F",
+    cost: 300,
+    priceMultiplier: 1.8,
+    perks: ["Workspace Console", "Enhanced Focus Shield (70%)", "+80% Coins", "Row 4-8 Assigned"],
+    seatSuffix: "F",
+  },
+  {
+    id: "premium",
+    name: "Premium Economy",
+    desc: "Row 12–16 · seats A-F",
+    cost: 150,
+    priceMultiplier: 1.3,
+    perks: ["Extra Wide Seat", "Standard Focus Shield (40%)", "+30% Coins", "Row 12-16 Assigned"],
+    seatSuffix: "D",
+  },
+  {
+    id: "economy",
+    name: "Economy Class",
+    desc: "Row 24–38 · seats A-F",
+    cost: 0,
+    priceMultiplier: 1.0,
+    perks: ["Standard Cockpit Utilities", "Eco-Takeoff Mode", "Base Coins Reward", "Row 24-38 Assigned"],
+    seatSuffix: "J",
+  },
+];
+
+const AIRCRAFT_MODELS = [
+  {
+    id: "a380",
+    name: "Airbus A380 Superjumbo",
+    desc: "Double-decker sky giant. Unrivaled stability and silence.",
+    engines: "4x Engine Alliance GP7200",
+    speed: "Mach 0.85 (903 km/h)",
+    comfort: "★★★★★",
+    shield: "Ultra-Quiet Focus Shield (+50%)",
+  },
+  {
+    id: "b777",
+    name: "Boeing 777-300ER Prestige",
+    desc: "Long-haul legend. Robust, spacious, and extremely reliable.",
+    engines: "2x General Electric GE90",
+    speed: "Mach 0.84 (892 km/h)",
+    comfort: "★★★★☆",
+    shield: "Twin-Engine Stability (+40%)",
+  },
+  {
+    id: "a350",
+    name: "Airbus A350-1000 XWB",
+    desc: "Next-gen carbon composite body.",
+    engines: "2x Rolls-Royce Trent XWB",
+    speed: "Mach 0.85 (903 km/h)",
+    comfort: "★★★★★",
+    shield: "Dynamic Pressure Optimization (+45%)",
+  },
+  {
+    id: "b787",
+    name: "Boeing 787 Dreamliner",
+    desc: "Holographic auto-dimming windows, advanced air quality systems.",
+    engines: "2x General Electric GEnx",
+    speed: "Mach 0.85 (903 km/h)",
+    comfort: "★★★★☆",
+    shield: "Moisture-Balanced Cabin (+35%)",
+  },
+];
+
 interface CockpitPageProps {
   params: Promise<{ id: string }>;
 }
@@ -598,13 +754,22 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     if (localConfig) {
       try {
         const parsed = JSON.parse(localConfig);
-        // Self-heal and ensure nested premium schema structures exist dynamically
+        
+        // Resolve nested systems dynamically by ID from constant sets to prevent stale flat schemas
+        const parsedAirlineId = parsed?.airline?.id || (typeof parsed?.airline === "string" ? parsed.airline : "airindia");
+        const parsedClassId = parsed?.cabinClass?.id || (typeof parsed?.cabinClass === "string" ? parsed.cabinClass : "economy");
+        const parsedAircraftId = parsed?.aircraft?.id || (typeof parsed?.aircraft === "string" ? parsed.aircraft : "a350");
+
+        const resolvedAirline = AIRLINES.find((a) => a.id === parsedAirlineId) || def.airline;
+        const resolvedClass = CABIN_CLASSES.find((c) => c.id === parsedClassId) || def.cabinClass;
+        const resolvedAircraft = AIRCRAFT_MODELS.find((a) => a.id === parsedAircraftId) || def.aircraft;
+
         const merged = {
           ...def,
           ...parsed,
-          airline: { ...def.airline, ...parsed.airline },
-          cabinClass: { ...def.cabinClass, ...parsed.cabinClass },
-          aircraft: { ...def.aircraft, ...parsed.aircraft },
+          airline: resolvedAirline,
+          cabinClass: resolvedClass,
+          aircraft: resolvedAircraft,
         };
         setConfig(merged as any);
         syncSeatToDatabase(merged.seatNumber, merged.studySubject);
