@@ -178,13 +178,9 @@ const AIRCRAFT_MODELS = [
 
 export default function BoardingPage({ params: paramsPromise }: BoardingPageProps) {
   const router = useRouter();
-  // Safely unwrap Next.js dynamic params, avoiding crashes if passed as a plain object or undefined
-  const params = paramsPromise
-    ? (typeof (paramsPromise as any).then === "function"
-      ? React.use(paramsPromise)
-      : (paramsPromise as any))
-    : { id: "" };
-  const sessionId = (params?.id || "").replace(/[^a-zA-Z0-9\-]/g, "");
+  // Unwrap Next.js dynamic params — always a Promise in App Router
+  const { id: rawId } = React.use(paramsPromise);
+  const sessionId = (rawId || "").replace(/[^a-zA-Z0-9\-]/g, "");
 
   const [session, setSession] = useState<FlightSession | null>(null);
   const [selectedAirline, setSelectedAirline] = useState(AIRLINES[0]);

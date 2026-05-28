@@ -248,13 +248,9 @@ const INITIAL_MULTIPLAYER_PILOTS: MultiplayerPilot[] = [
 
 export default function CockpitPage({ params: paramsPromise }: CockpitPageProps) {
   const router = useRouter();
-  // Safely unwrap Next.js dynamic params, avoiding crashes if passed as a plain object or undefined
-  const params = paramsPromise
-    ? (typeof (paramsPromise as any).then === "function"
-      ? React.use(paramsPromise)
-      : (paramsPromise as any))
-    : { id: "" };
-  const sessionId = (params?.id || "").replace(/[^a-zA-Z0-9\-]/g, "");
+  // Unwrap Next.js dynamic params — always a Promise in App Router
+  const { id: rawId } = React.use(paramsPromise);
+  const sessionId = (rawId || "").replace(/[^a-zA-Z0-9\-]/g, "");
 
   // Configurations
   const [session, setSession] = useState<FlightSession | null>(null);
