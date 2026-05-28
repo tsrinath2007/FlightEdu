@@ -1070,7 +1070,9 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     );
   }
 
-  const progressPercent = ((totalDurationSeconds - secondsRemaining) / totalDurationSeconds) * 100;
+  const progressPercent = totalDurationSeconds > 0 
+    ? Math.max(0, Math.min(100, ((totalDurationSeconds - secondsRemaining) / totalDurationSeconds) * 100)) 
+    : 0;
 
   // Dynamic airline theme configuration resolving
   const airlineId = config?.airline?.id || "airindia";
@@ -1324,7 +1326,9 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                       </p>
                     </div>
                   </div>
-                  <span className="text-[10px] text-emerald-400 font-semibold">{config.aircraft.speed.split(" ")[0]}</span>
+                  <span className="text-[10px] text-emerald-400 font-semibold">
+                    {config?.aircraft?.speed ? config.aircraft.speed.split(" ")[0] : "0"}
+                  </span>
                 </div>
 
                 <div className="bg-white/4 rounded-2xl border border-white/5 p-4 flex items-center justify-between">
@@ -1333,11 +1337,13 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
                     <div>
                       <p className="text-[10px] text-white/40 uppercase">Focus Shield</p>
                       <p className="text-md font-bold text-emerald-400 tracking-wider mt-0.5">
-                        {config.aircraft.shield.split("(")[1].replace(")", "")}
+                        {config?.aircraft?.shield && config.aircraft.shield.includes("(")
+                          ? config.aircraft.shield.split("(")[1].replace(")", "")
+                          : "0%"}
                       </p>
                     </div>
                   </div>
-                  <span className="text-[10px] text-emerald-400">{config.aircraft.comfort}</span>
+                  <span className="text-[10px] text-emerald-400">{config?.aircraft?.comfort || "★★★★★"}</span>
                 </div>
               </div>
             </div>

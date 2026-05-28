@@ -665,11 +665,15 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
                       <div className="space-y-1.5 border-t border-white/5 pt-3 text-[10px] text-white/60">
                         <div className="flex items-center justify-between">
                           <span>Engines:</span>
-                          <span className="font-mono text-white/40">{aircraft.engines.split("x")[1]}</span>
+                          <span className="font-mono text-white/40">
+                            {aircraft.engines ? (aircraft.engines.includes("x") ? aircraft.engines.split("x")[1] : aircraft.engines) : "Rolls-Royce Trent"}
+                          </span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span>Shield Rating:</span>
-                          <span className="text-emerald-400 font-semibold">{aircraft.shield.split("(")[1].replace(")", "")}</span>
+                          <span className="text-emerald-400 font-semibold">
+                            {aircraft.shield && aircraft.shield.includes("(") ? aircraft.shield.split("(")[1].replace(")", "") : "0%"}
+                          </span>
                         </div>
                       </div>
                     </button>
@@ -764,7 +768,9 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
                     <h2 className="font-mono text-4xl font-extrabold tracking-tighter text-white">
                       {session.originCode}
                     </h2>
-                    <p className="text-xs text-white/45 truncate mt-1">{session.origin.split(" Airport")[0]}</p>
+                    <p className="text-xs text-white/45 truncate mt-1">
+                      {session.origin ? session.origin.split(" Airport")[0] : "Dubai Intl"}
+                    </p>
                   </div>
                   
                   {/* Plane Connector Vector */}
@@ -790,7 +796,9 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
                     <h2 className="font-mono text-4xl font-extrabold tracking-tighter text-white">
                       {session.destinationCode}
                     </h2>
-                    <p className="text-xs text-white/45 truncate mt-1">{session.destination.split(" Airport")[0]}</p>
+                    <p className="text-xs text-white/45 truncate mt-1">
+                      {session.destination ? session.destination.split(" Airport")[0] : "Changi Intl"}
+                    </p>
                   </div>
                 </div>
 
@@ -823,7 +831,9 @@ export default function BoardingPage({ params: paramsPromise }: BoardingPageProp
                   </div>
                   <div>
                     <p className="text-[9px] font-mono tracking-widest text-white/35 uppercase">Aircraft Fleet</p>
-                    <p className="font-bold text-white/80 mt-0.5 truncate">{selectedAircraft.name.split(" ")[0]} {selectedAircraft.name.split(" ")[1]}</p>
+                    <p className="font-bold text-white/80 mt-0.5 truncate">
+                      {selectedAircraft.name ? (selectedAircraft.name.split(" ").length > 1 ? `${selectedAircraft.name.split(" ")[0]} ${selectedAircraft.name.split(" ")[1]}` : selectedAircraft.name) : "Airbus A350"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-[9px] font-mono tracking-widest text-white/35 uppercase">Takeoff Mode</p>
