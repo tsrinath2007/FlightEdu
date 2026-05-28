@@ -560,49 +560,58 @@ export default function CockpitPage({ params: paramsPromise }: CockpitPageProps)
     const savedActivity = localStorage.getItem(`avatar_activity`);
     if (savedActivity) setAvatarActivity(savedActivity as any);
 
+    const def = {
+      sessionId,
+      airline: {
+        id: "airindia",
+        name: "Air India",
+        logo: "🇮🇳",
+        code: "AI",
+        color: "from-saffron-500/30 to-orange-950/20",
+        textGlow: "text-orange-400",
+        perk: "+1.8x Coins & Indian Delicacies",
+        baseMultiplier: 1.8,
+      },
+      cabinClass: {
+        id: "economy",
+        name: "Economy Class",
+        desc: "Comfortable ergonomic seat with full study cockpit utilities.",
+        priceMultiplier: 1.0,
+        seatSuffix: "J",
+      },
+      aircraft: {
+        id: "a350",
+        name: "Airbus A350-1000 XWB",
+        desc: "Next-gen carbon composite body.",
+        engines: "2x Rolls-Royce Trent XWB",
+        speed: "Mach 0.85 (903 km/h)",
+        comfort: "★★★★★",
+        shield: "Dynamic Pressure Optimization (+45%)",
+      },
+      seatNumber: "26B",
+      flightNumber: "AI 350",
+      gateNumber: "T-03",
+      studySubject: "Focus Study",
+    };
+
     const localConfig = localStorage.getItem(`flight_config_${sessionId}`);
     if (localConfig) {
       try {
         const parsed = JSON.parse(localConfig);
-        setConfig(parsed);
-        syncSeatToDatabase(parsed.seatNumber, parsed.studySubject);
+        // Self-heal and ensure nested premium schema structures exist dynamically
+        const merged = {
+          ...def,
+          ...parsed,
+          airline: { ...def.airline, ...parsed.airline },
+          cabinClass: { ...def.cabinClass, ...parsed.cabinClass },
+          aircraft: { ...def.aircraft, ...parsed.aircraft },
+        };
+        setConfig(merged as any);
+        syncSeatToDatabase(merged.seatNumber, merged.studySubject);
       } catch (e) {
         console.error("Config parse fail:", e);
       }
     } else {
-      const def = {
-        sessionId,
-        airline: {
-          id: "airindia",
-          name: "Air India",
-          logo: "🇮🇳",
-          code: "AI",
-          color: "from-saffron-500/30 to-orange-950/20",
-          textGlow: "text-orange-400",
-          perk: "+1.8x Coins & Indian Delicacies",
-          baseMultiplier: 1.8,
-        },
-        cabinClass: {
-          id: "economy",
-          name: "Economy Class",
-          desc: "Comfortable ergonomic seat with full study cockpit utilities.",
-          priceMultiplier: 1.0,
-          seatSuffix: "J",
-        },
-        aircraft: {
-          id: "a350",
-          name: "Airbus A350-1000 XWB",
-          desc: "Next-gen carbon composite body.",
-          engines: "2x Rolls-Royce Trent XWB",
-          speed: "Mach 0.85 (903 km/h)",
-          comfort: "★★★★★",
-          shield: "Dynamic Pressure Optimization (+45%)",
-        },
-        seatNumber: "26B",
-        flightNumber: "AI 350",
-        gateNumber: "T-03",
-        studySubject: "Focus Study",
-      };
       setConfig(def as any);
       syncSeatToDatabase(def.seatNumber, def.studySubject);
     }
