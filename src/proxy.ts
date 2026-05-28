@@ -9,15 +9,20 @@ export async function proxy(request: NextRequest) {
 
   // 1. Correct CUID keyboard Shift-7 slashes (e.g. converting cmpnntz0k000004l//700lmqiy back to cmpnntz0k000004l7700lmqiy)
   if (pathname.includes("/session/")) {
-    const restOfPath = pathname.slice(pathname.indexOf("/session/") + "/session/".length);
-    const isBoarding = restOfPath.toLowerCase().endsWith("/boarding");
-    const cuidPart = isBoarding 
-      ? restOfPath.slice(0, -"/boarding".length) 
-      : restOfPath;
+    const startIndex = pathname.indexOf("/session/") + "/session/".length;
+    // Find the start of /boarding or /boarding/ (case-insensitive) to isolate the CUID
+    let endIndex = pathname.toLowerCase().indexOf("/boarding", startIndex);
+    if (endIndex === -1) {
+      endIndex = pathname.length;
+    }
     
-    if (cuidPart.includes("/")) {
-      const cleanCuid = cuidPart.replace(/\//g, "7");
-      url.pathname = `/session/${cleanCuid}${isBoarding ? "/boarding" : ""}`;
+    const cuidPart = pathname.substring(startIndex, endIndex);
+    
+    // Clean and correct CUID if it contains slashes, avoiding the boarding path separator
+    if (cuidPart.includes("/") && cuidPart !== "/") {
+      const cleanCuid = cuidPart.replace(/\/+/g, "7");
+      const rest = pathname.substring(endIndex);
+      url.pathname = `/session/${cleanCuid}${rest}`;
       return NextResponse.redirect(url, 301);
     }
   }
