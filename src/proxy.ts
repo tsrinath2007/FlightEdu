@@ -36,33 +36,45 @@ export async function proxy(request: NextRequest) {
 
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          for (const { name, value } of cookiesToSet) {
-            request.cookies.set(name, value);
-          }
-          response = NextResponse.next({ request });
-          for (const { name, value, options } of cookiesToSet) {
-            response.cookies.set(name, value, options);
-          }
-        },
-      },
-    }
-  );
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   let user = null;
-  try {
-    const { data } = await supabase.auth.getUser();
-    user = data?.user || null;
-  } catch (err) {
-    console.error("⚠️ Supabase Edge proxy middleware auth failed:", err);
+
+  if (supabaseUrl && supabaseAnonKey) {
+    const supabase = createServerClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            for (const { name, value } of cookiesToSet) {
+              request.cookies.set(name, value);
+            }
+            response = NextResponse.next({ request });
+            for (const { name, value, options } of cookiesToSet) {
+              response.cookies.set(name, value, options);
+            }
+          },
+        },
+      }
+    );
+
+    try {
+      const { data } = await supabase.auth.getUser();
+      user = data?.user || null;
+    } catch (err) {
+      console.error("⚠️ Supabase Edge proxy middleware auth failed:", err);
+    }
+  } else {
+    // If supabase credentials are not set, we are in local development / simulated flight config mode without auth constraints
+    if (process.env.NODE_ENV === "development") {
+      // In local dev, mock a pilot user so the app is accessible offline
+      user = { id: "simulated-guest-user-id", email: "guest@gofocusgen.com" };
+    }
   }
 
   const isPublic = PUBLIC_PATHS.some((p) =>

@@ -89,24 +89,28 @@ export async function POST(request: Request) {
     }
   }
 
-  const session = await prisma.session.create({
-    data: {
-      hostId: userId,
-      origin: body.origin,
-      originCode: body.originCode,
-      destination: body.destination,
-      destinationCode: body.destinationCode,
-      transportMode: body.transportMode as "FLIGHT" | "BUS" | "TRAIN" | "CAR",
-      duration: body.duration,
-      mode: body.mode,
-      isPrivate: isPrivate,
-      inviteCode: nanoid(8).toUpperCase(),
-      participants: {
-        create: { userId: userId },
+  try {
+    const session = await prisma.session.create({
+      data: {
+        hostId: userId,
+        origin: body.origin,
+        originCode: body.originCode,
+        destination: body.destination,
+        destinationCode: body.destinationCode,
+        transportMode: body.transportMode as "FLIGHT" | "BUS" | "TRAIN" | "CAR",
+        duration: body.duration,
+        mode: body.mode,
+        isPrivate: isPrivate,
+        inviteCode: nanoid(8).toUpperCase(),
+        participants: {
+          create: { userId: userId },
+        },
       },
-    },
-    include: { participants: true },
-  });
-
-  return NextResponse.json({ session });
+      include: { participants: true },
+    });
+    return NextResponse.json({ session });
+  } catch (createErr) {
+    console.error("Session creation failed:", createErr);
+    return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
+  }
 }
