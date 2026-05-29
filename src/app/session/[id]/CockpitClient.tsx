@@ -1197,48 +1197,6 @@ export default function CockpitClient({ id }: { id: string }) {
       return `${sign}${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
     }
   };
-
-  if (sessionNotFound) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-navy-950 text-white px-4">
-        <div className="max-w-md w-full text-center space-y-6 bg-white/4 border border-white/5 backdrop-blur-md rounded-3xl p-8 shadow-2xl z-10">
-          <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto text-red-400">
-            <AlertTriangle className="size-8 animate-pulse" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="font-display text-2xl font-bold tracking-tight text-white">Telemetry Connection Lost</h1>
-            <p className="text-sm text-white/60 font-mono">Flight Session #{sessionId || "Unknown"} could not be found or has expired.</p>
-          </div>
-          <div className="h-px bg-white/10" />
-          <p className="text-xs text-white/45">
-            This session may have been deleted by the host or is no longer active on our telemetry grid.
-          </p>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="w-full py-3.5 rounded-2xl bg-electric-500 hover:bg-electric-600 active:scale-[0.98] font-bold text-sm tracking-wider transition-all shadow-[0_0_15px_rgba(14,165,233,0.3)] cursor-pointer"
-          >
-            Return to Flight Command
-          </button>
-        </div>
-      </main>
-    );
-  }
-
-  if (!session || !config) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-navy-950 text-white">
-        <div className="text-center">
-          <div className="size-12 rounded-full border-2 border-electric-500 border-t-transparent animate-spin mx-auto mb-4" />
-          <p className="font-display text-lg tracking-wider text-white/60">Pressurizing Pilot Cockpit...</p>
-        </div>
-      </main>
-    );
-  }
-
-  const progressPercent = totalDurationSeconds > 0 
-    ? Math.max(0, Math.min(100, ((totalDurationSeconds - secondsRemaining) / totalDurationSeconds) * 100)) 
-    : 0;
-
   // Dynamic airline theme configuration resolving
   const airlineId = config?.airline?.id || "airindia";
   const airlineHsl = (config?.airline as any)?.hslColor || (
@@ -1314,6 +1272,47 @@ export default function CockpitClient({ id }: { id: string }) {
         };
     }
   }, [airlineId, airlineHsl]);
+
+  if (sessionNotFound) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-navy-950 text-white px-4">
+        <div className="max-w-md w-full text-center space-y-6 bg-white/4 border border-white/5 backdrop-blur-md rounded-3xl p-8 shadow-2xl z-10">
+          <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto text-red-400">
+            <AlertTriangle className="size-8 animate-pulse" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-white">Telemetry Connection Lost</h1>
+            <p className="text-sm text-white/60 font-mono">Flight Session #{sessionId || "Unknown"} could not be found or has expired.</p>
+          </div>
+          <div className="h-px bg-white/10" />
+          <p className="text-xs text-white/45">
+            This session may have been deleted by the host or is no longer active on our telemetry grid.
+          </p>
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="w-full py-3.5 rounded-2xl bg-electric-500 hover:bg-electric-600 active:scale-[0.98] font-bold text-sm tracking-wider transition-all shadow-[0_0_15px_rgba(14,165,233,0.3)] cursor-pointer"
+          >
+            Return to Flight Command
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  if (!session || !config) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-navy-950 text-white">
+        <div className="text-center">
+          <div className="size-12 rounded-full border-2 border-electric-500 border-t-transparent animate-spin mx-auto mb-4" />
+          <p className="font-display text-lg tracking-wider text-white/60">Pressurizing Pilot Cockpit...</p>
+        </div>
+      </main>
+    );
+  }
+
+  const progressPercent = totalDurationSeconds > 0 
+    ? Math.max(0, Math.min(100, ((totalDurationSeconds - secondsRemaining) / totalDurationSeconds) * 100)) 
+    : 0;
 
   const toggleAmenity = (item: string) => {
     setActiveAmenities(prev => ({
