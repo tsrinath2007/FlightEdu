@@ -336,6 +336,11 @@ export default function CockpitClient({ id }: { id: string }) {
         }
       })
       .catch(() => {});
+
+    // Request desktop notification permission on page load
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
   }, []);
 
   const activePilots = React.useMemo(() => {
@@ -899,13 +904,42 @@ export default function CockpitClient({ id }: { id: string }) {
 
         // --- Pilot Presence Check Security System ---
         const presenceActive = localStorage.getItem(`flight_presence_check_active_${sessionId}`) === "true";
+        const triggeredStr = localStorage.getItem(`flight_triggered_checkpoints_${sessionId}`) || "[]";
+        let triggeredList: number[] = [];
+        try {
+          triggeredList = JSON.parse(triggeredStr);
+        } catch {}
         
-        if (securityCheckpoints.includes(elapsed) && !presenceActive) {
-          const index = securityCheckpoints.indexOf(elapsed);
+        // Find if we crossed any checkpoint that has not been triggered yet
+        const targetCpIndex = securityCheckpoints.findIndex((cp, idx) => elapsed >= cp && !triggeredList.includes(idx));
+        
+        if (targetCpIndex !== -1 && !presenceActive) {
+          const index = targetCpIndex;
           setCurrentCheckpointIndex(index);
           setActivePresenceCheck(true);
           setPresenceCheckSecondsLeft(60);
           setValidationError("");
+          
+          // Mark it as triggered immediately to avoid multiple ticks triggering
+          triggeredList.push(index);
+          localStorage.setItem(`flight_triggered_checkpoints_${sessionId}`, JSON.stringify(triggeredList));
+
+          // A. Trigger high-volume warning alert beep audibly
+          try {
+            const warningBeep = new Audio("https://assets.mixkit.co/active_storage/sfx/911/911-84.wav");
+            warningBeep.volume = 0.55;
+            warningBeep.play().catch(() => {});
+          } catch (e) {}
+
+          // B. Trigger system browser HTML5 desktop notification
+          if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+            try {
+              new Notification("⚠️ VoyageIQ MASTER WARNING", {
+                body: "Are you still there in flight? Solve the presence check within 60s to prevent ejection!",
+                icon: "/favicon.ico"
+              });
+            } catch (e) {}
+          }
           
           // 1. Choose a random check type: CODE, MATH, or BUTTON
           const types: ("CODE" | "MATH" | "BUTTON")[] = ["CODE", "MATH", "BUTTON"];
@@ -982,6 +1016,19 @@ export default function CockpitClient({ id }: { id: string }) {
           setFlightPhase("Flight Landed Safely! Welcome!");
           setAltitude(0);
           setSpeed(0);
+          try {
+            localStorage.removeItem(`flight_security_checkpoints_${sessionId}`);
+            localStorage.removeItem(`flight_triggered_checkpoints_${sessionId}`);
+            localStorage.removeItem(`flight_presence_check_active_${sessionId}`);
+            localStorage.removeItem(`flight_presence_check_seconds_${sessionId}`);
+            localStorage.removeItem(`flight_presence_check_code_${sessionId}`);
+            localStorage.removeItem(`flight_presence_check_index_${sessionId}`);
+            localStorage.removeItem(`flight_presence_type_${sessionId}`);
+            localStorage.removeItem(`flight_presence_math_q_${sessionId}`);
+            localStorage.removeItem(`flight_presence_math_a_${sessionId}`);
+            localStorage.removeItem(`flight_presence_suggestion_${sessionId}`);
+            localStorage.removeItem(`flight_presence_btns_${sessionId}`);
+          } catch {}
           syncCoinsToProfile();
         }
       }, 1000);
@@ -1243,6 +1290,8 @@ export default function CockpitClient({ id }: { id: string }) {
     try {
       localStorage.setItem(`flight_ejected_${sessionId}`, "true");
       localStorage.setItem(`flight_timer_active_${sessionId}`, "false");
+      localStorage.removeItem(`flight_security_checkpoints_${sessionId}`);
+      localStorage.removeItem(`flight_triggered_checkpoints_${sessionId}`);
       localStorage.removeItem(`flight_presence_check_active_${sessionId}`);
       localStorage.removeItem(`flight_presence_check_seconds_${sessionId}`);
       localStorage.removeItem(`flight_presence_check_code_${sessionId}`);
@@ -1328,6 +1377,17 @@ export default function CockpitClient({ id }: { id: string }) {
       localStorage.removeItem(`flight_timer_active_${sessionId}`);
       localStorage.removeItem(`flight_timer_start_timestamp_${sessionId}`);
       localStorage.removeItem(`flight_timer_accumulated_elapsed_${sessionId}`);
+      localStorage.removeItem(`flight_security_checkpoints_${sessionId}`);
+      localStorage.removeItem(`flight_triggered_checkpoints_${sessionId}`);
+      localStorage.removeItem(`flight_presence_check_active_${sessionId}`);
+      localStorage.removeItem(`flight_presence_check_seconds_${sessionId}`);
+      localStorage.removeItem(`flight_presence_check_code_${sessionId}`);
+      localStorage.removeItem(`flight_presence_check_index_${sessionId}`);
+      localStorage.removeItem(`flight_presence_type_${sessionId}`);
+      localStorage.removeItem(`flight_presence_math_q_${sessionId}`);
+      localStorage.removeItem(`flight_presence_math_a_${sessionId}`);
+      localStorage.removeItem(`flight_presence_suggestion_${sessionId}`);
+      localStorage.removeItem(`flight_presence_btns_${sessionId}`);
     } catch {}
 
     if (audioRef.current) audioRef.current.pause();
@@ -1786,6 +1846,71 @@ export default function CockpitClient({ id }: { id: string }) {
                   {ambiencePlaying ? "Active" : "Mute"}
                 </span>
               </button>
+            </div>
+
+            {/* Transponder Security Alert Settings */}
+            <div className="rounded-3xl border border-white/10 bg-navy-900/30 p-6 backdrop-blur-md">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-display text-xs font-black tracking-widest text-amber-500 uppercase flex items-center gap-1.5">
+                  <Shield className="size-4 animate-pulse" />
+                  Transponder security
+                </h3>
+                <span className="text-[8px] font-mono bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full uppercase font-bold animate-pulse">
+                  System Arm
+                </span>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-[10px] text-white/70">
+                  <span>Proportional Checkpoints:</span>
+                  <span className="font-mono text-amber-400 font-bold">
+                    {securityCheckpoints.length > 0
+                      ? securityCheckpoints.map(cp => `${Math.round(cp / 60)}m`).join(" · ")
+                      : "Calculating..."}
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between text-[10px] text-white/70">
+                  <span>Notification Permissions:</span>
+                  <button
+                    onClick={async () => {
+                      if (typeof window !== "undefined" && "Notification" in window) {
+                        const perm = await Notification.requestPermission();
+                        alert(`Notification permission status: ${perm}`);
+                      } else {
+                        alert("Notifications not supported in this browser.");
+                      }
+                    }}
+                    className="font-mono text-electric-400 font-bold hover:underline cursor-pointer bg-transparent border-0 p-0 text-[10px]"
+                  >
+                    {typeof window !== "undefined" && "Notification" in window
+                      ? Notification.permission.toUpperCase()
+                      : "NOT SUPPORTED"}
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (soundEffectsEnabled) {
+                      try {
+                        const chime = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
+                        chime.volume = 0.25;
+                        chime.play().catch(() => {});
+                      } catch (e) {}
+                    }
+                    setSoundEffectsEnabled(!soundEffectsEnabled);
+                    localStorage.setItem("sound_effects_enabled", String(!soundEffectsEnabled));
+                  }}
+                  className={`w-full flex items-center justify-between p-3.5 rounded-xl border text-[10px] font-bold uppercase transition duration-300 ${
+                    soundEffectsEnabled
+                      ? "bg-amber-500/10 border-amber-400/40 text-amber-400"
+                      : "bg-white/4 border-white/5 hover:bg-white/8 text-white/70"
+                  }`}
+                >
+                  <span>⚠️ Auditive Warn Siren</span>
+                  <span>{soundEffectsEnabled ? "ON" : "OFF"}</span>
+                </button>
+              </div>
             </div>
 
             {/* Dynamic Airline Service Control Deck */}
