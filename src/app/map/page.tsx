@@ -9,6 +9,7 @@ import {
   MapPin, Clock, Award, Landmark, User, Heart, ChevronRight, Coins
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { haversineKm } from "@/lib/travel";
 
 interface CityHub {
   id: string;
@@ -730,12 +731,10 @@ export default function InteractiveMapPage() {
     setCreatingSession(true);
     setErrorText(null);
 
-    // Calculate mock flight parameters
-    const dx = Math.abs(origin.x - destination.x);
-    const dy = Math.abs(origin.y - destination.y);
-    const distanceVal = Math.sqrt(dx * dx + dy * dy);
-    // 1 percent coordinate diff = approx 120km, flight duration = approx 10 minutes per 1000km
-    const durationMinutes = Math.max(30, Math.round(distanceVal * 6));
+    // Calculate flight parameters using GPS coordinates
+    const distKm = haversineKm(origin.lat, origin.lng, destination.lat, destination.lng);
+    const travelMins = (distKm / 870) * 60;
+    const durationMinutes = Math.max(60, Math.round(travelMins + 40));
 
     try {
       const res = await fetch("/api/sessions", {
@@ -1212,11 +1211,10 @@ export default function InteractiveMapPage() {
                       const dest = GLOBAL_HUBS.find((h) => h.id === destId);
                       if (!dest) return null;
 
-                      // Calculate mock duration
-                      const dx = Math.abs(selectedCity.x - dest.x);
-                      const dy = Math.abs(selectedCity.y - dest.y);
-                      const distanceVal = Math.sqrt(dx * dx + dy * dy);
-                      const durationMinutes = Math.max(30, Math.round(distanceVal * 6));
+                      // Calculate duration using GPS coordinates
+                      const distKm = haversineKm(selectedCity.lat, selectedCity.lng, dest.lat, dest.lng);
+                      const travelMins = (distKm / 870) * 60;
+                      const durationMinutes = Math.max(60, Math.round(travelMins + 40));
 
                       return (
                         <button
@@ -1426,11 +1424,10 @@ export default function InteractiveMapPage() {
             <AnimatePresence mode="wait">
               {activeBoardingTab === "router" ? (
                 origin && destination ? (() => {
-                  // Calculate distance and duration
-                  const dx = Math.abs(origin.x - destination.x);
-                  const dy = Math.abs(origin.y - destination.y);
-                  const distanceVal = Math.sqrt(dx * dx + dy * dy);
-                  const durationMinutes = Math.max(30, Math.round(distanceVal * 6));
+                  // Calculate distance and duration using GPS coordinates
+                  const distKm = haversineKm(origin.lat, origin.lng, destination.lat, destination.lng);
+                  const travelMins = (distKm / 870) * 60;
+                  const durationMinutes = Math.max(60, Math.round(travelMins + 40));
 
                   return (
                     <motion.div

@@ -10,7 +10,7 @@ const SPEEDS: Record<TransportMode, number> = {
 
 // Extra overhead in minutes (boarding, taxi, etc.)
 const OVERHEAD: Record<TransportMode, number> = {
-  FLIGHT: 120,
+  FLIGHT: 40,
   TRAIN: 30,
   CAR: 10,
   BUS: 20,
@@ -55,11 +55,9 @@ export function calcTravelOptions(
         MIN_DURATION[mode],
         Math.round(travelMins + OVERHEAD[mode])
       );
-      const totalSecs = totalMins * 60;
-
       return {
         mode,
-        duration: totalSecs,
+        duration: totalMins,
         durationText: formatMins(totalMins),
         distance: Math.round(distKm),
         distanceText: distKm >= 1000
@@ -84,7 +82,7 @@ function formatMins(mins: number): string {
   return `${h}h ${m}m`;
 }
 
-export function calcArrivalTime(durationSecs: number): string {
-  const arrival = new Date(Date.now() + durationSecs * 1000);
+export function calcArrivalTime(durationMins: number): string {
+  const arrival = new Date(Date.now() + durationMins * 60 * 1000);
   return arrival.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", timeZoneName: "short" });
 }
