@@ -273,6 +273,14 @@ export default function CockpitClient({ id }: { id: string }) {
   const [inputVerificationCode, setInputVerificationCode] = useState("");
   const [ejectedSession, setEjectedSession] = useState(false);
 
+  // Randomized Security Verification Challenges & suggestions
+  const [verificationType, setVerificationType] = useState<"CODE" | "MATH" | "BUTTON">("CODE");
+  const [mathQuestion, setMathQuestion] = useState("");
+  const [mathCorrectAnswer, setMathCorrectAnswer] = useState("");
+  const [activeSuggestion, setActiveSuggestion] = useState("");
+  const [validationError, setValidationError] = useState("");
+  const [randomizedButtons, setRandomizedButtons] = useState<string[]>([]);
+
   // View state: 'timer' or 'cabin'
   const [activeTab, setActiveTab] = useState<"timer" | "cabin">("cabin");
 
@@ -566,6 +574,19 @@ export default function CockpitClient({ id }: { id: string }) {
         if (savedIndex !== null) {
           setCurrentCheckpointIndex(Number(savedIndex));
         }
+
+        const savedType = (localStorage.getItem(`flight_presence_type_${sessionId}`) || "CODE") as "CODE" | "MATH" | "BUTTON";
+        setVerificationType(savedType);
+        setMathQuestion(localStorage.getItem(`flight_presence_math_q_${sessionId}`) || "");
+        setMathCorrectAnswer(localStorage.getItem(`flight_presence_math_a_${sessionId}`) || "");
+        setActiveSuggestion(localStorage.getItem(`flight_presence_suggestion_${sessionId}`) || "");
+        
+        try {
+          const savedBtns = localStorage.getItem(`flight_presence_btns_${sessionId}`);
+          if (savedBtns) {
+            setRandomizedButtons(JSON.parse(savedBtns));
+          }
+        } catch {}
       }
     }
   }, [session, totalDurationSeconds, config, sessionId]);
@@ -884,10 +905,49 @@ export default function CockpitClient({ id }: { id: string }) {
           setCurrentCheckpointIndex(index);
           setActivePresenceCheck(true);
           setPresenceCheckSecondsLeft(60);
+          setValidationError("");
           
-          const code = Math.random().toString(36).substring(2, 6).toUpperCase();
-          setPilotVerificationCode(code);
-          setInputVerificationCode("");
+          // 1. Choose a random check type: CODE, MATH, or BUTTON
+          const types: ("CODE" | "MATH" | "BUTTON")[] = ["CODE", "MATH", "BUTTON"];
+          const chosenType = types[Math.floor(Math.random() * types.length)];
+          setVerificationType(chosenType);
+          
+          // 2. Generate challenge contents
+          let code = "";
+          let mathQ = "";
+          let mathA = "";
+          let btns: string[] = [];
+          
+          if (chosenType === "CODE") {
+            code = Math.random().toString(36).substring(2, 6).toUpperCase();
+            setPilotVerificationCode(code);
+            setInputVerificationCode("");
+          } else if (chosenType === "MATH") {
+            const num1 = Math.floor(Math.random() * 8) + 2; // 2 to 9
+            const num2 = Math.floor(Math.random() * 8) + 2; // 2 to 9
+            mathQ = `What is ${num1} + ${num2}?`;
+            mathA = String(num1 + num2);
+            setMathQuestion(mathQ);
+            setMathCorrectAnswer(mathA);
+            setInputVerificationCode("");
+          } else if (chosenType === "BUTTON") {
+            const correctOpt = "I AM STILL STUDYING";
+            const wrongOpt1 = "DISMISS ALARM";
+            const wrongOpt2 = "DO NOTHING";
+            btns = [correctOpt, wrongOpt1, wrongOpt2].sort(() => Math.random() - 0.5);
+            setRandomizedButtons(btns);
+          }
+          
+          // 3. Choose a random wellness suggestion
+          const suggestions = [
+            "Roll your shoulders back and sit straight to release flight posture tension.",
+            "A pilot needs water! Take a quick sip of water to boost cognitive performance.",
+            "Look away from the console at an object 20 feet away for 20 seconds to prevent eye muscle strain.",
+            "Inhale deeply for 4 seconds, hold for 4 seconds, then exhale slowly for 4 seconds.",
+            "Acknowledge the single main study task you are working on right now."
+          ];
+          const chosenSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+          setActiveSuggestion(chosenSuggestion);
           
           setFlightPhase("⚠️ MASTER WARNING: Presence Verification Required");
           
@@ -896,6 +956,11 @@ export default function CockpitClient({ id }: { id: string }) {
             localStorage.setItem(`flight_presence_check_seconds_${sessionId}`, "60");
             localStorage.setItem(`flight_presence_check_code_${sessionId}`, code);
             localStorage.setItem(`flight_presence_check_index_${sessionId}`, String(index));
+            localStorage.setItem(`flight_presence_type_${sessionId}`, chosenType);
+            localStorage.setItem(`flight_presence_math_q_${sessionId}`, mathQ);
+            localStorage.setItem(`flight_presence_math_a_${sessionId}`, mathA);
+            localStorage.setItem(`flight_presence_suggestion_${sessionId}`, chosenSuggestion);
+            localStorage.setItem(`flight_presence_btns_${sessionId}`, JSON.stringify(btns));
           } catch {}
         } else if (presenceActive) {
           const savedSeconds = Number(localStorage.getItem(`flight_presence_check_seconds_${sessionId}`)) || 60;
@@ -1182,6 +1247,11 @@ export default function CockpitClient({ id }: { id: string }) {
       localStorage.removeItem(`flight_presence_check_seconds_${sessionId}`);
       localStorage.removeItem(`flight_presence_check_code_${sessionId}`);
       localStorage.removeItem(`flight_presence_check_index_${sessionId}`);
+      localStorage.removeItem(`flight_presence_type_${sessionId}`);
+      localStorage.removeItem(`flight_presence_math_q_${sessionId}`);
+      localStorage.removeItem(`flight_presence_math_a_${sessionId}`);
+      localStorage.removeItem(`flight_presence_suggestion_${sessionId}`);
+      localStorage.removeItem(`flight_presence_btns_${sessionId}`);
     } catch {}
 
     if (audioRef.current) audioRef.current.pause();
@@ -1190,21 +1260,41 @@ export default function CockpitClient({ id }: { id: string }) {
     await syncCoinsToProfile(0);
   };
 
-  const handleVerifyAutopilot = () => {
-    if (inputVerificationCode.trim().toUpperCase() === pilotVerificationCode) {
+  const handleVerifyAutopilot = (buttonSelection?: string) => {
+    let isValid = false;
+    
+    if (verificationType === "CODE") {
+      isValid = inputVerificationCode.trim().toUpperCase() === pilotVerificationCode;
+    } else if (verificationType === "MATH") {
+      isValid = inputVerificationCode.trim() === mathCorrectAnswer;
+    } else if (verificationType === "BUTTON") {
+      isValid = buttonSelection === "I AM STILL STUDYING";
+    }
+    
+    if (isValid) {
       // Clear alert state
       setActivePresenceCheck(false);
       setCurrentCheckpointIndex(null);
       setFlightPhase("Established at Cruising Altitude");
+      setValidationError("");
       
       try {
         localStorage.removeItem(`flight_presence_check_active_${sessionId}`);
         localStorage.removeItem(`flight_presence_check_seconds_${sessionId}`);
         localStorage.removeItem(`flight_presence_check_code_${sessionId}`);
         localStorage.removeItem(`flight_presence_check_index_${sessionId}`);
+        localStorage.removeItem(`flight_presence_type_${sessionId}`);
+        localStorage.removeItem(`flight_presence_math_q_${sessionId}`);
+        localStorage.removeItem(`flight_presence_math_a_${sessionId}`);
+        localStorage.removeItem(`flight_presence_suggestion_${sessionId}`);
+        localStorage.removeItem(`flight_presence_btns_${sessionId}`);
       } catch {}
     } else {
-      alert("❌ INCORRECT TRANSPONDER CODE. Autopilot response failed.");
+      setValidationError(
+        verificationType === "BUTTON"
+          ? "❌ SECURITY PROTOCOL BREACHED: Incorrect selection."
+          : "❌ INCORRECT ALARM OVERRIDE RESPONSE."
+      );
     }
   };
 
@@ -3182,28 +3272,28 @@ export default function CockpitClient({ id }: { id: string }) {
       {/* EMERGENCY ACTIVE PRESENCE ALERT DIALOG */}
       {activePresenceCheck && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#070b19] border-2 border-amber-500/50 rounded-3xl p-6 shadow-[0_0_50px_rgba(245,158,11,0.3)] relative overflow-hidden flex flex-col items-center text-center space-y-4 font-sans select-none animate-pulse">
+          <div className="w-full max-w-md bg-[#070b19] border-2 border-amber-500/50 rounded-3xl p-6 shadow-[0_0_50px_rgba(245,158,11,0.3)] relative overflow-hidden flex flex-col items-center text-center space-y-4 font-sans select-none">
             {/* Alert Beacon Icon */}
-            <div className="size-20 rounded-full border-4 border-amber-500/30 flex items-center justify-center relative bg-amber-500/10 animate-ping">
-              <span className="text-4xl text-amber-500">⚠️</span>
+            <div className="size-16 rounded-full border-4 border-amber-500/30 flex items-center justify-center relative bg-amber-500/10 animate-pulse">
+              <span className="text-3xl text-amber-500">⚠️</span>
             </div>
             
             <div className="space-y-1">
-              <h2 className="font-display font-black text-xl text-amber-400 uppercase tracking-widest">
-                Presence Verification
+              <h2 className="font-display font-black text-lg text-amber-400 uppercase tracking-widest animate-pulse">
+                Are you still there in flight?
               </h2>
-              <p className="text-[9px] text-white/50 font-mono tracking-widest uppercase">
+              <p className="text-[8px] text-white/50 font-mono tracking-widest uppercase">
                 Autopilot emergency transponder scan
               </p>
             </div>
 
-            <p className="text-xs text-white/70 max-w-sm leading-relaxed">
-              Autopilot suspected pilot absence. To prevent idle coin-farming exploits, you must enter the transponder code within 60 seconds or you will be <span className="text-red-400 font-extrabold uppercase">Ejected</span> with <span className="text-red-400 font-extrabold">0 focus coins</span>!
+            <p className="text-[11px] text-white/70 max-w-sm leading-relaxed">
+              Autopilot suspected pilot absence. To prevent idle coin-farming exploits, you must solve the presence check within 60 seconds or you will be <span className="text-red-400 font-extrabold uppercase">Ejected</span> with <span className="text-red-400 font-extrabold">0 focus coins</span>!
             </p>
 
             {/* Countdown timer */}
-            <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center">
-              <span className="text-4xl font-mono font-black text-amber-500 tracking-wider">
+            <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-3 flex flex-col items-center">
+              <span className="text-3xl font-mono font-black text-amber-500 tracking-wider">
                 {presenceCheckSecondsLeft}s
               </span>
               <p className="text-[8px] font-mono tracking-wider text-white/40 uppercase mt-1">
@@ -3211,7 +3301,7 @@ export default function CockpitClient({ id }: { id: string }) {
               </p>
               
               {/* Progress Bar */}
-              <div className="w-full h-1 bg-white/5 rounded-full mt-3 overflow-hidden">
+              <div className="w-full h-1 bg-white/5 rounded-full mt-2 overflow-hidden">
                 <div 
                   className="h-full bg-amber-500 transition-all duration-1000 ease-linear"
                   style={{ width: `${(presenceCheckSecondsLeft / 60) * 100}%` }}
@@ -3219,32 +3309,98 @@ export default function CockpitClient({ id }: { id: string }) {
               </div>
             </div>
 
-            {/* Verification Inputs */}
-            <div className="w-full space-y-2 border-t border-white/5 pt-4">
-              <label className="text-[9px] font-bold text-amber-400 uppercase tracking-widest block">
-                Type Transponder Key to Clear:
-              </label>
-              <div className="flex items-center justify-center gap-3">
-                <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono font-black text-xl px-4 py-2.5 rounded-xl tracking-widest select-all">
-                  {pilotVerificationCode}
-                </span>
-                <input
-                  type="text"
-                  maxLength={4}
-                  placeholder="CODE"
-                  value={inputVerificationCode}
-                  onChange={(e) => setInputVerificationCode(e.target.value.toUpperCase())}
-                  className="bg-white/5 border-2 border-white/10 rounded-xl px-4 py-2 font-mono font-black text-lg tracking-widest text-center w-28 text-white focus:outline-none focus:border-amber-400 transition"
-                />
-              </div>
+            {/* Dynamic Verification Challenge based on verificationType */}
+            <div className="w-full space-y-3 border-t border-white/5 pt-3">
+              {verificationType === "CODE" && (
+                <>
+                  <label className="text-[8px] font-bold text-amber-400 uppercase tracking-widest block">
+                    Type Transponder Key to Clear:
+                  </label>
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono font-black text-lg px-4 py-2 rounded-xl tracking-widest select-all">
+                      {pilotVerificationCode}
+                    </span>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      placeholder="CODE"
+                      value={inputVerificationCode}
+                      onChange={(e) => setInputVerificationCode(e.target.value.toUpperCase())}
+                      className="bg-white/5 border-2 border-white/10 rounded-xl px-4 py-2 font-mono font-black text-base tracking-widest text-center w-28 text-white focus:outline-none focus:border-amber-400 transition"
+                    />
+                  </div>
+                </>
+              )}
+
+              {verificationType === "MATH" && (
+                <>
+                  <label className="text-[8px] font-bold text-amber-400 uppercase tracking-widest block">
+                    Solve Focus Arithmetic:
+                  </label>
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono font-black text-sm px-4 py-2 rounded-xl tracking-wider select-none">
+                      {mathQuestion}
+                    </span>
+                    <input
+                      type="number"
+                      placeholder="?"
+                      value={inputVerificationCode}
+                      onChange={(e) => setInputVerificationCode(e.target.value)}
+                      className="bg-white/5 border-2 border-white/10 rounded-xl px-4 py-2 font-mono font-black text-base tracking-wider text-center w-20 text-white focus:outline-none focus:border-amber-400 transition"
+                    />
+                  </div>
+                </>
+              )}
+
+              {verificationType === "BUTTON" && (
+                <>
+                  <label className="text-[8px] font-bold text-amber-400 uppercase tracking-widest block">
+                    Confirm your pilot status below:
+                  </label>
+                  <div className="grid grid-cols-1 gap-2 pt-1 w-full max-w-xs mx-auto">
+                    {randomizedButtons.map((btnLabel, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleVerifyAutopilot(btnLabel)}
+                        className="py-2.5 px-4 bg-white/5 hover:bg-white/10 active:scale-[0.98] border border-white/10 text-white font-bold text-[10px] uppercase tracking-wider rounded-xl transition cursor-pointer"
+                      >
+                        {btnLabel}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
-            <button
-              onClick={handleVerifyAutopilot}
-              className="w-full py-4 bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-navy-950 font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-amber-500/25 transition cursor-pointer select-none"
-            >
-              Verify Presence & Clear Master Alarm
-            </button>
+            {/* Error notifications */}
+            {validationError && (
+              <div className="text-[9px] font-bold text-red-400 uppercase tracking-wide bg-red-950/40 border border-red-500/30 px-3 py-1.5 rounded-lg w-full">
+                {validationError}
+              </div>
+            )}
+
+            {/* Render submission button for input challenges */}
+            {verificationType !== "BUTTON" && (
+              <button
+                onClick={() => handleVerifyAutopilot()}
+                className="w-full py-3 bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-navy-950 font-black text-[10px] uppercase tracking-widest rounded-xl shadow-lg shadow-amber-500/25 transition cursor-pointer select-none"
+              >
+                Transmit Transponder Signal
+              </button>
+            )}
+
+            {/* HELPFUL PILOT STUDY FOCUS SUGGESTION BOX */}
+            {activeSuggestion && (
+              <div className="w-full border border-amber-500/20 bg-amber-500/5 rounded-2xl p-3.5 mt-2 text-left relative overflow-hidden">
+                <div className="absolute top-0 right-0 text-[18px] opacity-15 rotate-12 select-none">💡</div>
+                <h4 className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                  <span>💡</span> Focus Suggestion
+                </h4>
+                <p className="text-[9.5px] text-white/70 leading-relaxed font-mono select-none">
+                  {activeSuggestion}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
