@@ -11,6 +11,7 @@ import {
   Plane, Shield, Award, Users, Sparkles, Navigation, Globe, Compass, 
   Flame, Calendar, MessageSquare, Coffee, LogIn, Laptop, BookOpen, Clock
 } from "lucide-react";
+import { WordsPullUp } from "@/components/ui/prisma-hero";
 
 const FEATURES = [
   {
@@ -161,13 +162,17 @@ export default function LandingPortalPage() {
   if (landingTheme === "prisma") {
     return (
       <main className="relative h-screen w-screen overflow-hidden bg-black text-white font-sans selection:bg-electric-500">
-        {/* Fullscreen Cinematic Image Background */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center transition-all duration-1000 transform scale-100"
-          style={{ 
-            backgroundImage: "url('/cinematic_clouds_study_island.png')",
-          }}
+        {/* Fullscreen Background Video (Moving Clouds) */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 h-full w-full object-cover select-none pointer-events-none"
+          src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260405_170732_8a9ccda6-5cff-4628-b164-059c500a2b41.mp4"
         />
+        {/* Noise overlay */}
+        <div className="noise-overlay pointer-events-none absolute inset-0 opacity-[0.4] mix-blend-overlay" />
         {/* Dark Vignette Overlay for Premium Readability */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/60 pointer-events-none" />
 
@@ -207,8 +212,11 @@ export default function LandingPortalPage() {
 
         {/* Giant Prisma-Style Title (Bottom Left) */}
         <div className="absolute bottom-10 left-10 z-10 text-left select-none pointer-events-none">
-          <h1 className="font-display text-6xl md:text-[120px] font-black tracking-tight text-white leading-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.4)] animate-pulse">
-            GoFocusGen<span className="text-electric-400">*</span>
+          <h1 
+            className="font-display font-medium leading-[0.85] tracking-[-0.07em] text-[18vw] sm:text-[16vw] md:text-[14vw]"
+            style={{ color: "#E1E0CC" }}
+          >
+            <WordsPullUp text="GoFocusGen" showAsterisk />
           </h1>
         </div>
 
