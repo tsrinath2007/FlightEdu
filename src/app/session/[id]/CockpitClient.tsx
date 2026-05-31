@@ -848,8 +848,8 @@ export default function CockpitClient({ id }: { id: string }) {
     if (!isActive) {
       if (secondsRemaining > 0 && secondsRemaining < totalDurationSeconds) {
         setFlightPhase("Autopilot Paused - Holding Pattern");
-        if (altitude > 10000) setAltitude((prev) => Math.max(10000, prev - 150));
-        if (speed > 250) setSpeed((prev) => Math.max(250, prev - 5));
+        setAltitude((prev) => prev > 10000 ? Math.max(10000, prev - 150) : prev);
+        setSpeed((prev) => prev > 250 ? Math.max(250, prev - 5) : prev);
       }
       return;
     }
@@ -883,7 +883,7 @@ export default function CockpitClient({ id }: { id: string }) {
       setAltitude((prev) => Math.max(200, prev - 120));
       setSpeed((prev) => Math.max(140, prev - 8));
     }
-  }, [isActive, secondsRemaining, totalDurationSeconds, altitude, speed]);
+  }, [isActive, secondsRemaining, totalDurationSeconds]);
 
   const toggleAutopilot = () => {
     const nextActive = !isActive;
