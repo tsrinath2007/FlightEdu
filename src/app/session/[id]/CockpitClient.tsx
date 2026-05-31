@@ -264,6 +264,15 @@ export default function CockpitClient({ id }: { id: string }) {
   const [altitude, setAltitude] = useState(0);
   const [speed, setSpeed] = useState(0);
 
+  // Security Presence Check System (Autopilot Verification)
+  const [securityCheckpoints, setSecurityCheckpoints] = useState<number[]>([]);
+  const [activePresenceCheck, setActivePresenceCheck] = useState<boolean>(false);
+  const [presenceCheckSecondsLeft, setPresenceCheckSecondsLeft] = useState(60);
+  const [currentCheckpointIndex, setCurrentCheckpointIndex] = useState<number | null>(null);
+  const [pilotVerificationCode, setPilotVerificationCode] = useState("");
+  const [inputVerificationCode, setInputVerificationCode] = useState("");
+  const [ejectedSession, setEjectedSession] = useState(false);
+
   // View state: 'timer' or 'cabin'
   const [activeTab, setActiveTab] = useState<"timer" | "cabin">("cabin");
 
@@ -520,6 +529,44 @@ export default function CockpitClient({ id }: { id: string }) {
       const baseMul = config?.airline?.baseMultiplier ?? 1.0;
       const classMul = config?.cabinClass?.priceMultiplier ?? 1.0;
       setCoinsEarned(Number((elapsed * 0.05 * baseMul * classMul).toFixed(2)));
+
+      // Load or generate security checkpoints (persisted so refresh doesn't randomize them again!)
+      let savedCheckpoints: number[] = [];
+      const checkpointsStr = localStorage.getItem(`flight_security_checkpoints_${sessionId}`);
+      if (checkpointsStr) {
+        try {
+          savedCheckpoints = JSON.parse(checkpointsStr);
+        } catch {}
+      }
+
+      if (savedCheckpoints.length === 0 && totalSecs > 0) {
+        const cp1 = Math.round(totalSecs * (0.15 + Math.random() * 0.20)); // 15% - 35%
+        const cp2 = Math.round(totalSecs * (0.45 + Math.random() * 0.20)); // 45% - 65%
+        const cp3 = Math.round(totalSecs * (0.75 + Math.random() * 0.15)); // 75% - 90%
+        savedCheckpoints = [cp1, cp2, cp3];
+        localStorage.setItem(`flight_security_checkpoints_${sessionId}`, JSON.stringify(savedCheckpoints));
+      }
+      setSecurityCheckpoints(savedCheckpoints);
+
+      // Load persistent ejection and transponder check states
+      const isEjected = localStorage.getItem(`flight_ejected_${sessionId}`) === "true";
+      if (isEjected) {
+        setEjectedSession(true);
+        activeState = false;
+      }
+
+      const presenceActive = localStorage.getItem(`flight_presence_check_active_${sessionId}`) === "true";
+      if (presenceActive && !isEjected) {
+        setActivePresenceCheck(true);
+        const savedSeconds = Number(localStorage.getItem(`flight_presence_check_seconds_${sessionId}`)) || 60;
+        setPresenceCheckSecondsLeft(savedSeconds);
+        const savedCode = localStorage.getItem(`flight_presence_check_code_${sessionId}`) || "ABCD";
+        setPilotVerificationCode(savedCode);
+        const savedIndex = localStorage.getItem(`flight_presence_check_index_${sessionId}`);
+        if (savedIndex !== null) {
+          setCurrentCheckpointIndex(Number(savedIndex));
+        }
+      }
     }
   }, [session, totalDurationSeconds, config, sessionId]);
 
@@ -829,6 +876,41 @@ export default function CockpitClient({ id }: { id: string }) {
           setChecklist((prev) => prev.map((item) => item.id === 4 ? { ...item, completed: true } : item));
         }
 
+        // --- Pilot Presence Check Security System ---
+        const presenceActive = localStorage.getItem(`flight_presence_check_active_${sessionId}`) === "true";
+        
+        if (securityCheckpoints.includes(elapsed) && !presenceActive) {
+          const index = securityCheckpoints.indexOf(elapsed);
+          setCurrentCheckpointIndex(index);
+          setActivePresenceCheck(true);
+          setPresenceCheckSecondsLeft(60);
+          
+          const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+          setPilotVerificationCode(code);
+          setInputVerificationCode("");
+          
+          setFlightPhase("⚠️ MASTER WARNING: Presence Verification Required");
+          
+          try {
+            localStorage.setItem(`flight_presence_check_active_${sessionId}`, "true");
+            localStorage.setItem(`flight_presence_check_seconds_${sessionId}`, "60");
+            localStorage.setItem(`flight_presence_check_code_${sessionId}`, code);
+            localStorage.setItem(`flight_presence_check_index_${sessionId}`, String(index));
+          } catch {}
+        } else if (presenceActive) {
+          const savedSeconds = Number(localStorage.getItem(`flight_presence_check_seconds_${sessionId}`)) || 60;
+          const nextSeconds = Math.max(0, savedSeconds - 1);
+          setPresenceCheckSecondsLeft(nextSeconds);
+          try {
+            localStorage.setItem(`flight_presence_check_seconds_${sessionId}`, String(nextSeconds));
+          } catch {}
+          
+          if (nextSeconds <= 0) {
+            handlePilotEjection();
+            return;
+          }
+        }
+
         if (remaining <= 0) {
           setIsActive(false);
           localStorage.setItem(`flight_timer_active_${sessionId}`, "false");
@@ -847,7 +929,7 @@ export default function CockpitClient({ id }: { id: string }) {
     }
 
     return () => clearInterval(timer);
-  }, [isActive, secondsRemaining, totalDurationSeconds, config, sessionId]);
+  }, [isActive, secondsRemaining, totalDurationSeconds, config, sessionId, securityCheckpoints, activePresenceCheck, presenceCheckSecondsLeft]);
 
   // Flight Instruments Engine
   useEffect(() => {
@@ -892,6 +974,11 @@ export default function CockpitClient({ id }: { id: string }) {
   }, [isActive, secondsRemaining, totalDurationSeconds]);
 
   const toggleAutopilot = () => {
+    if (activePresenceCheck) {
+      alert("🚨 MASTER ALARM ACTIVE: Autopilot controls locked during transponder presence verification.");
+      return;
+    }
+
     const nextActive = !isActive;
     setIsActive(nextActive);
     
@@ -1075,6 +1162,49 @@ export default function CockpitClient({ id }: { id: string }) {
       });
     } catch (e) {
       console.warn("DB coin sync failed:", e);
+    }
+  };
+
+  const handlePilotEjection = async () => {
+    setIsActive(false);
+    setActivePresenceCheck(false);
+    setEjectedSession(true);
+    setFlightPhase("❌ PILOT EJECTED: Autopilot Presence Check Failed");
+    setAltitude(0);
+    setSpeed(0);
+    setCoinsEarned(0); // Forfeit all coins!
+    
+    // Clear persistent timer keys on ejection to prevent leaks
+    try {
+      localStorage.setItem(`flight_ejected_${sessionId}`, "true");
+      localStorage.setItem(`flight_timer_active_${sessionId}`, "false");
+      localStorage.removeItem(`flight_presence_check_active_${sessionId}`);
+      localStorage.removeItem(`flight_presence_check_seconds_${sessionId}`);
+      localStorage.removeItem(`flight_presence_check_code_${sessionId}`);
+      localStorage.removeItem(`flight_presence_check_index_${sessionId}`);
+    } catch {}
+
+    if (audioRef.current) audioRef.current.pause();
+
+    // Synchronize 0 coins to prevent hacks!
+    await syncCoinsToProfile(0);
+  };
+
+  const handleVerifyAutopilot = () => {
+    if (inputVerificationCode.trim().toUpperCase() === pilotVerificationCode) {
+      // Clear alert state
+      setActivePresenceCheck(false);
+      setCurrentCheckpointIndex(null);
+      setFlightPhase("Established at Cruising Altitude");
+      
+      try {
+        localStorage.removeItem(`flight_presence_check_active_${sessionId}`);
+        localStorage.removeItem(`flight_presence_check_seconds_${sessionId}`);
+        localStorage.removeItem(`flight_presence_check_code_${sessionId}`);
+        localStorage.removeItem(`flight_presence_check_index_${sessionId}`);
+      } catch {}
+    } else {
+      alert("❌ INCORRECT TRANSPONDER CODE. Autopilot response failed.");
     }
   };
 
@@ -3048,6 +3178,123 @@ export default function CockpitClient({ id }: { id: string }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* EMERGENCY ACTIVE PRESENCE ALERT DIALOG */}
+      {activePresenceCheck && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#070b19] border-2 border-amber-500/50 rounded-3xl p-6 shadow-[0_0_50px_rgba(245,158,11,0.3)] relative overflow-hidden flex flex-col items-center text-center space-y-4 font-sans select-none animate-pulse">
+            {/* Alert Beacon Icon */}
+            <div className="size-20 rounded-full border-4 border-amber-500/30 flex items-center justify-center relative bg-amber-500/10 animate-ping">
+              <span className="text-4xl text-amber-500">⚠️</span>
+            </div>
+            
+            <div className="space-y-1">
+              <h2 className="font-display font-black text-xl text-amber-400 uppercase tracking-widest">
+                Presence Verification
+              </h2>
+              <p className="text-[9px] text-white/50 font-mono tracking-widest uppercase">
+                Autopilot emergency transponder scan
+              </p>
+            </div>
+
+            <p className="text-xs text-white/70 max-w-sm leading-relaxed">
+              Autopilot suspected pilot absence. To prevent idle coin-farming exploits, you must enter the transponder code within 60 seconds or you will be <span className="text-red-400 font-extrabold uppercase">Ejected</span> with <span className="text-red-400 font-extrabold">0 focus coins</span>!
+            </p>
+
+            {/* Countdown timer */}
+            <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center">
+              <span className="text-4xl font-mono font-black text-amber-500 tracking-wider">
+                {presenceCheckSecondsLeft}s
+              </span>
+              <p className="text-[8px] font-mono tracking-wider text-white/40 uppercase mt-1">
+                seconds remaining before ejection
+              </p>
+              
+              {/* Progress Bar */}
+              <div className="w-full h-1 bg-white/5 rounded-full mt-3 overflow-hidden">
+                <div 
+                  className="h-full bg-amber-500 transition-all duration-1000 ease-linear"
+                  style={{ width: `${(presenceCheckSecondsLeft / 60) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Verification Inputs */}
+            <div className="w-full space-y-2 border-t border-white/5 pt-4">
+              <label className="text-[9px] font-bold text-amber-400 uppercase tracking-widest block">
+                Type Transponder Key to Clear:
+              </label>
+              <div className="flex items-center justify-center gap-3">
+                <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono font-black text-xl px-4 py-2.5 rounded-xl tracking-widest select-all">
+                  {pilotVerificationCode}
+                </span>
+                <input
+                  type="text"
+                  maxLength={4}
+                  placeholder="CODE"
+                  value={inputVerificationCode}
+                  onChange={(e) => setInputVerificationCode(e.target.value.toUpperCase())}
+                  className="bg-white/5 border-2 border-white/10 rounded-xl px-4 py-2 font-mono font-black text-lg tracking-widest text-center w-28 text-white focus:outline-none focus:border-amber-400 transition"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleVerifyAutopilot}
+              className="w-full py-4 bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-navy-950 font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-amber-500/25 transition cursor-pointer select-none"
+            >
+              Verify Presence & Clear Master Alarm
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MASTER AUTOPILOT EJECTION VIEW OVERLAY */}
+      {ejectedSession && (
+        <div className="fixed inset-0 bg-[#050a17] z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-red-950/10 border border-red-500/25 rounded-3xl p-8 shadow-[0_0_50px_rgba(239,68,68,0.15)] backdrop-blur-xl text-center space-y-6">
+            <div className="size-20 rounded-full border-4 border-red-500/30 flex items-center justify-center relative bg-red-500/5 mx-auto animate-bounce">
+              <span className="text-4xl">❌</span>
+            </div>
+            
+            <div className="space-y-1">
+              <h2 className="font-display font-black text-xl text-red-500 uppercase tracking-widest">
+                Autopilot Ejected
+              </h2>
+              <p className="text-[10px] text-red-400 font-mono tracking-widest uppercase">
+                Flight Deck Session Terminated
+              </p>
+            </div>
+
+            <p className="text-xs text-white/60 leading-relaxed">
+              Autopilot has ejected you from the focus cabin because you failed the master presence verification transponder checklist. 
+            </p>
+            
+            <div className="bg-red-500/5 border border-red-500/10 rounded-2xl p-4 text-left space-y-2">
+              <p className="text-[9px] font-bold text-red-400 uppercase tracking-widest">Log details:</p>
+              <div className="text-[11px] font-mono text-white/50 space-y-1">
+                <p>STATUS: DISENGAGED (EJECTED)</p>
+                <p>REASON: COIN-HACK SUSPICION (TIMEOUT)</p>
+                <p>PENALTY: ALL FLIGHT COINS FORFEITED (🪙 0)</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                localStorage.removeItem(`flight_timer_active_${sessionId}`);
+                localStorage.removeItem(`flight_timer_start_timestamp_${sessionId}`);
+                localStorage.removeItem(`flight_timer_accumulated_elapsed_${sessionId}`);
+                localStorage.removeItem(`flight_security_checkpoints_${sessionId}`);
+                localStorage.removeItem(`flight_ejected_${sessionId}`);
+                router.push("/dashboard");
+              }}
+              className="w-full py-4 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg transition cursor-pointer active:scale-95"
+            >
+              Return to Base Airport
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
