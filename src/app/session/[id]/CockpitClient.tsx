@@ -459,7 +459,13 @@ export default function CockpitClient({ id }: { id: string }) {
         setSessionNotFound(false);
       } else {
         if (res.status === 404) {
-          setSessionNotFound(true);
+          // If it is a mock/simulated session, do NOT trigger connection lost — keep using local/mock state
+          if (sessionId.startsWith("mock-") || sessionId.startsWith("demo-")) {
+            console.info("Using local mock flight manifest for session:", sessionId);
+            setSessionNotFound(false);
+          } else {
+            setSessionNotFound(true);
+          }
         } else {
           throw new Error();
         }
