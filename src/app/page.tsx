@@ -11,7 +11,6 @@ import {
   Plane, Shield, Award, Users, Sparkles, Navigation, Globe, Compass, 
   Flame, Calendar, MessageSquare, Coffee, LogIn, Laptop, BookOpen, Clock
 } from "lucide-react";
-import { WordsPullUp } from "@/components/ui/prisma-hero";
 
 const FEATURES = [
   {
@@ -65,15 +64,6 @@ export default function LandingPortalPage() {
   const [loading, setLoading] = useState(false);
   const [checkLoading, setCheckLoading] = useState(true);
   const [currentTip, setCurrentTip] = useState(0);
-  const [landingTheme, setLandingTheme] = useState<"classic" | "prisma">("prisma");
-
-  // Read theme from localStorage on mount to prevent hydration mismatch
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("gofocusgen_landing_theme") as "classic" | "prisma" | null;
-    if (savedTheme) {
-      setLandingTheme(savedTheme);
-    }
-  }, []);
 
   // Cycle cockpit tips every 6 seconds for dynamic feel
   useEffect(() => {
@@ -158,87 +148,6 @@ export default function LandingPortalPage() {
     );
   }
 
-  // --- Brand New Prisma-Inspired Cinematic Sky Lounge Interface ---
-  if (landingTheme === "prisma") {
-    return (
-      <main className="relative h-screen w-screen overflow-hidden bg-black text-white font-sans selection:bg-electric-500">
-        {/* Fullscreen Background Video (Moving Clouds) */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 h-full w-full object-cover select-none pointer-events-none"
-          src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260405_170732_8a9ccda6-5cff-4628-b164-059c500a2b41.mp4"
-        />
-        {/* Noise overlay */}
-        <div className="noise-overlay pointer-events-none absolute inset-0 opacity-[0.4] mix-blend-overlay" />
-        {/* Dark Vignette Overlay for Premium Readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/60 pointer-events-none" />
-
-        {/* Brand Logo (Top Left) */}
-        <div className="absolute top-6 left-6 z-20 flex items-center gap-2">
-          <Logo layout="horizontal" size="md" />
-        </div>
-
-        {/* Centered Pill Capsule Menu (Top Center) */}
-        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 flex items-center bg-black/60 border border-white/10 backdrop-blur-xl px-6 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest gap-5 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
-          <button onClick={() => alert("Our vision: study like you are travelling the world in premium focus cabins.")} className="hover:text-electric-400 text-white/70 hover:text-white transition cursor-pointer">Our story</button>
-          <button onClick={() => router.push("/leaderboard")} className="hover:text-electric-400 text-white/70 hover:text-white transition cursor-pointer">Leaderboard</button>
-          <button onClick={() => router.push("/journey")} className="hover:text-electric-400 text-white/70 hover:text-white transition cursor-pointer">Workshops</button>
-          <span className="text-white/20">|</span>
-          <button 
-            onClick={() => {
-              setLandingTheme("classic");
-              localStorage.setItem("gofocusgen_landing_theme", "classic");
-            }} 
-            className="text-amber-400 hover:text-amber-300 font-bold transition cursor-pointer flex items-center gap-1.5"
-          >
-            🔄 Classic UI
-          </button>
-        </div>
-
-        {/* Launch Cabin Gate (Top Right) */}
-        <div className="absolute top-6 right-6 z-20">
-          <Button
-            variant="ghost"
-            onClick={handleGoogleLogin}
-            loading={loading}
-            className="bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold uppercase tracking-wider text-white rounded-full px-5 py-2.5 cursor-pointer backdrop-blur-md transition"
-          >
-            Launch Cabin
-          </Button>
-        </div>
-
-        {/* Giant Prisma-Style Title (Bottom Left) */}
-        <div className="absolute bottom-10 left-10 z-10 text-left select-none pointer-events-none">
-          <h1 
-            className="font-display font-medium leading-[0.85] tracking-[-0.07em] text-[18vw] sm:text-[16vw] md:text-[14vw]"
-            style={{ color: "#E1E0CC" }}
-          >
-            <WordsPullUp text="GoFocusGen" showAsterisk />
-          </h1>
-        </div>
-
-        {/* Premium Description & CTA Button (Bottom Right) */}
-        <div className="absolute bottom-10 right-10 z-10 max-w-sm text-right flex flex-col items-end space-y-5">
-          <p className="text-[11px] md:text-[13px] text-white/80 leading-relaxed font-sans text-right max-w-xs drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-            GoFocusGen is a worldwide network of visual learners, pilots, and storytellers. Pick a real flight route, board your study cabin, fly in real-time, and unlock the world.
-          </p>
-          <button
-            onClick={handleGoogleLogin}
-            className="flex items-center gap-4 bg-[#e4e4e7] hover:bg-white text-black font-extrabold text-[10px] md:text-xs uppercase tracking-widest px-6 py-3.5 rounded-full transition shadow-2xl active:scale-[0.98] cursor-pointer"
-          >
-            <span>Board Flight</span>
-            <div className="size-6 bg-black rounded-full flex items-center justify-center text-white text-xs">
-              →
-            </div>
-          </button>
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-navy-950 px-4 py-8 md:p-8 noise animate-fade-in text-white selection:bg-electric-500">
       {/* Background ambient cosmic glow */}
@@ -254,16 +163,6 @@ export default function LandingPortalPage() {
           <Logo layout="horizontal" size="md" />
         </div>
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setLandingTheme("prisma");
-              localStorage.setItem("gofocusgen_landing_theme", "prisma");
-            }}
-            className="border border-amber-500/30 bg-amber-500/5 text-xs font-semibold uppercase tracking-wider text-amber-400 hover:bg-amber-500/10 rounded-xl cursor-pointer"
-          >
-            ✨ Cinematic Sky View
-          </Button>
           <Button
             variant="ghost"
             onClick={handleGoogleLogin}
