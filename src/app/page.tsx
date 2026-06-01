@@ -533,7 +533,7 @@ export default function LandingPortalPage() {
         {/* Instagram / Social Media Footer Links */}
         <div className="mt-4 flex items-center justify-center gap-3 text-xs text-white/30">
           <a
-            href="https://www.instagram.com/voyage_iq/"
+            href="https://www.instagram.com/gofocusgen/?utm_source=ig_web_button_share_sheet"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-pink-400 transition-colors font-medium"
