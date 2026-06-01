@@ -255,6 +255,7 @@ export default function BoardingPassGeneratorPage() {
   const [selectedClass, setSelectedClass] = useState(CABIN_CLASSES[1]); // Business
   const [selectedAircraft, setSelectedAircraft] = useState(AIRCRAFT_MODELS[0]); // A380
   const [sessionMode, setSessionMode] = useState<"CHILL" | "HARDCORE">("CHILL");
+  const [storeInCloset, setStoreInCloset] = useState(true);
 
   // Client-only generated values to prevent hydration errors
   const [passengerName, setPassengerName] = useState("Pilot Cadet");
@@ -374,6 +375,7 @@ export default function BoardingPassGeneratorPage() {
         gateNumber,
         studySubject: studySubject.trim(),
         mode: sessionMode,
+        storeInCloset: storeInCloset,
       };
       localStorage.setItem(`flight_config_${data.session.id}`, JSON.stringify(flightConfig));
 
@@ -404,6 +406,7 @@ export default function BoardingPassGeneratorPage() {
         gateNumber,
         studySubject: studySubject.trim(),
         mode: sessionMode,
+        storeInCloset: storeInCloset,
       };
       localStorage.setItem(`flight_config_${mockSessionId}`, JSON.stringify(flightConfig));
 
@@ -673,6 +676,25 @@ export default function BoardingPassGeneratorPage() {
               </div>
             </div>
 
+            {/* Store in Closet switch */}
+            <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur-md flex items-center justify-between gap-4">
+              <div>
+                <h4 className="text-sm font-bold flex items-center gap-1.5">🗄️ Store in Closet</h4>
+                <p className="text-xs text-white/40 mt-0.5">Collect this boarding ticket in your profile past stamp log closet</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStoreInCloset(!storeInCloset)}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none ${
+                  storeInCloset ? 'bg-amber-500' : 'bg-white/10'
+                }`}
+              >
+                <span className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  storeInCloset ? 'translate-x-5' : 'translate-x-0'
+                }`} />
+              </button>
+            </div>
+
           </div>
 
           {/* Right Panel Boarding Pass card preview */}
@@ -786,6 +808,10 @@ export default function BoardingPassGeneratorPage() {
                   <div>
                     <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Mode</p>
                     <p className="font-bold text-emerald-400 mt-0.5">{sessionMode}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Closet Status</p>
+                    <p className={`font-bold mt-0.5 ${storeInCloset ? 'text-amber-400 font-semibold' : 'text-white/40'}`}>{storeInCloset ? '🗄️ Stored' : '❌ Private'}</p>
                   </div>
                   <div className="col-span-2 border-t border-white/5 pt-3">
                     <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Study Focus</p>

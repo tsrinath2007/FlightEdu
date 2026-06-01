@@ -1260,6 +1260,17 @@ export default function CockpitClient({ id }: { id: string }) {
     } catch {}
     // Also try DB sync with keepalive to prevent browser cancel on page navigation
     try {
+      let shouldStore = isCompleted;
+      try {
+        const cachedConfig = localStorage.getItem(`flight_config_${sessionId}`);
+        if (cachedConfig) {
+          const parsed = JSON.parse(cachedConfig);
+          if (parsed.storeInCloset === false) {
+            shouldStore = false;
+          }
+        }
+      } catch {}
+
       const elapsedSeconds = totalDurationSeconds - secondsRemaining;
       await fetch("/api/user/coins", {
         method: "POST",
@@ -1268,7 +1279,7 @@ export default function CockpitClient({ id }: { id: string }) {
           coinsEarned: finalCoins,
           secondsFocused: elapsedSeconds,
           sessionId: sessionId,
-          completed: isCompleted,
+          completed: shouldStore,
         }),
         keepalive: true,
       });

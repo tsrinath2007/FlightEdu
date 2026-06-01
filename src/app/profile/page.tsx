@@ -399,6 +399,92 @@ export default function ProfilePage() {
   
   // Feedback messages
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Share with pilot buddies state
+  const [buddies, setBuddies] = useState<any[]>([]);
+  const [buddiesLoading, setBuddiesLoading] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareTarget, setShareTarget] = useState<{ type: "license" | "flight"; flight?: any } | null>(null);
+  const [sharingBuddyId, setSharingBuddyId] = useState<string | null>(null);
+
+  const handleOpenShareModal = (target: { type: "license" | "flight"; flight?: any }) => {
+    setShareTarget(target);
+    setIsShareModalOpen(true);
+    
+    // Fetch buddies if they aren't loaded yet
+    if (buddies.length === 0) {
+      setBuddiesLoading(true);
+      fetch("/api/friends/request")
+        .then(res => res.json())
+        .then(data => {
+          setBuddies(data.friends || []);
+        })
+        .catch(err => console.error("Failed to load buddies for share:", err))
+        .finally(() => setBuddiesLoading(false));
+    }
+  };
+
+  const handleShareWithBuddy = async (buddyId: string) => {
+    if (!dbUser || !shareTarget) return;
+    setSharingBuddyId(buddyId);
+    
+    let content = "";
+    const pilotId = dbUser.pilotId || dbUser.id;
+    
+    if (shareTarget.type === "license") {
+      content = `✈️ Check out my Verified Space Pilot License! 🔗 ${window.location.origin}/profile/license/${pilotId}`;
+    } else if (shareTarget.type === "flight" && shareTarget.flight) {
+      const flight = shareTarget.flight;
+      const sessionId = flight.sessionId || flight.id || "";
+      
+      // Deterministically reconstruct airline & aircraft like we do in details
+      const char0 = sessionId.charCodeAt(0) || 69;
+      const char1 = sessionId.charCodeAt(1) || 75;
+      const airline = AIRLINES[char0 % AIRLINES.length];
+      const aircraft = AIRCRAFT_MODELS[char1 % AIRCRAFT_MODELS.length];
+      
+      let finalSubject = dbUser.studyTime || "Focus Study Voyage";
+      if (typeof window !== "undefined") {
+        const cachedConfig = localStorage.getItem(`flight_config_${sessionId}`);
+        if (cachedConfig) {
+          try {
+            const parsed = JSON.parse(cachedConfig);
+            if (parsed.studySubject) finalSubject = parsed.studySubject;
+          } catch {}
+        }
+      }
+      
+      const duration = flight.session?.duration || 0;
+      const coins = flight.coinsEarned || Math.round(duration * 2);
+      
+      content = `🎫 Check out my filed focus boarding ticket!
+📚 Focus: ${finalSubject}
+⏱️ Cruise: ${duration} mins
+✈️ Fleet: ${airline.name} (${aircraft.name})
+🪙 Accrued: +${coins} coins
+🔗 ${window.location.origin}/profile/license/${pilotId}?flight=${sessionId}`;
+    }
+    
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receiverId: buddyId, content }),
+      });
+      
+      if (res.ok) {
+        setFeedback({ type: "success", text: `Voyage shared successfully with your wingman! 🚀` });
+        setIsShareModalOpen(false);
+      } else {
+        setFeedback({ type: "error", text: "Failed to send the coordinates to your wingman." });
+      }
+    } catch (err) {
+      setFeedback({ type: "error", text: "An error occurred while transmitting coordinates." });
+    } finally {
+      setSharingBuddyId(null);
+      setTimeout(() => setFeedback(null), 4000);
+    }
+  };
   
   // Avatar upload
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -1055,13 +1141,36 @@ export default function ProfilePage() {
                   <span className="text-sm font-bold">{dbUser?.coins ?? 0} Coins</span>
                 </div>
 
+                <div className="flex gap-2 w-full mt-2">
+                  <button
+                    onClick={() => {
+                      if (typeof window === "undefined") return;
+                      const shareUrl = `${window.location.origin}/profile/license/${dbUser?.pilotId || dbUser?.id}`;
+                      navigator.clipboard.writeText(shareUrl);
+                      setFeedback({ type: "success", text: "Pilot License link copied to clipboard! 📋" });
+                      setTimeout(() => setFeedback(null), 3000);
+                    }}
+                    className="flex-1 py-2 rounded-xl bg-emerald-950/30 hover:bg-emerald-900/50 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 font-semibold text-[11px] tracking-wider uppercase transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    title="Copy License Link"
+                  >
+                    <span>Copy Link 📋</span>
+                  </button>
+                  <button
+                    onClick={() => handleOpenShareModal({ type: "license" })}
+                    className="flex-1 py-2 rounded-xl bg-electric-950/30 hover:bg-electric-900/50 border border-electric-500/20 hover:border-electric-500/40 text-electric-400 font-semibold text-[11px] tracking-wider uppercase transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    title="Share with Pilot Buddies"
+                  >
+                    <span>Send Buddies 👥</span>
+                  </button>
+                </div>
+
                 <button
                   onClick={async () => {
                     const supabase = createClient();
                     await supabase?.auth.signOut();
                     window.location.href = "/";
                   }}
-                  className="w-full mt-2 py-2 rounded-xl bg-red-950/30 hover:bg-red-900/50 border border-red-500/20 hover:border-red-500/40 text-red-400 font-semibold text-xs tracking-wider uppercase transition flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-2 rounded-xl bg-red-950/30 hover:bg-red-900/50 border border-red-500/20 hover:border-red-500/40 text-red-400 font-semibold text-xs tracking-wider uppercase transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>Sign Out 🚪</span>
                 </button>
@@ -2033,6 +2142,109 @@ export default function ProfilePage() {
         )}
       </AnimatePresence>
 
+      {/* Share with Pilot Buddies Modal */}
+      <AnimatePresence>
+        {isShareModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsShareModalOpen(false)}
+              className="absolute inset-0 bg-navy-950/80 backdrop-blur-sm"
+            />
+
+            {/* Modal Content */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative z-10 w-full max-w-md rounded-2xl border border-electric-500/30 bg-[#0a0f1d] p-6 shadow-2xl overflow-hidden"
+              style={{
+                boxShadow: "0 20px 50px rgba(59, 130, 246, 0.15)",
+              }}
+            >
+              {/* Top ambient glow */}
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-electric-500 via-indigo-500 to-purple-500" />
+              
+              <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">👥</span>
+                  <h3 className="text-lg font-bold text-white tracking-wide">Share with Pilot Crew</h3>
+                </div>
+                <button
+                  onClick={() => setIsShareModalOpen(false)}
+                  className="rounded-full bg-white/5 hover:bg-white/10 p-1.5 text-white/70 hover:text-white transition cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {buddiesLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="size-8 animate-spin text-electric-400" />
+                  <span className="text-xs text-white/40 mt-2">Connecting to radio frequency...</span>
+                </div>
+              ) : buddies.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center text-white/30">
+                  <span className="text-3xl mb-2">👥</span>
+                  <p className="text-sm font-semibold">No Wingmen Active</p>
+                  <p className="text-xs mt-1 max-w-[220px] leading-relaxed">
+                    You can only share coordinates with accepted pilot buddies.
+                  </p>
+                  <Link
+                    href="/friends"
+                    onClick={() => setIsShareModalOpen(false)}
+                    className="mt-4 rounded-xl bg-electric-500/20 border border-electric-400/40 px-4 py-2 text-xs font-semibold text-electric-400 hover:bg-electric-500/30 transition"
+                  >
+                    Search Wingmen
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                  {buddies.map((buddy) => {
+                    const isSharing = sharingBuddyId === buddy.user.id;
+                    return (
+                      <div
+                        key={buddy.friendshipId}
+                        className="flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/5 hover:border-white/10 transition"
+                      >
+                        <img
+                          src={buddy.user.avatarUrl || getAvatarUrl(buddy.user.name || "pilot")}
+                          alt={buddy.user.name || "avatar"}
+                          className="size-10 rounded-full border border-white/10 bg-navy-950/60"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-white truncate">
+                            {buddy.user.name || "Anonymous Pilot"}
+                          </p>
+                          <p className="text-[10px] font-mono text-white/40 truncate">
+                            @{buddy.user.pilotId || "noid"}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          disabled={isSharing || sharingBuddyId !== null}
+                          onClick={() => handleShareWithBuddy(buddy.user.id)}
+                          className="bg-electric-500 hover:bg-electric-600 text-white font-bold text-xs uppercase tracking-wider px-3.5 py-1.5 h-auto rounded-lg shadow-md transition"
+                        >
+                          {isSharing ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            "Transmit 🚀"
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Boarding Pass Ticket Modal */}
       <AnimatePresence>
         {selectedFlightForPass && (() => {
@@ -2258,12 +2470,18 @@ export default function ProfilePage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-3 pt-2">
+                  <div className="flex gap-2 pt-2">
                     <button
                       onClick={() => setSelectedFlightForPass(null)}
                       className="flex-1 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition cursor-pointer text-center"
                     >
                       Close Card
+                    </button>
+                    <button
+                      onClick={() => handleOpenShareModal({ type: "flight", flight })}
+                      className="flex-1 py-3 rounded-2xl bg-electric-950/40 hover:bg-electric-900/40 border border-electric-500/30 hover:border-electric-500/50 text-xs font-bold text-electric-300 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      Share Buddy 👥
                     </button>
                     <button
                       onClick={() => {
@@ -2276,7 +2494,7 @@ export default function ProfilePage() {
                         boxShadow: `0 4px 15px ${finalTheme.accentColor}20`,
                       }}
                     >
-                      <TwitterIcon className="size-3.5 fill-white" /> Share Voyage
+                      <TwitterIcon className="size-3.5 fill-white" /> Post X 🐦
                     </button>
                   </div>
 
