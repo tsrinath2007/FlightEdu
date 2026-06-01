@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { PlaceSearch } from "@/components/journey/PlaceSearch";
 import { calcTravelOptions, calcArrivalTime } from "@/lib/travel";
 import { getTransportEmoji, getTransportLabel } from "@/lib/utils";
@@ -187,6 +188,33 @@ export default function JourneyPage() {
       </header>
 
       <div className="relative z-10 mx-auto max-w-md px-4 pb-32 pt-2 space-y-4">
+
+        {/* Ticket-styled Boarding Pass Generator CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-3xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-yellow-500/5 p-5 relative overflow-hidden backdrop-blur-xl group hover:border-amber-500/50 transition duration-300 shadow-lg shadow-amber-500/[0.02]"
+        >
+          {/* Decorative glow */}
+          <div className="absolute -top-12 -right-12 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition pointer-events-none" />
+          
+          <div className="flex items-start gap-4">
+            <div className="size-11 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-xl shrink-0">
+              🎫
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="text-[9px] font-mono font-bold text-amber-400 tracking-widest uppercase bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">NEW FEATURE</span>
+              <h4 className="text-sm font-bold text-white tracking-wide mt-2">Boarding Pass Generator</h4>
+              <p className="text-xs text-white/50 leading-relaxed mt-1">
+                Design a custom flight ticket showing your study goals to share with friends!
+              </p>
+              
+              <Link href="/journey/boarding-pass" className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 mt-3.5 group/btn transition">
+                Launch Pass Generator ➔
+              </Link>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Search panel */}
         <div className="rounded-3xl border border-white/8 bg-white/5 backdrop-blur-xl p-5 space-y-4">

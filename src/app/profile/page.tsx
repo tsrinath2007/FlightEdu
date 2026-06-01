@@ -33,6 +33,12 @@ import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { computePilotRank } from "@/lib/pilotRank";
 
+const TwitterIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+
 interface ProfileDetails {
   id: string;
   name: string;
@@ -140,6 +146,215 @@ function validatePhoneNumber(dialCode: string, number: string): string | null {
   return null;
 }
 
+// ─── Aircraft UI Themes ────────────────────────────────────────────────────────
+const AIRCRAFT_THEMES: Record<string, {
+  gradient: string;
+  accentColor: string;
+  borderColor: string;
+  glowColor: string;
+  badgeStyle: string;
+  selectedStyle: string;
+  tagline: string;
+  icon: string;
+  techLabel: string;
+}> = {
+  a380: {
+    gradient: "from-yellow-900/40 via-amber-950/30 to-yellow-950/20",
+    accentColor: "#f59e0b",
+    borderColor: "border-amber-500/40",
+    glowColor: "shadow-amber-500/20",
+    badgeStyle: "bg-amber-500/10 border-amber-400/40 text-amber-300",
+    selectedStyle: "bg-gradient-to-br from-amber-900/30 to-amber-950/10 border-amber-400/50 shadow-amber-500/10",
+    tagline: "⚜️ Superjumbo Class",
+    icon: "🛬",
+    techLabel: "QUAD TURBOFAN",
+  },
+  b777: {
+    gradient: "from-blue-900/40 via-blue-950/30 to-slate-950/20",
+    accentColor: "#3b82f6",
+    borderColor: "border-blue-500/40",
+    glowColor: "shadow-blue-500/20",
+    badgeStyle: "bg-blue-500/10 border-blue-400/40 text-blue-300",
+    selectedStyle: "bg-gradient-to-br from-blue-900/30 to-blue-950/10 border-blue-400/50 shadow-blue-500/10",
+    tagline: "🌐 Long-Haul Legend",
+    icon: "✈️",
+    techLabel: "TWIN GE90",
+  },
+  a350: {
+    gradient: "from-teal-900/40 via-emerald-950/30 to-teal-950/20",
+    accentColor: "#14b8a6",
+    borderColor: "border-teal-500/40",
+    glowColor: "shadow-teal-500/20",
+    badgeStyle: "bg-teal-500/10 border-teal-400/40 text-teal-300",
+    selectedStyle: "bg-gradient-to-br from-teal-900/30 to-teal-950/10 border-teal-400/50 shadow-teal-500/10",
+    tagline: "🌿 Carbon Composite Next-Gen",
+    icon: "🛩️",
+    techLabel: "TRENT XWB",
+  },
+  b787: {
+    gradient: "from-purple-900/40 via-violet-950/30 to-purple-950/20",
+    accentColor: "#a855f7",
+    borderColor: "border-purple-500/40",
+    glowColor: "shadow-purple-500/20",
+    badgeStyle: "bg-purple-500/10 border-purple-400/40 text-purple-300",
+    selectedStyle: "bg-gradient-to-br from-purple-900/30 to-purple-950/10 border-purple-400/50 shadow-purple-500/10",
+    tagline: "✨ Dreamliner Holographic",
+    icon: "🌙",
+    techLabel: "GENX TWIN",
+  },
+};
+
+const AIRLINES = [
+  {
+    id: "emirates",
+    name: "Emirates",
+    abbrev: "AE",
+    cost: 800,
+    hslColor: "hsl(0, 100%, 60%)",
+    code: "EK",
+    color: "from-red-600/30 to-red-950/20",
+    glow: "shadow-red-500/20 border-red-500/30",
+    textGlow: "text-red-400",
+    badge: "First class luxury",
+    perk: "+2.5x Coins & Fine Dining",
+    baseMultiplier: 2.5,
+  },
+  {
+    id: "singapore",
+    name: "Singapore Airlines",
+    abbrev: "SG",
+    cost: 650,
+    hslColor: "hsl(45, 100%, 55%)",
+    code: "SQ",
+    color: "from-amber-500/30 to-amber-950/20",
+    glow: "shadow-amber-500/20 border-amber-500/30",
+    textGlow: "text-amber-400",
+    badge: "5-Star premium service",
+    perk: "+2.2x Coins & Comfort Cabins",
+    baseMultiplier: 2.2,
+  },
+  {
+    id: "qatar",
+    name: "Qatar Airways",
+    abbrev: "QA",
+    cost: 550,
+    hslColor: "hsl(330, 80%, 50%)",
+    code: "QR",
+    color: "from-rose-800/30 to-rose-950/20",
+    glow: "shadow-rose-500/20 border-rose-500/30",
+    textGlow: "text-rose-400",
+    badge: "World's best business class",
+    perk: "+2.0x Coins & Elite Lounges",
+    baseMultiplier: 2.0,
+  },
+  {
+    id: "airindia",
+    name: "Air India",
+    abbrev: "IN",
+    cost: 300,
+    hslColor: "hsl(20, 100%, 60%)",
+    code: "AI",
+    color: "from-orange-500/30 to-orange-950/20",
+    glow: "shadow-orange-500/20 border-orange-500/30",
+    textGlow: "text-orange-400",
+    badge: "Global Indian spirit",
+    perk: "+1.8x Coins & Indian Delicacies",
+    baseMultiplier: 1.8,
+  },
+  {
+    id: "indigo",
+    name: "IndiGo",
+    abbrev: "6E",
+    cost: 0,
+    hslColor: "hsl(215, 100%, 60%)",
+    code: "6E",
+    color: "from-blue-600/30 to-blue-950/20",
+    glow: "shadow-blue-500/20 border-blue-500/30",
+    textGlow: "text-blue-400",
+    badge: "On-time & affordable",
+    perk: "+1.5x Coins & Super Fast Entry",
+    baseMultiplier: 1.5,
+  },
+];
+
+const CABIN_CLASSES = [
+  {
+    id: "first",
+    name: "First Class Suite",
+    desc: "Row 1 · seats A-B",
+    cost: 500,
+    priceMultiplier: 2.5,
+    perks: ["Private Suite Door", "Holographic Focus Shield (100%)", "Double Coins", "Row 1 Assigned"],
+  },
+  {
+    id: "business",
+    name: "Business Class",
+    desc: "Row 4–8 · seats A-F",
+    cost: 300,
+    priceMultiplier: 1.8,
+    perks: ["Workspace Console", "Enhanced Focus Shield (70%)", "+80% Coins", "Row 4-8 Assigned"],
+  },
+  {
+    id: "premium",
+    name: "Premium Economy",
+    desc: "Row 12–16 · seats A-F",
+    cost: 150,
+    priceMultiplier: 1.3,
+    perks: ["Extra Wide Seat", "Standard Focus Shield (40%)", "+30% Coins", "Row 12-16 Assigned"],
+  },
+  {
+    id: "economy",
+    name: "Economy Class",
+    desc: "Row 24–38 · seats A-F",
+    cost: 0,
+    priceMultiplier: 1.0,
+    perks: ["Standard Cockpit Utilities", "Eco-Takeoff Mode", "Base Coins Reward", "Row 24-38 Assigned"],
+  },
+];
+
+const AIRCRAFT_MODELS = [
+  {
+    id: "a380",
+    name: "Airbus A380 Superjumbo",
+    desc: "Double-decker sky giant. Unrivaled stability and silence.",
+    engines: "4x Engine Alliance GP7200",
+    comfort: "★★★★★",
+    shield: "Ultra-Quiet Focus Shield (+50%)",
+    capacity: "853 pax",
+    highlight: "World's largest passenger aircraft",
+  },
+  {
+    id: "b777",
+    name: "Boeing 777-300ER Prestige",
+    desc: "Long-haul legend. Robust, spacious, and extremely reliable.",
+    engines: "2x General Electric GE90",
+    comfort: "★★★★☆",
+    shield: "Twin-Engine Stability (+40%)",
+    capacity: "396 pax",
+    highlight: "World's most powerful twin-engine",
+  },
+  {
+    id: "a350",
+    name: "Airbus A350-1000 XWB",
+    desc: "Next-gen carbon composite body with ambient high-altitude cabin pressures.",
+    engines: "2x Rolls-Royce Trent XWB",
+    comfort: "★★★★★",
+    shield: "Dynamic Pressure Optimization (+45%)",
+    capacity: "369 pax",
+    highlight: "Lower cabin altitude for wellbeing",
+  },
+  {
+    id: "b787",
+    name: "Boeing 787 Dreamliner",
+    desc: "Holographic auto-dimming windows, advanced air quality systems.",
+    engines: "2x General Electric GEnx",
+    comfort: "★★★★☆",
+    shield: "Moisture-Balanced Cabin (+35%)",
+    capacity: "330 pax",
+    highlight: "Electrochromic dimmable windows",
+  },
+];
+
 export default function ProfilePage() {
   const router = useRouter();
   
@@ -153,6 +368,7 @@ export default function ProfilePage() {
   const [dbBadges, setDbBadges] = useState<any[]>([]);
   const [currentPassportPage, setCurrentPassportPage] = useState(0);
   const [currentLogPage, setCurrentLogPage] = useState(0);
+  const [selectedFlightForPass, setSelectedFlightForPass] = useState<any | null>(null);
   
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -1232,6 +1448,7 @@ export default function ProfilePage() {
                           <th className="py-2.5 px-3">Route</th>
                           <th className="py-2.5 px-3 text-right">Cruise Time</th>
                           <th className="py-2.5 px-3 text-right">Accrued</th>
+                          <th className="py-2.5 px-3 text-right">Ticket</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
@@ -1285,6 +1502,15 @@ export default function ProfilePage() {
                                 <span className="text-amber-300 font-bold font-mono">
                                   +{coins} 🪙
                                 </span>
+                              </td>
+                              <td className="py-3 px-3 text-right">
+                                <button
+                                  onClick={() => setSelectedFlightForPass(flight)}
+                                  className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/30 text-[9px] font-mono font-bold tracking-wide uppercase transition cursor-pointer"
+                                  title="View Flight Boarding Pass"
+                                >
+                                  🎫 View
+                                </button>
                               </td>
                             </tr>
                           );
@@ -1785,6 +2011,260 @@ export default function ProfilePage() {
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
+
+      {/* Boarding Pass Ticket Modal */}
+      <AnimatePresence>
+        {selectedFlightForPass && (() => {
+          const flight = selectedFlightForPass;
+          const sessionId = flight.sessionId || flight.id || "";
+          
+          // Reconstruct details deterministically based on sessionId to support persistent passes
+          const char0 = sessionId.charCodeAt(0) || 69;
+          const char1 = sessionId.charCodeAt(1) || 75;
+          const char2 = sessionId.charCodeAt(2) || 88;
+          
+          // Find standard configurations
+          const airline = AIRLINES[char0 % AIRLINES.length];
+          const aircraft = AIRCRAFT_MODELS[char1 % AIRCRAFT_MODELS.length];
+          const gate = ["A-04", "B-12", "C-08", "D-15", "E-20"][char2 % 5];
+          const seat = flight.seat || `${Math.floor(char0 % 20) + 4}${["A", "C", "F", "K"][char1 % 4]}`;
+          
+          // Determine cabin class based on seat row
+          const seatRow = parseInt(seat.replace(/\D/g, "")) || 24;
+          const cabinClass = seatRow <= 2 ? CABIN_CLASSES[0] : seatRow <= 8 ? CABIN_CLASSES[1] : seatRow <= 16 ? CABIN_CLASSES[2] : CABIN_CLASSES[3];
+          
+          const date = new Date(flight.session?.completedAt || flight.joinedAt);
+          const dateStr = date.toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          }).toUpperCase();
+          const timeStr = date.toLocaleTimeString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          const duration = flight.session?.duration || 0;
+          const coins = flight.coinsEarned || Math.round(duration * 2);
+          const originCode = flight.session?.originCode || "DXB";
+          const originName = flight.session?.origin?.split(" Airport")[0] || "Dubai International";
+          const destinationCode = flight.session?.destinationCode || "SIN";
+          const destinationName = flight.session?.destination?.split(" Airport")[0] || "Changi Airport";
+
+          // Try checking if there is a local storage config for this session (precise user choices override)
+          let finalAirline = airline;
+          let finalAircraft = aircraft;
+          let finalClass = cabinClass;
+          let finalSeat = seat;
+          let finalGate = gate;
+          let finalSubject = dbUser?.studyTime || "Focus Study Voyage";
+
+          if (typeof window !== "undefined") {
+            const cachedConfig = localStorage.getItem(`flight_config_${sessionId}`);
+            if (cachedConfig) {
+              try {
+                const parsed = JSON.parse(cachedConfig);
+                if (parsed.airline) finalAirline = parsed.airline;
+                if (parsed.aircraft) finalAircraft = parsed.aircraft;
+                if (parsed.cabinClass) finalClass = parsed.cabinClass;
+                if (parsed.seatNumber) finalSeat = parsed.seatNumber;
+                if (parsed.gateNumber) finalGate = parsed.gateNumber;
+                if (parsed.studySubject) finalSubject = parsed.studySubject;
+              } catch {}
+            }
+          }
+
+          const finalTheme = AIRCRAFT_THEMES[finalAircraft.id] || AIRCRAFT_THEMES.a380;
+          const flightNum = `${finalAirline.code} ${finalAircraft.id === "a380" ? "380" : finalAircraft.id === "b777" ? "777" : finalAircraft.id === "a350" ? "350" : "787"}`;
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setSelectedFlightForPass(null)}
+                className="absolute inset-0 bg-[#050a17]/90 backdrop-blur-md"
+              />
+
+              {/* Modal Body */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="relative z-10 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border text-left"
+                style={{
+                  borderColor: `${finalTheme.accentColor}30`,
+                  background: `linear-gradient(135deg, ${finalTheme.accentColor}08, rgba(5,10,23,0.98))`,
+                  boxShadow: `0 20px 60px ${finalTheme.accentColor}15`,
+                }}
+              >
+                {/* Aircraft accent stripe */}
+                <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, ${finalTheme.accentColor}, transparent)` }} />
+
+                {/* Header */}
+                <div className={`p-4 bg-gradient-to-r ${finalAirline.color} border-b border-white/8 flex items-center justify-between`}>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="flex size-7 items-center justify-center rounded-lg border font-['Space_Grotesk',system-ui] font-extrabold text-[10px] tracking-wider"
+                      style={{
+                        color: finalAirline.hslColor,
+                        borderColor: `${finalAirline.hslColor}40`,
+                        backgroundColor: `${finalAirline.hslColor}10`,
+                      }}
+                    >
+                      {finalAirline.abbrev}
+                    </div>
+                    <span className="font-['Space_Grotesk',system-ui] font-bold text-xs uppercase tracking-widest text-white/80">{finalAirline.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full border animate-pulse" style={{ color: finalTheme.accentColor, borderColor: `${finalTheme.accentColor}30`, backgroundColor: `${finalTheme.accentColor}10` }}>
+                      {finalAircraft.id.toUpperCase()}
+                    </span>
+                    <div className="rounded-full bg-white/10 border border-white/10 px-2.5 py-0.5 text-[10px] font-mono tracking-widest uppercase">{flightNum}</div>
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="p-6 space-y-5 text-white">
+                  
+                  {/* Route */}
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <h2 className="font-mono text-4xl font-extrabold tracking-tighter text-white">{originCode}</h2>
+                      <p className="text-xs text-white/40 truncate mt-1">{originName}</p>
+                    </div>
+                    <div className="flex-1 flex flex-col items-center px-2">
+                      <span className="text-[10px] font-mono text-white/25 uppercase tracking-widest mb-1.5">{duration} min</span>
+                      <div className="relative w-full flex items-center">
+                        <div className="absolute inset-x-0 h-[1px]" style={{ background: `linear-gradient(90deg, transparent, ${finalTheme.accentColor}40, transparent)` }} />
+                        <div className="w-full flex justify-center relative">
+                          <div className="bg-[#050a17] px-2">
+                            <Plane className="size-4 rotate-[90deg] text-emerald-400" style={{ filter: `drop-shadow(0 0 6px rgba(52,211,153,0.6))` }} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="min-w-0 text-right">
+                      <h2 className="font-mono text-4xl font-extrabold tracking-tighter text-white">{destinationCode}</h2>
+                      <p className="text-xs text-white/40 truncate mt-1">{destinationName}</p>
+                    </div>
+                  </div>
+
+                  {/* Perforation */}
+                  <div className="relative h-4 flex items-center justify-between">
+                    <div className="absolute left-[-28px] size-6 rounded-full bg-[#050a17] border border-white/12 border-l-transparent z-10" />
+                    <div className="w-full border-t border-dashed border-white/10" />
+                    <div className="absolute right-[-28px] size-6 rounded-full bg-[#050a17] border border-white/12 border-r-transparent z-10" />
+                  </div>
+
+                  {/* Details Grid */}
+                  <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-xs">
+                    <div>
+                      <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Passenger</p>
+                      <p className="font-bold text-white mt-0.5 truncate">{dbUser?.name || "Pilot Cadet"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Cabin Class</p>
+                      <p className="font-bold mt-0.5" style={{ color: finalTheme.accentColor }}>{finalClass.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Gate</p>
+                      <p className="font-bold text-white mt-0.5">{finalGate}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Seat</p>
+                      <p className="font-mono font-extrabold mt-0.5 tracking-wider inline-block border rounded-md px-2 py-0.5"
+                        style={{ color: finalTheme.accentColor, borderColor: `${finalTheme.accentColor}30`, backgroundColor: `${finalTheme.accentColor}08` }}
+                      >{finalSeat}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Voyage Date</p>
+                      <p className="font-bold text-white/75 mt-0.5 truncate">{dateStr}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Time & Status</p>
+                      <p className="font-bold text-emerald-400 mt-0.5 font-mono">{timeStr} · LANDED</p>
+                    </div>
+                    <div className="col-span-2 border-t border-white/5 pt-3">
+                      <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Study Focus</p>
+                      <p className="font-bold text-yellow-400 mt-0.5 truncate">📚 {finalSubject}</p>
+                    </div>
+                    <div className="col-span-2 border-t border-white/5 pt-3 flex justify-between items-center">
+                      <div>
+                        <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Completed Cruise</p>
+                        <p className="text-white/50 text-[10px] mt-0.5">{finalAircraft.name} · Chill</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Accrued</p>
+                        <p className="font-bold text-yellow-400 mt-0.5 text-sm">+{coins} 🪙</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Focus Shield */}
+                  <div
+                    className="rounded-2xl p-3 flex items-center justify-between gap-3 border"
+                    style={{ backgroundColor: `${finalTheme.accentColor}08`, borderColor: `${finalTheme.accentColor}25` }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Shield className="size-4 shrink-0" style={{ color: finalTheme.accentColor }} />
+                      <div>
+                        <p className="text-[10px] font-bold tracking-wide uppercase" style={{ color: finalTheme.accentColor }}>Mastery Badge Unlocked</p>
+                        <p className="text-[9px] text-white/45">🛡️ Voyage flight completed successfully</p>
+                      </div>
+                    </div>
+                    <Award className="size-5 shrink-0" style={{ color: finalTheme.accentColor }} />
+                  </div>
+
+                  {/* Simulated Barcode */}
+                  <div className="border-t border-white/5 pt-4 flex flex-col items-center">
+                    <div className="w-full h-10 bg-white/4 rounded-md flex items-center justify-center p-1.5 relative overflow-hidden border border-white/5 opacity-70">
+                      <div className="flex justify-between w-full h-full opacity-50">
+                        {Array.from({ length: 42 }).map((_, i) => (
+                          <div key={i} className="bg-white" style={{ width: `${[1, 2, 3, 1, 4, 1, 2][i % 7]}px`, opacity: i % 4 === 0 ? 0.3 : 1 }} />
+                        ))}
+                      </div>
+                      <div
+                        className="absolute inset-x-0 h-[2px] opacity-70 bg-emerald-400"
+                        style={{ boxShadow: `0 0 8px #10b981` }}
+                      />
+                    </div>
+                    <span className="text-[8px] font-mono text-white/25 tracking-[0.4em] uppercase mt-2">
+                      GoFocusGen-{sessionId.substring(0, 8).toUpperCase()}
+                    </span>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => setSelectedFlightForPass(null)}
+                      className="flex-1 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition cursor-pointer text-center"
+                    >
+                      Close Card
+                    </button>
+                    <button
+                      onClick={() => {
+                        const text = `✈️ Just verified my focus boarding pass on GoFocusGen! \n\n📚 Focus: ${finalSubject}\n⏱️ Cruise: ${duration} mins completed!\n🪙 Accrued: +${coins} coins\n\nTrack your focus journeys at:`;
+                        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.origin)}`, "_blank");
+                      }}
+                      className="flex-1 py-3 rounded-2xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition cursor-pointer"
+                      style={{
+                        background: `linear-gradient(135deg, ${finalTheme.accentColor}, ${finalTheme.accentColor}cc)`,
+                        boxShadow: `0 4px 15px ${finalTheme.accentColor}20`,
+                      }}
+                    >
+                      <TwitterIcon className="size-3.5 fill-white" /> Share Voyage
+                    </button>
+                  </div>
+
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* Bottom Nav bar */}
