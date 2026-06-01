@@ -1418,105 +1418,125 @@ export default function ProfilePage() {
             <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-md relative overflow-hidden shadow-xl">
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
               
-              <div className="flex items-center justify-between border-b border-white/15 pb-4 mb-4">
+              <div className="flex items-center justify-between border-b border-white/15 pb-4 mb-5">
                 <div>
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Plane className="size-5 text-electric-400 animate-pulse" />
-                    Official Pilot Flight Log
+                    <span className="text-xl">🗄️</span>
+                    My Boarding Pass Closet
                   </h3>
-                  <p className="text-xs text-white/40 mt-0.5">Historical ledger of all successfully landed focus voyages</p>
+                  <p className="text-xs text-white/40 mt-0.5">Visual cabinet drawer of all successfully filed boarding tickets</p>
                 </div>
                 
                 <span className="text-xs bg-navy-900/60 border border-white/10 text-white/60 font-mono px-2.5 py-1 rounded-full">
-                  Total Entries: {completedFlightsCount}
+                  Filed Tickets: {completedFlightsCount}
                 </span>
               </div>
 
               {flightsLoading ? (
                 <div className="flex flex-col items-center justify-center py-10">
                   <Loader2 className="size-8 animate-spin text-electric-400" />
-                  <span className="text-xs text-white/40 mt-2">Loading mission ledger...</span>
+                  <span className="text-xs text-white/40 mt-2">Opening ticket closet...</span>
                 </div>
               ) : displayedLogs.length > 0 ? (
                 <div className="space-y-4">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[500px]">
-                      <thead>
-                        <tr className="border-b border-white/10 text-[10px] uppercase font-bold tracking-wider text-white/40">
-                          <th className="py-2.5 px-3">Date & Time</th>
-                          <th className="py-2.5 px-3">Type</th>
-                          <th className="py-2.5 px-3">Route</th>
-                          <th className="py-2.5 px-3 text-right">Cruise Time</th>
-                          <th className="py-2.5 px-3 text-right">Accrued</th>
-                          <th className="py-2.5 px-3 text-right">Ticket</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5">
-                        {displayedLogs.map((flight) => {
-                          const date = new Date(flight.session?.completedAt || flight.joinedAt);
-                          const dateStr = date.toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          }).toUpperCase();
-                          const timeStr = date.toLocaleTimeString("en-GB", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          });
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {displayedLogs.map((flight) => {
+                      const sessionId = flight.sessionId || flight.id || "";
+                      
+                      // Reconstruct config deterministically just like the modal does
+                      const char0 = sessionId.charCodeAt(0) || 69;
+                      const char1 = sessionId.charCodeAt(1) || 75;
+                      
+                      const airline = AIRLINES[char0 % AIRLINES.length];
+                      const aircraft = AIRCRAFT_MODELS[char1 % AIRCRAFT_MODELS.length];
+                      const seat = flight.seat || `${Math.floor(char0 % 20) + 4}${["A", "C", "F", "K"][char1 % 4]}`;
+                      const seatRow = parseInt(seat.replace(/\D/g, "")) || 24;
+                      const cabinClass = seatRow <= 2 ? CABIN_CLASSES[0] : seatRow <= 8 ? CABIN_CLASSES[1] : seatRow <= 16 ? CABIN_CLASSES[2] : CABIN_CLASSES[3];
+                      const theme = AIRCRAFT_THEMES[aircraft.id] || AIRCRAFT_THEMES.a380;
+                      
+                      const date = new Date(flight.session?.completedAt || flight.joinedAt);
+                      const dateStr = date.toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      }).toUpperCase();
+                      
+                      const origin = flight.session?.originCode || "DXB";
+                      const dest = flight.session?.destinationCode || "SIN";
+                      const duration = flight.session?.duration || 0;
+                      const coins = flight.coinsEarned || Math.round(duration * 2);
+                      
+                      let finalSubject = dbUser?.studyTime || "Focus Study Voyage";
+                      let finalSeat = seat;
+                      
+                      // Check local storage config override
+                      if (typeof window !== "undefined") {
+                        const cachedConfig = localStorage.getItem(`flight_config_${sessionId}`);
+                        if (cachedConfig) {
+                          try {
+                            const parsed = JSON.parse(cachedConfig);
+                            if (parsed.studySubject) finalSubject = parsed.studySubject;
+                            if (parsed.seatNumber) finalSeat = parsed.seatNumber;
+                          } catch {}
+                        }
+                      }
+
+                      return (
+                        <motion.div
+                          key={flight.id}
+                          onClick={() => setSelectedFlightForPass(flight)}
+                          whileHover={{ y: -4 }}
+                          className="relative h-44 rounded-2xl border border-white/10 bg-navy-900/60 p-4 shadow-lg overflow-hidden group cursor-pointer hover:border-amber-500/30 transition-all duration-300"
+                          style={{
+                            background: `linear-gradient(135deg, ${theme.accentColor}05, rgba(13, 26, 53, 0.4))`,
+                          }}
+                        >
+                          {/* Colored aircraft stripe */}
+                          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r" style={{ backgroundImage: `linear-gradient(90deg, ${theme.accentColor}, transparent)` }} />
                           
-                          const origin = flight.session?.originCode || "???";
-                          const dest = flight.session?.destinationCode || "???";
-                          const duration = flight.session?.duration || 0;
-                          const tMode = flight.session?.transportMode || "FLIGHT";
-                          const coins = flight.coinsEarned || Math.round(duration * 2);
-
-                          const transportLabel = tMode === "TRAIN" ? "🚆 Train" : tMode === "BUS" ? "🚌 Bus" : tMode === "CAR" ? "🚗 Car" : "✈️ Flight";
-
-                          let formattedDuration = `${duration} mins`;
-                          if (duration >= 60) {
-                            const hrs = Math.floor(duration / 60);
-                            const mins = duration % 60;
-                            formattedDuration = mins > 0 ? `${hrs}h ${mins}m` : `${hrs} hrs`;
-                          }
-
-                          return (
-                            <tr key={flight.id} className="text-xs text-white/70 hover:bg-white/[0.02] transition-colors">
-                              <td className="py-3 px-3">
-                                <span className="font-medium text-white/95 block">{dateStr}</span>
-                                <span className="text-[10px] text-white/40 block font-mono">{timeStr}</span>
-                              </td>
-                              <td className="py-3 px-3">
-                                <span className="px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/60 font-semibold text-[10px]">
-                                  {transportLabel}
+                          {/* Inner Sliding Ticket Body */}
+                          <div className="relative z-10 size-full flex flex-col justify-between transition-transform duration-300 group-hover:-translate-y-2">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <span className="text-[10px] font-mono font-extrabold uppercase px-2 py-0.5 rounded border text-white/50 bg-white/5" style={{ borderColor: `${theme.accentColor}25` }}>
+                                  {airline.code} {aircraft.id.toUpperCase()}
                                 </span>
-                              </td>
-                              <td className="py-3 px-3">
-                                <span className="font-mono font-bold tracking-wider text-electric-400 bg-navy-900/60 px-2 py-0.5 rounded border border-white/5">
-                                  {origin} ➔ {dest}
-                                </span>
-                              </td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-white/80">
-                                {formattedDuration}
-                              </td>
-                              <td className="py-3 px-3 text-right">
-                                <span className="text-amber-300 font-bold font-mono">
-                                  +{coins} 🪙
-                                </span>
-                              </td>
-                              <td className="py-3 px-3 text-right">
-                                <button
-                                  onClick={() => setSelectedFlightForPass(flight)}
-                                  className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/30 text-[9px] font-mono font-bold tracking-wide uppercase transition cursor-pointer"
-                                  title="View Flight Boarding Pass"
-                                >
-                                  🎫 View
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                                <h4 className="mt-2 text-xs font-bold text-white/80 line-clamp-1">
+                                  📚 {finalSubject}
+                                </h4>
+                              </div>
+                              <span className="text-[10px] font-bold font-mono text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full animate-pulse">
+                                +{coins} 🪙
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center justify-between border-t border-b border-white/5 py-2 my-2">
+                              <div>
+                                <p className="font-mono text-lg font-black leading-none text-white">{origin}</p>
+                                <p className="text-[8px] text-white/30 uppercase mt-0.5">Origin</p>
+                              </div>
+                              <span className="text-xs text-white/20">➔</span>
+                              <div className="text-right">
+                                <p className="font-mono text-lg font-black leading-none text-white">{dest}</p>
+                                <p className="text-[8px] text-white/30 uppercase mt-0.5">Dest</p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-between items-center text-[10px]">
+                              <span className="font-mono text-white/40">{dateStr}</span>
+                              <span className="font-mono font-bold text-amber-400">Seat {finalSeat}</span>
+                            </div>
+                          </div>
+
+                          {/* Pocket Folder glass cover sheet overlay */}
+                          <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-navy-950/90 to-navy-950/40 border-t border-white/10 backdrop-blur-[1px] flex items-center justify-center translate-y-full group-hover:translate-y-0 transition-transform duration-300 z-20">
+                            <span className="text-xs font-bold tracking-wider text-amber-400 uppercase flex items-center gap-1">
+                              🎫 Pull Out Pass
+                            </span>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
                   </div>
 
                   {/* Log Pagination Controls */}

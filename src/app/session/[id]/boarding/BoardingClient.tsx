@@ -256,6 +256,8 @@ export default function BoardingClient({ id }: { id: string }) {
   const [passengerName, setPassengerName] = useState("Pilot Cadet");
   const [studySubject, setStudySubject] = useState("");
   const [userCoins, setUserCoins] = useState<number>(0);
+  const [storeInCloset, setStoreInCloset] = useState(true);
+  const [showManifestModal, setShowManifestModal] = useState(false);
 
   // Current aircraft theme
   const aircraftTheme = AIRCRAFT_THEMES[selectedAircraft.id] || AIRCRAFT_THEMES.a380;
@@ -334,6 +336,11 @@ export default function BoardingClient({ id }: { id: string }) {
       alert("⚠️ Declaring your focus subject is mandatory before boarding the flight.");
       return;
     }
+    setShowManifestModal(true);
+  };
+
+  const handleConfirmTakeOff = async () => {
+    setShowManifestModal(false);
     setIsTakingOff(true);
 
     if (soundOn) {
@@ -369,6 +376,7 @@ export default function BoardingClient({ id }: { id: string }) {
       gateNumber,
       studySubject: studySubject.trim() || "Focus Study",
       mode: session?.mode || "CHILL",
+      storeInCloset: storeInCloset,
     };
     localStorage.setItem(`flight_config_${sessionId}`, JSON.stringify(flightConfig));
     if (session) localStorage.setItem(`flight_session_${sessionId}`, JSON.stringify(session));
@@ -459,7 +467,17 @@ export default function BoardingClient({ id }: { id: string }) {
         )}
       </AnimatePresence>
 
-      <div className="relative z-10 mx-auto max-w-6xl px-4 pt-10">
+      <div className="relative z-10 mx-auto max-w-6xl px-4 pt-10 pb-20">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="rounded-3xl border border-white/10 bg-[#070d1e]/85 backdrop-blur-2xl shadow-[0_30px_90px_rgba(0,0,0,0.8)] p-6 md:p-10 relative overflow-hidden"
+          style={{
+            borderColor: `${aircraftTheme.accentColor}25`,
+            boxShadow: `0 30px 100px ${aircraftTheme.accentColor}10`,
+          }}
+        >
 
         {/* ─── HEADER ─── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
@@ -762,6 +780,34 @@ export default function BoardingClient({ id }: { id: string }) {
               </div>
             </div>
 
+            {/* Step 4: Closet Archival Toggle */}
+            <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur-md">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-7 items-center justify-center rounded-lg text-xs font-bold font-mono" style={{ backgroundColor: `${aircraftTheme.accentColor}20`, color: aircraftTheme.accentColor }}>04</span>
+                  <div>
+                    <h3 className="font-['Space_Grotesk',system-ui] text-sm font-bold text-white tracking-wide flex items-center gap-1.5">
+                      🗄️ File in Ticket Closet
+                    </h3>
+                    <p className="text-xs text-white/40 mt-0.5">
+                      Save this boarding pass to your Profile closet past stamp drawer for visual history.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setStoreInCloset(!storeInCloset)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none ${
+                    storeInCloset ? 'bg-amber-500' : 'bg-white/10'
+                  }`}
+                >
+                  <span className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    storeInCloset ? 'translate-x-5' : 'translate-x-0'
+                  }`} />
+                </button>
+              </div>
+            </div>
+
           </div>
 
           {/* ─── RIGHT COLUMN: Boarding Pass ─── */}
@@ -889,6 +935,14 @@ export default function BoardingClient({ id }: { id: string }) {
                     <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Mode</p>
                     <p className="font-bold text-emerald-400 mt-0.5">{session.mode}</p>
                   </div>
+                  <div>
+                    <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Closet Status</p>
+                    <p className={`font-bold mt-0.5 ${storeInCloset ? 'text-amber-400 font-semibold' : 'text-white/40'}`}>{storeInCloset ? '🗄️ Stored' : '❌ Private'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Auth Code</p>
+                    <p className="font-mono text-white/50 mt-0.5 font-bold">{sessionId.substring(0, 5).toUpperCase()}</p>
+                  </div>
                   <div className="col-span-2 border-t border-white/5 pt-3">
                     <p className="text-[9px] font-mono tracking-widest text-white/30 uppercase">Study Focus</p>
                     <p className="font-bold text-yellow-400 mt-0.5 truncate">📚 {studySubject || "Not declared yet"}</p>
@@ -967,7 +1021,156 @@ export default function BoardingClient({ id }: { id: string }) {
           </div>
 
         </div>
+        </motion.div>
       </div>
+
+      {/* Floating Manifest Verification Modal */}
+      <AnimatePresence>
+        {showManifestModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowManifestModal(false)}
+              className="absolute inset-0 bg-black/85 backdrop-blur-md"
+            />
+
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 30, scale: 0.95 }}
+              className="relative z-10 w-full max-w-sm rounded-3xl border p-6 text-center shadow-2xl flex flex-col items-center border-white/10"
+              style={{
+                background: `linear-gradient(135deg, ${aircraftTheme.accentColor}10, rgba(5,10,23,0.98))`,
+                boxShadow: `0 20px 60px ${aircraftTheme.accentColor}20`,
+              }}
+            >
+              <div className="mb-4">
+                <span className="text-[9px] font-mono font-bold tracking-widest text-amber-400 uppercase bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
+                  🛃 Pre-Boarding Verification
+                </span>
+                <h3 className="font-['Space_Grotesk',system-ui] text-lg font-black text-white mt-3">
+                  Verify Flight Manifest
+                </h3>
+                <p className="text-[11px] text-white/50 mt-1 max-w-[250px] mx-auto leading-relaxed">
+                  Review your study passport details before cabin pressurization.
+                </p>
+              </div>
+
+              {/* Floating Ticket Card Preview */}
+              <div className="w-full mb-4 transform scale-95 origin-center">
+                <div
+                  className="rounded-2xl overflow-hidden border text-left"
+                  style={{
+                    borderColor: `${aircraftTheme.accentColor}25`,
+                    background: "rgba(5, 10, 23, 0.8)",
+                  }}
+                >
+                  <div className={`p-3 bg-gradient-to-r ${selectedAirline.color} border-b border-white/5 flex items-center justify-between`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-bold text-white/80">{selectedAirline.name}</span>
+                    </div>
+                    <span className="text-[8px] font-mono bg-white/10 px-1 py-0.5 rounded text-white/60">{flightNumber}</span>
+                  </div>
+                  <div className="p-4 space-y-3 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-2xl font-mono font-extrabold leading-none">{session.originCode}</p>
+                        <p className="text-[8px] text-white/30 mt-1">{session.origin.split(" Airport")[0]}</p>
+                      </div>
+                      <span className="text-xs text-white/20">➔</span>
+                      <div className="text-right">
+                        <p className="text-2xl font-mono font-extrabold leading-none">{session.destinationCode}</p>
+                        <p className="text-[8px] text-white/30 mt-1">{session.destination.split(" Airport")[0]}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 border-t border-dashed border-white/10 pt-3 text-[9px]">
+                      <div>
+                        <span className="text-white/30 uppercase block text-[7px] tracking-wider">Passenger</span>
+                        <span className="font-bold truncate block">{passengerName}</span>
+                      </div>
+                      <div>
+                        <span className="text-white/30 uppercase block text-[7px] tracking-wider">Cabin & Seat</span>
+                        <span className="font-bold block text-amber-300">{selectedClass.name.split(" ")[0]} · {seatNumber}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-white/30 uppercase block text-[7px] tracking-wider">Focus Subject</span>
+                        <span className="font-bold text-yellow-400 truncate block">📚 {studySubject}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* CLOSET STORAGE OPTION */}
+              <div className="w-full space-y-4">
+                <div
+                  className="rounded-2xl p-3.5 border text-left flex items-center justify-between gap-4 transition-all duration-300"
+                  style={{
+                    backgroundColor: storeInCloset ? `${aircraftTheme.accentColor}08` : "rgba(255,255,255,0.01)",
+                    borderColor: storeInCloset ? `${aircraftTheme.accentColor}25` : "rgba(255,255,255,0.06)",
+                  }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <span>🗄️</span> Store in Closet
+                    </p>
+                    <p className="text-[9px] text-white/40 leading-relaxed mt-0.5">
+                      Save this boarding pass to your Profile passport log closet.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (soundOn) {
+                        try {
+                          const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
+                          audio.volume = 0.2;
+                          audio.play().catch(() => {});
+                        } catch {}
+                      }
+                      setStoreInCloset(!storeInCloset);
+                    }}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none ${
+                      storeInCloset ? 'bg-amber-500' : 'bg-white/10'
+                    }`}
+                  >
+                    <span className={`pointer-events-none inline-block size-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      storeInCloset ? 'translate-x-4' : 'translate-x-0'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* TAKE OFF ACTIONS */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowManifestModal(false)}
+                    className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-semibold transition cursor-pointer text-center text-white/80 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmTakeOff}
+                    className="flex-1 py-2.5 rounded-xl text-[11px] font-extrabold tracking-wider text-white flex items-center justify-center gap-1 transition cursor-pointer"
+                    style={{
+                      background: `linear-gradient(135deg, ${aircraftTheme.accentColor}, ${aircraftTheme.accentColor}cc)`,
+                      boxShadow: `0 4px 15px ${aircraftTheme.accentColor}20`,
+                    }}
+                  >
+                    <Plane className="size-3 rotate-[45deg]" /> IGNITE ENGINES
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
