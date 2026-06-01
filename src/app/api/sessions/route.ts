@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       await prisma.$transaction([
         prisma.user.update({
           where: { id: userId },
-          data: { coins: { decrement: 300 } },
+          data: { coins: Math.max(0, currentCoins - 300) },
         }),
         prisma.transaction.create({
           data: {
