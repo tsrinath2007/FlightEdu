@@ -2566,7 +2566,7 @@ export default function CockpitClient({ id }: { id: string }) {
                             🌸 Season 1
                           </span>
                           <span className="rounded-full bg-amber-500/10 border border-amber-500/25 px-3 py-1 text-[10px] font-bold text-amber-400 flex items-center gap-1.5 shadow-[0_0_10px_rgba(245,158,11,0.1)]">
-                            🍌 3
+                            🍌 {currentUser?.streakFreezes !== undefined ? currentUser.streakFreezes : 2}
                           </span>
                           <span className="rounded-full bg-cyan-500/10 border border-cyan-500/25 px-3 py-1 text-[10px] font-mono font-bold text-cyan-400 flex items-center gap-1.5 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
                             🪙 {walletCoins}
