@@ -3928,15 +3928,15 @@ export default function CockpitClient({ id }: { id: string }) {
                   Voyage Completed Successfully!
                 </span>
                 <h2 className="font-display font-black text-2xl text-white pt-2.5">
-                  Thanks for studying with us!
+                  Thanks for flying with us!
                 </h2>
                 <p className="text-[10px] text-white/50 font-mono tracking-widest uppercase mt-0.5">
-                  Official GoFocusGen Focus Log
+                  Official GoFocusGen Flight Log
                 </p>
               </div>
 
               <p className="text-xs text-white/70 max-w-md leading-relaxed">
-                Excellent focus discipline, Cadet! You have safely piloted your study aircraft to your destination airport, maintaining absolute focus throughout the flight manifest.
+                Excellent piloting discipline, Cadet! You have safely completed your voyage and landed your aircraft at the destination airport, maintaining absolute focus throughout the flight manifest.
               </p>
 
               {/* Flight Summary Stats Grid */}
@@ -3983,7 +3983,7 @@ export default function CockpitClient({ id }: { id: string }) {
                       <span>🗄️</span> Boarding Pass Stored Successfully!
                     </h4>
                     <p className="text-[10px] text-white/70 leading-relaxed font-sans">
-                      Your holographic boarding pass has been safely archived and stored in your **Pilot License Closet**. You can view and download this commemorative badge anytime from your profile!
+                      For successfully completing your voyage, your commemorative holographic boarding pass has been safely archived and stored in your **Pilot License Closet**. You can view and download this flight badge anytime from your profile!
                     </p>
                   </div>
                 ) : (
