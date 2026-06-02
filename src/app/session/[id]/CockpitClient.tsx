@@ -307,6 +307,7 @@ export default function CockpitClient({ id }: { id: string }) {
   const [multiplayerPilots, setMultiplayerPilots] = useState<MultiplayerPilot[]>(INITIAL_MULTIPLAYER_PILOTS);
   const [selectedSeatDetails, setSelectedSeatDetails] = useState<MultiplayerPilot | null>(null);
   const [relocatingSeat, setRelocatingSeat] = useState<string | null>(null);
+  const [showArrivalModal, setShowArrivalModal] = useState(false);
 
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [myDream, setMyDream] = useState("Fly high, reach uni, study my dream job, and conquer this study session!");
@@ -1162,6 +1163,7 @@ export default function CockpitClient({ id }: { id: string }) {
             localStorage.removeItem(`flight_presence_btns_${sessionId}`);
           } catch {}
           syncCoinsToProfile();
+          setShowArrivalModal(true);
         }
       }, 1000);
     } else if (secondsRemaining === 0 && totalDurationSeconds > 0) {
@@ -3081,34 +3083,46 @@ export default function CockpitClient({ id }: { id: string }) {
 
               {/* Control Deck (Engage Timer buttons) */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 border-t border-white/5 pt-6 mt-6">
-                <button
-                  onClick={toggleAutopilot}
-                  className={`w-full sm:w-auto min-w-[200px] flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-display font-black tracking-widest transition duration-300 shadow-lg ${
-                    isActive
-                      ? "bg-amber-500 hover:bg-amber-400 text-navy-950 shadow-amber-500/10"
-                      : "bg-electric-500 hover:bg-electric-400 text-white shadow-electric-500/10"
-                  }`}
-                >
-                  {isActive ? (
-                    <>
-                      <Pause className="size-5 fill-current" />
-                      <span>PAUSE AUTOPILOT</span>
-                    </>
-                  ) : (
-                    <>
-                      <Play className="size-5 fill-current" />
-                      <span>ENGAGE AUTOPILOT</span>
-                    </>
-                  )}
-                </button>
+                {secondsRemaining === 0 ? (
+                  <button
+                    onClick={() => setShowArrivalModal(true)}
+                    className="w-full flex items-center justify-center gap-2 px-8 py-4.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-extrabold text-sm tracking-widest uppercase shadow-lg shadow-emerald-500/25 active:scale-[0.98] transition cursor-pointer animate-pulse"
+                  >
+                    <span>🛬</span>
+                    <span>Claim Focus Rewards & Land</span>
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={toggleAutopilot}
+                      className={`w-full sm:w-auto min-w-[200px] flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-display font-black tracking-widest transition duration-300 shadow-lg ${
+                        isActive
+                          ? "bg-amber-500 hover:bg-amber-400 text-navy-950 shadow-amber-500/10"
+                          : "bg-electric-500 hover:bg-electric-400 text-white shadow-electric-500/10"
+                      }`}
+                    >
+                      {isActive ? (
+                        <>
+                          <Pause className="size-5 fill-current" />
+                          <span>PAUSE AUTOPILOT</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="size-5 fill-current" />
+                          <span>ENGAGE AUTOPILOT</span>
+                        </>
+                      )}
+                    </button>
 
-                <button
-                  onClick={handleEject}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-400 transition"
-                >
-                  <LogOut className="size-4" />
-                  <span className="font-semibold text-xs tracking-wider uppercase">Emergency Eject</span>
-                </button>
+                    <button
+                      onClick={handleEject}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-400 transition"
+                    >
+                      <LogOut className="size-4" />
+                      <span className="font-semibold text-xs tracking-wider uppercase">Emergency Eject</span>
+                    </button>
+                  </>
+                )}
               </div>
 
             </div>
@@ -3886,6 +3900,132 @@ export default function CockpitClient({ id }: { id: string }) {
               ✕
             </button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* SUCCESS FLIGHT SAFELY LANDED OVERLAY */}
+      <AnimatePresence>
+        {showArrivalModal && (
+          <div className="fixed inset-0 bg-[#050a17]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-lg bg-[#070b1c] border-2 border-emerald-500/30 rounded-[36px] p-8 shadow-[0_0_60px_rgba(16,185,129,0.25)] relative overflow-hidden flex flex-col items-center text-center space-y-6 font-sans z-50"
+            >
+              {/* Decorative background sparkles */}
+              <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/5 to-transparent pointer-events-none" />
+
+              {/* Glowing Beacon Success Icon */}
+              <div className="size-24 rounded-full border-4 border-emerald-500/20 flex items-center justify-center relative bg-emerald-500/10 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+                <span className="text-5xl animate-bounce">🛬</span>
+                <span className="absolute -top-1 -right-1 text-xl animate-pulse">✨</span>
+                <span className="absolute -bottom-1 -left-1 text-xl animate-pulse">✨</span>
+              </div>
+
+              <div className="space-y-1">
+                <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-1.5 text-xs font-black tracking-widest text-emerald-400 uppercase">
+                  Voyage Completed Successfully!
+                </span>
+                <h2 className="font-display font-black text-2xl text-white pt-2.5">
+                  Thanks for studying with us!
+                </h2>
+                <p className="text-[10px] text-white/50 font-mono tracking-widest uppercase mt-0.5">
+                  Official GoFocusGen Focus Log
+                </p>
+              </div>
+
+              <p className="text-xs text-white/70 max-w-md leading-relaxed">
+                Excellent focus discipline, Cadet! You have safely piloted your study aircraft to your destination airport, maintaining absolute focus throughout the flight manifest.
+              </p>
+
+              {/* Flight Summary Stats Grid */}
+              <div className="w-full grid grid-cols-3 gap-3 bg-white/[0.02] border border-white/5 rounded-2xl p-4">
+                <div className="text-center">
+                  <p className="text-xs text-white/40 font-mono uppercase tracking-wider">Duration</p>
+                  <p className="text-base font-black text-white mt-1">{session.duration}m</p>
+                </div>
+                <div className="text-center border-x border-white/5">
+                  <p className="text-xs text-white/40 font-mono uppercase tracking-wider">Fleet</p>
+                  <p className="text-base font-black text-white mt-1 leading-none">
+                    {config.airline.logo} {config.airline.code}
+                  </p>
+                  <span className="text-[8px] text-white/40 font-mono block mt-0.5">{config.cabinClass.name}</span>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-white/40 font-mono uppercase tracking-wider">Rewards</p>
+                  <p className="text-base font-black text-emerald-400 mt-1">
+                    🪙 {Math.round(coinsEarned) + (session.mode === "HARDCORE" ? 500 : 0)}
+                  </p>
+                  <span className="text-[8px] text-emerald-400 font-mono block mt-0.5">
+                    {session.mode === "HARDCORE" ? "Incl. Deposit Refund" : "Focus Coins"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Stored Boarding Pass Status Capsule */}
+              {(() => {
+                let storeInCloset = true;
+                try {
+                  const cachedConfig = localStorage.getItem(`flight_config_${sessionId}`);
+                  if (cachedConfig) {
+                    const parsed = JSON.parse(cachedConfig);
+                    if (parsed.storeInCloset === false) {
+                      storeInCloset = false;
+                    }
+                  }
+                } catch {}
+
+                return storeInCloset ? (
+                  <div className="w-full border border-amber-500/20 bg-amber-500/5 rounded-2xl p-4 text-left relative overflow-hidden">
+                    <div className="absolute top-1.5 right-3 text-2xl opacity-10 select-none">🗄️</div>
+                    <h4 className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                      <span>🗄️</span> Boarding Pass Stored Successfully!
+                    </h4>
+                    <p className="text-[10px] text-white/70 leading-relaxed font-sans">
+                      Your holographic boarding pass has been safely archived and stored in your **Pilot License Closet**. You can view and download this commemorative badge anytime from your profile!
+                    </p>
+                  </div>
+                ) : (
+                  <div className="w-full border border-white/10 bg-white/[0.02] rounded-2xl p-4 text-left relative overflow-hidden">
+                    <div className="absolute top-1.5 right-3 text-2xl opacity-10 select-none">🔒</div>
+                    <h4 className="text-[9px] font-black text-white/50 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                      <span>🔒</span> Private Flight Completed
+                    </h4>
+                    <p className="text-[10px] text-white/50 leading-relaxed font-sans">
+                      Your focus coins and hours have been synchronized to your profile, but this boarding pass was kept private and was not stored in your closet as requested during boarding.
+                    </p>
+                  </div>
+                );
+              })()}
+
+              {/* Action button to return back to dashboard */}
+              <button
+                onClick={() => {
+                  try {
+                    localStorage.removeItem(`flight_timer_active_${sessionId}`);
+                    localStorage.removeItem(`flight_timer_start_timestamp_${sessionId}`);
+                    localStorage.removeItem(`flight_timer_accumulated_elapsed_${sessionId}`);
+                    localStorage.removeItem(`flight_security_checkpoints_${sessionId}`);
+                    localStorage.removeItem(`flight_triggered_checkpoints_${sessionId}`);
+                    localStorage.removeItem(`flight_presence_check_active_${sessionId}`);
+                    localStorage.removeItem(`flight_presence_check_seconds_${sessionId}`);
+                    localStorage.removeItem(`flight_presence_check_code_${sessionId}`);
+                    localStorage.removeItem(`flight_presence_check_index_${sessionId}`);
+                    localStorage.removeItem(`flight_presence_type_${sessionId}`);
+                    localStorage.removeItem(`flight_presence_math_q_${sessionId}`);
+                    localStorage.removeItem(`flight_presence_math_a_${sessionId}`);
+                    localStorage.removeItem(`flight_presence_suggestion_${sessionId}`);
+                    localStorage.removeItem(`flight_presence_btns_${sessionId}`);
+                  } catch {}
+                  router.push("/dashboard");
+                }}
+                className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-emerald-500/20 transition cursor-pointer active:scale-95"
+              >
+                Return to Base Command (Dashboard)
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </main>
