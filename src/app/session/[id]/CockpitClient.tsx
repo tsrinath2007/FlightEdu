@@ -234,16 +234,18 @@ interface MultiplayerPilot {
   avatarActivity: ActivityType;
   isActive: boolean;
   userId?: string;
+  dream?: string;
+  isMe?: boolean;
 }
 
 const INITIAL_MULTIPLAYER_PILOTS: MultiplayerPilot[] = [
-  { seat: "1A", name: "Captain Emily", subject: "Quantum Computing", focusTime: "1h 42m", streak: 12, coins: 2850, avatarHair: "bob", avatarHairColor: "purple", avatarClothing: "uniform", avatarEyes: "glossy", avatarActivity: "BOOK", isActive: true },
-  { seat: "2D", name: "Cadet Liam", subject: "Advanced Next.js", focusTime: "52m", streak: 5, coins: 820, avatarHair: "spiky", avatarHairColor: "black", avatarClothing: "hoodie", avatarEyes: "glasses", avatarActivity: "LAPTOP", isActive: true },
-  { seat: "4C", name: "Co-Pilot Sophia", subject: "Aerodynamics", focusTime: "2h 10m", streak: 21, coins: 4930, avatarHair: "curls", avatarHairColor: "blonde", avatarClothing: "uniform", avatarEyes: "glossy", avatarActivity: "WRITING", isActive: true },
-  { seat: "8F", name: "Cadet Aarav", subject: "Organic Chemistry", focusTime: "15m", streak: 3, coins: 340, avatarHair: "spiky", avatarHairColor: "brown", avatarClothing: "rose_tee", avatarEyes: "glossy", avatarActivity: "CHILL", isActive: true },
-  { seat: "14D", name: "Cadet Chloe", subject: "Macroeconomics", focusTime: "38m", streak: 7, coins: 1150, avatarHair: "curls", avatarHairColor: "purple", avatarClothing: "tanktop", avatarEyes: "glossy", avatarActivity: "WRITING", isActive: true },
-  { seat: "26B", name: "Cadet Hiroshi", subject: "Japanese Linguistics", focusTime: "1h 05m", streak: 15, coins: 2310, avatarHair: "bob", avatarHairColor: "black", avatarClothing: "hoodie", avatarEyes: "glossy", avatarActivity: "BOOK", isActive: false },
-  { seat: "32J", name: "Cadet Elena", subject: "Creative Writing", focusTime: "2h 45m", streak: 18, coins: 3750, avatarHair: "bob", avatarHairColor: "blonde", avatarClothing: "rose_tee", avatarEyes: "glasses", avatarActivity: "LAPTOP", isActive: true },
+  { seat: "1A", name: "Captain Emily", subject: "Quantum Computing", focusTime: "1h 42m", streak: 12, coins: 2850, avatarHair: "bob", avatarHairColor: "purple", avatarClothing: "uniform", avatarEyes: "glossy", avatarActivity: "BOOK", isActive: true, dream: "To build the world's first error-corrected quantum compiler." },
+  { seat: "2D", name: "Cadet Liam", subject: "Advanced Next.js", focusTime: "52m", streak: 5, coins: 820, avatarHair: "spiky", avatarHairColor: "black", avatarClothing: "hoodie", avatarEyes: "glasses", avatarActivity: "LAPTOP", isActive: true, dream: "Fly high, reach uni, study my dream job, and conquer this study session!" },
+  { seat: "4C", name: "Co-Pilot Sophia", subject: "Aerodynamics", focusTime: "2h 10m", streak: 21, coins: 4930, avatarHair: "curls", avatarHairColor: "blonde", avatarClothing: "uniform", avatarEyes: "glossy", avatarActivity: "WRITING", isActive: true, dream: "To design zero-emission commercial hypersonic airliners." },
+  { seat: "8F", name: "Cadet Aarav", subject: "Organic Chemistry", focusTime: "15m", streak: 3, coins: 340, avatarHair: "spiky", avatarHairColor: "brown", avatarClothing: "rose_tee", avatarEyes: "glossy", avatarActivity: "CHILL", isActive: true, dream: "To synthesize a target molecule that cures rare genetic disorders." },
+  { seat: "14D", name: "Cadet Chloe", subject: "Macroeconomics", focusTime: "38m", streak: 7, coins: 1150, avatarHair: "curls", avatarHairColor: "purple", avatarClothing: "tanktop", avatarEyes: "glossy", avatarActivity: "WRITING", isActive: true, dream: "To work at the IMF and build data models that reduce global poverty." },
+  { seat: "26B", name: "Cadet Hiroshi", subject: "Japanese Linguistics", focusTime: "1h 05m", streak: 15, coins: 2310, avatarHair: "bob", avatarHairColor: "black", avatarClothing: "hoodie", avatarEyes: "glossy", avatarActivity: "BOOK", isActive: false, dream: "To compile a comprehensive digital archive of endangered rural dialects." },
+  { seat: "32J", name: "Cadet Elena", subject: "Creative Writing", focusTime: "2h 45m", streak: 18, coins: 3750, avatarHair: "bob", avatarHairColor: "blonde", avatarClothing: "rose_tee", avatarEyes: "glasses", avatarActivity: "LAPTOP", isActive: true, dream: "To publish a best-selling sci-fi epic and win the Hugo Award." },
 ];
 
 export default function CockpitClient({ id }: { id: string }) {
@@ -307,6 +309,59 @@ export default function CockpitClient({ id }: { id: string }) {
   const [relocatingSeat, setRelocatingSeat] = useState<string | null>(null);
 
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [myDream, setMyDream] = useState("Fly high, reach uni, study my dream job, and conquer this study session!");
+  const [studySubject, setStudySubject] = useState("Focus Study");
+  const passengerName = currentUser?.name || "YOU";
+
+  // Sound Effects settings sync
+  const [soundEffectsEnabled, setSoundEffectsEnabled] = useState(false);
+  useEffect(() => {
+    const savedSound = localStorage.getItem("sound_effects_enabled");
+    if (savedSound !== null) {
+      setSoundEffectsEnabled(savedSound === "true");
+    } else {
+      setSoundEffectsEnabled(false); // Default is off as requested!
+    }
+  }, []);
+
+  const activePilots = React.useMemo(() => {
+    if (session?.isPrivate) {
+      return multiplayerPilots.filter((p) => !!p.userId);
+    }
+    return multiplayerPilots;
+  }, [session?.isPrivate, multiplayerPilots]);
+
+  const [sessionToast, setSessionToast] = useState<{
+    id: string;
+    message: string;
+    subMessage: string;
+    icon: string;
+    color: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (sessionToast) {
+      const timer = setTimeout(() => {
+        setSessionToast(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [sessionToast]);
+
+  const showSessionToast = (
+    message: string,
+    subMessage: string,
+    icon: string,
+    color: string = "border-amber-500/40 text-amber-400 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.25)]"
+  ) => {
+    setSessionToast({
+      id: String(Date.now()),
+      message,
+      subMessage,
+      icon,
+      color
+    });
+  };
   
   const [friends, setFriends] = useState<any[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
@@ -337,18 +392,81 @@ export default function CockpitClient({ id }: { id: string }) {
       })
       .catch(() => {});
 
+    try {
+      const savedDream = localStorage.getItem("gofocusgen_my_dream");
+      if (savedDream) setMyDream(savedDream);
+    } catch {}
+
     // Request desktop notification permission on page load
     if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
   }, []);
 
-  const activePilots = React.useMemo(() => {
-    if (session?.isPrivate) {
-      return multiplayerPilots.filter((p) => !!p.userId);
-    }
-    return multiplayerPilots;
-  }, [session?.isPrivate, multiplayerPilots]);
+  // Simulated Cadet Interactive Live Celebrations (makes Multiplayer feel 100% alive!)
+  useEffect(() => {
+    if (!isActive || !config) return;
+
+    const interval = setInterval(() => {
+      // Pick a random pilot (excluding yourself)
+      const otherPilots = activePilots.filter(p => p.seat !== config.seatNumber);
+      if (otherPilots.length === 0) return;
+
+      const randomPilot = otherPilots[Math.floor(Math.random() * otherPilots.length)];
+      const actions = ["CLAP", "CHEER", "COFFEE"] as const;
+      const randomAction = actions[Math.floor(Math.random() * actions.length)];
+
+      if (randomAction === "CLAP") {
+        showSessionToast(
+          `${randomPilot.name} clapped for your focus! 👏`,
+          `They celebrated your task: "${studySubject || "Focus Study"}"`,
+          "👏",
+          "border-blue-500/40 text-blue-400 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.25)]"
+        );
+        if (soundEffectsEnabled) {
+          try {
+            const clapAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+            clapAudio.volume = 0.15;
+            clapAudio.play().catch(() => {});
+          } catch {}
+        }
+      } else if (randomAction === "CHEER") {
+        showSessionToast(
+          `${randomPilot.name} cheered your dream! 🎉`,
+          `They love your goal: "${myDream}"`,
+          "🎉",
+          "border-yellow-500/40 text-yellow-400 bg-yellow-500/10 shadow-[0_0_15px_rgba(245,158,11,0.25)]"
+        );
+        if (soundEffectsEnabled) {
+          try {
+            const cheerAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+            cheerAudio.volume = 0.15;
+            cheerAudio.play().catch(() => {});
+          } catch {}
+        }
+      } else {
+        showSessionToast(
+          `${randomPilot.name} sent you warm Coffee Vibes! ☕`,
+          `A hot cup of study focus fuel has arrived at seat ${config.seatNumber}!`,
+          "☕",
+          "border-orange-500/40 text-orange-400 bg-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.25)]"
+        );
+        setSendingEnergy(config.seatNumber);
+        if (soundEffectsEnabled) {
+          try {
+            const sweep = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
+            sweep.volume = 0.2;
+            sweep.play().catch(() => {});
+          } catch {}
+        }
+        setTimeout(() => setSendingEnergy(null), 2500);
+      }
+    }, 45000); // Trigger a supportive celebration toast every 45 seconds!
+
+    return () => clearInterval(interval);
+  }, [isActive, config, activePilots, studySubject, myDream, soundEffectsEnabled]);
+
+
 
   const isHost = React.useMemo(() => {
     if (!session || !currentUser) return false;
@@ -634,6 +752,18 @@ export default function CockpitClient({ id }: { id: string }) {
 
   const handleClap = (seat: string) => {
     setClapCounts(prev => ({ ...prev, [seat]: (prev[seat] || 0) + 1 }));
+    
+    const target = activePilots.find(p => p.seat === seat);
+    const targetName = target ? target.name : `Cadet ${seat}`;
+    const targetSubject = target ? target.subject : "study";
+    
+    showSessionToast(
+      "Focus Celebrated! 👏",
+      `You clapped for ${targetName}'s focus on "${targetSubject}"!`,
+      "👏",
+      "border-blue-500/40 text-blue-400 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.25)]"
+    );
+
     if (soundEffectsEnabled) {
       try {
         const clapAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
@@ -645,6 +775,17 @@ export default function CockpitClient({ id }: { id: string }) {
 
   const handleCheer = (seat: string) => {
     setCheerCounts(prev => ({ ...prev, [seat]: (prev[seat] || 0) + 1 }));
+    
+    const target = activePilots.find(p => p.seat === seat);
+    const targetName = target ? target.name : `Cadet ${seat}`;
+    
+    showSessionToast(
+      "Dream Cheered! 🎉",
+      `You cheered for ${targetName}'s study dream!`,
+      "🎉",
+      "border-yellow-500/40 text-yellow-400 bg-yellow-500/10 shadow-[0_0_15px_rgba(245,158,11,0.25)]"
+    );
+
     if (soundEffectsEnabled) {
       try {
         const cheerAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
@@ -726,16 +867,7 @@ export default function CockpitClient({ id }: { id: string }) {
   const [ambiencePlaying, setAmbiencePlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Sound Effects settings sync
-  const [soundEffectsEnabled, setSoundEffectsEnabled] = useState(false);
-  useEffect(() => {
-    const savedSound = localStorage.getItem("sound_effects_enabled");
-    if (savedSound !== null) {
-      setSoundEffectsEnabled(savedSound === "true");
-    } else {
-      setSoundEffectsEnabled(false); // Default is off as requested!
-    }
-  }, []);
+
 
   // Synchronize earned coins with wallet
   useEffect(() => {
@@ -1225,6 +1357,17 @@ export default function CockpitClient({ id }: { id: string }) {
 
   const sendFocusVibes = (targetSeat: string) => {
     setSendingEnergy(targetSeat);
+    
+    const target = activePilots.find(p => p.seat === targetSeat);
+    const targetName = target ? target.name : `Cadet ${targetSeat}`;
+    
+    showSessionToast(
+      "Coffee Vibes Gifted! ☕",
+      `You sent fresh, warm focus fuel to ${targetName} at seat ${targetSeat}!`,
+      "☕",
+      "border-orange-500/40 text-orange-400 bg-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.25)]"
+    );
+
     if (soundEffectsEnabled) {
       try {
         const sweep = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
@@ -1434,7 +1577,23 @@ export default function CockpitClient({ id }: { id: string }) {
       return (
         <div
           onClick={() => {
-            setSelectedSeatDetails(null);
+            const myDetails = {
+              seat: config.seatNumber,
+              name: passengerName,
+              subject: studySubject,
+              focusTime: formatTime(totalDurationSeconds - secondsRemaining),
+              streak: currentUser?.currentStreak || 0,
+              coins: walletCoins,
+              avatarHair,
+              avatarHairColor,
+              avatarClothing,
+              avatarEyes,
+              avatarActivity,
+              isActive,
+              isMe: true,
+              dream: myDream
+            };
+            setSelectedSeatDetails(myDetails);
             if (soundEffectsEnabled) {
               try {
                 const tap = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
@@ -1443,8 +1602,32 @@ export default function CockpitClient({ id }: { id: string }) {
               } catch (e) {}
             }
           }}
-          className="relative group w-14 h-14 shrink-0 flex flex-col items-center justify-between rounded-xl p-1 border transition duration-300 cursor-pointer bg-electric-500/10 border-electric-400 shadow-[0_0_12px_rgba(56,189,248,0.3)] ring-1 ring-electric-400/30"
+          className="relative group w-14 h-14 shrink-0 flex flex-col items-center justify-between rounded-xl p-1 border transition duration-300 cursor-pointer bg-electric-500/10 border-electric-400 shadow-[0_0_12px_rgba(56,189,248,0.3)] ring-1 ring-electric-400/30 overflow-visible"
         >
+          {sendingEnergy === seatId && (
+            <div className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center overflow-visible">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: [1, 1, 0], scale: [1, 1.5, 2], y: [-20, -50, -80] }}
+                transition={{ duration: 2, ease: "easeOut" }}
+                className="absolute flex flex-col gap-1 text-sm font-bold items-center"
+              >
+                <span>☕</span>
+                <span className="text-[6px] bg-amber-500 text-white font-extrabold uppercase px-1 rounded shadow-md whitespace-nowrap animate-pulse">+ Vibes!</span>
+              </motion.div>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <motion.span
+                  key={i}
+                  initial={{ opacity: 1, scale: 0.8, x: 0, y: 0 }}
+                  animate={{ opacity: 0, scale: 1.2, x: (i % 2 === 0 ? 15 : -15) * Math.random(), y: -40 - Math.random() * 30 }}
+                  transition={{ duration: 1.5, ease: "easeOut", delay: i * 0.15 }}
+                  className="absolute text-xs"
+                >
+                  ✨
+                </motion.span>
+              ))}
+            </div>
+          )}
           <span className="text-[6px] font-mono font-bold text-electric-400 uppercase leading-none">YOU</span>
           <CadetAvatar
             size="sm"
@@ -1465,12 +1648,36 @@ export default function CockpitClient({ id }: { id: string }) {
       return (
         <div
           onClick={() => handleSeatClick(pilot.seat, true, pilot)}
-          className={`relative group w-14 h-14 shrink-0 flex flex-col items-center justify-between rounded-xl p-1 border transition duration-300 cursor-pointer ${
+          className={`relative group w-14 h-14 shrink-0 flex flex-col items-center justify-between rounded-xl p-1 border transition duration-300 cursor-pointer overflow-visible ${
             isSelected
               ? "bg-purple-500/15 border-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.3)] ring-1 ring-purple-400/30"
               : "bg-navy-900/40 border-white/5 hover:border-white/12 hover:bg-navy-900/60"
           }`}
         >
+          {sendingEnergy === seatId && (
+            <div className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center overflow-visible">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: [1, 1, 0], scale: [1, 1.5, 2], y: [-20, -50, -80] }}
+                transition={{ duration: 2, ease: "easeOut" }}
+                className="absolute flex flex-col gap-1 text-sm font-bold items-center"
+              >
+                <span>☕</span>
+                <span className="text-[6px] bg-amber-500 text-white font-extrabold uppercase px-1 rounded shadow-md whitespace-nowrap animate-pulse">+ Vibes!</span>
+              </motion.div>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <motion.span
+                  key={i}
+                  initial={{ opacity: 1, scale: 0.8, x: 0, y: 0 }}
+                  animate={{ opacity: 0, scale: 1.2, x: (i % 2 === 0 ? 15 : -15) * Math.random(), y: -40 - Math.random() * 30 }}
+                  transition={{ duration: 1.5, ease: "easeOut", delay: i * 0.15 }}
+                  className="absolute text-xs"
+                >
+                  ✨
+                </motion.span>
+              ))}
+            </div>
+          )}
           <span className="text-[6px] font-mono font-bold text-purple-400 uppercase leading-none">{pilot.seat}</span>
           <CadetAvatar
             size="sm"
@@ -2157,13 +2364,13 @@ export default function CockpitClient({ id }: { id: string }) {
                                 exit={{ opacity: 0 }}
                                 className="absolute inset-0 pointer-events-none z-50 overflow-visible"
                               >
-                                {/* Glowing neon vector energy lines shooting from Center to target */}
+                                {/* Glowing warm orange coffee vector energy lines shooting to target */}
                                 <svg className="absolute inset-0 w-full h-full">
                                   <defs>
                                     <linearGradient id="beam-grad" x1="0%" y1="50%" x2="100%" y2="50%">
-                                      <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.2" />
-                                      <stop offset="50%" stopColor="#a855f7" stopOpacity="1" />
-                                      <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.8" />
+                                      <stop offset="0%" stopColor="#ea580c" stopOpacity="0.2" />
+                                      <stop offset="50%" stopColor="#f59e0b" stopOpacity="1" />
+                                      <stop offset="100%" stopColor="#ea580c" stopOpacity="0.8" />
                                     </linearGradient>
                                   </defs>
                                   <motion.line 
@@ -2176,8 +2383,9 @@ export default function CockpitClient({ id }: { id: string }) {
                                     transition={{ ease: "linear", duration: 0.5, repeat: Infinity }}
                                   />
                                 </svg>
-                                <div className="absolute top-[40%] left-[80%] -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-                                  <span className="text-lg animate-ping">⚡✨🚀</span>
+                                <div className="absolute top-[40%] left-[80%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-1 z-50">
+                                  <span className="text-2xl animate-bounce">☕✨</span>
+                                  <span className="text-[7px] bg-gradient-to-r from-orange-500 to-amber-500 border border-orange-400 text-white font-extrabold uppercase px-1.5 py-0.5 rounded shadow-lg animate-pulse tracking-widest leading-none">Coffee Vibes Sent!</span>
                                 </div>
                               </motion.div>
                             );
@@ -2348,47 +2556,93 @@ export default function CockpitClient({ id }: { id: string }) {
                               </div>
 
                               {/* Current Task Capsule */}
-                              <div className="rounded-2xl border border-blue-500/10 bg-blue-500/5 p-3 space-y-1.5 text-left">
-                                <div className="flex items-center justify-between text-[7px] font-mono font-bold tracking-widest text-blue-400 uppercase">
-                                  <span>⚡ Current Task</span>
-                                  <button
-                                    onClick={() => handleClap(selectedSeatDetails.seat)}
-                                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/25 text-white font-bold hover:bg-blue-500/20 active:scale-95 transition text-[8px] cursor-pointer"
-                                  >
-                                    👏 {clapCounts[selectedSeatDetails.seat] || 1}
-                                  </button>
+                              {selectedSeatDetails.isMe ? (
+                                <div className="rounded-2xl border border-blue-500/10 bg-blue-500/5 p-3 space-y-1.5 text-left">
+                                  <div className="text-[7px] font-mono font-bold tracking-widest text-blue-400 uppercase">
+                                    <span>⚡ Current Task (Editing)</span>
+                                  </div>
+                                  <input
+                                    type="text"
+                                    value={studySubject}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setStudySubject(val);
+                                      if (config) {
+                                        const updatedConfig = { ...config, studySubject: val };
+                                        localStorage.setItem(`flight_config_${sessionId}`, JSON.stringify(updatedConfig));
+                                        setConfig(updatedConfig);
+                                        syncSeatToDatabase(config.seatNumber, val).catch(() => {});
+                                      }
+                                      setSelectedSeatDetails(prev => prev ? { ...prev, subject: val } : null);
+                                    }}
+                                    placeholder="What are you studying?"
+                                    className="w-full bg-navy-950/40 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 transition font-bold"
+                                  />
                                 </div>
-                                <p className="text-[10px] font-bold text-white leading-tight">
-                                  📚 {selectedSeatDetails.subject}
-                                </p>
-                              </div>
+                              ) : (
+                                <div className="rounded-2xl border border-blue-500/10 bg-blue-500/5 p-3 space-y-1.5 text-left">
+                                  <div className="flex items-center justify-between text-[7px] font-mono font-bold tracking-widest text-blue-400 uppercase">
+                                    <span>⚡ Current Task</span>
+                                    <button
+                                      onClick={() => handleClap(selectedSeatDetails.seat)}
+                                      className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/25 text-white font-bold hover:bg-blue-500/20 active:scale-95 transition text-[8px] cursor-pointer"
+                                    >
+                                      👏 {clapCounts[selectedSeatDetails.seat] || 1}
+                                    </button>
+                                  </div>
+                                  <p className="text-[10px] font-bold text-white leading-tight">
+                                    📚 {selectedSeatDetails.subject}
+                                  </p>
+                                </div>
+                              )}
 
                               {/* Dream Mandate Capsule */}
-                              <div className="rounded-2xl border border-amber-500/10 bg-amber-500/5 p-3 space-y-1.5 text-left">
-                                <div className="flex items-center justify-between text-[7px] font-mono font-bold tracking-widest text-amber-400 uppercase">
-                                  <span>⭐ My Dream</span>
-                                  <button
-                                    onClick={() => handleCheer(selectedSeatDetails.seat)}
-                                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-white font-bold hover:bg-amber-500/20 active:scale-95 transition text-[8px] cursor-pointer"
-                                  >
-                                    🎉 {cheerCounts[selectedSeatDetails.seat] || 3}
-                                  </button>
+                              {selectedSeatDetails.isMe ? (
+                                <div className="rounded-2xl border border-amber-500/10 bg-amber-500/5 p-3 space-y-1.5 text-left">
+                                  <div className="text-[7px] font-mono font-bold tracking-widest text-amber-400 uppercase">
+                                    <span>⭐ My Dream (Editing)</span>
+                                  </div>
+                                  <textarea
+                                    value={myDream}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setMyDream(val);
+                                      localStorage.setItem("gofocusgen_my_dream", val);
+                                      setSelectedSeatDetails(prev => prev ? { ...prev, dream: val } : null);
+                                    }}
+                                    placeholder="Write your study dream..."
+                                    className="w-full bg-navy-950/40 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 transition resize-none h-16 font-medium leading-normal"
+                                  />
                                 </div>
-                                <p className="text-[9px] font-medium text-white/80 leading-normal italic">
-                                  “Fly high, reach uni, study my dream job, and conquer this study session!”
-                                </p>
-                              </div>
+                              ) : (
+                                <div className="rounded-2xl border border-amber-500/10 bg-amber-500/5 p-3 space-y-1.5 text-left">
+                                  <div className="flex items-center justify-between text-[7px] font-mono font-bold tracking-widest text-amber-400 uppercase">
+                                    <span>⭐ My Dream</span>
+                                    <button
+                                      onClick={() => handleCheer(selectedSeatDetails.seat)}
+                                      className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-white font-bold hover:bg-amber-500/20 active:scale-95 transition text-[8px] cursor-pointer"
+                                    >
+                                      🎉 {cheerCounts[selectedSeatDetails.seat] || 3}
+                                    </button>
+                                  </div>
+                                  <p className="text-[9px] font-medium text-white/80 leading-normal italic">
+                                    “{selectedSeatDetails.dream || "Fly high, reach uni, study my dream job, and conquer this study session!"}”
+                                  </p>
+                                </div>
+                              )}
 
                               {/* Action Gift button */}
-                              <button
-                                onClick={() => {
-                                  sendFocusVibes(selectedSeatDetails.seat);
-                                }}
-                                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-extrabold text-[10px] uppercase tracking-wider transition duration-300 shadow-lg shadow-orange-600/15 active:scale-[0.98] cursor-pointer"
-                              >
-                                <span>☕</span>
-                                <span>Gift Coffee Vibes</span>
-                              </button>
+                              {!selectedSeatDetails.isMe && (
+                                <button
+                                  onClick={() => {
+                                    sendFocusVibes(selectedSeatDetails.seat);
+                                  }}
+                                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-extrabold text-[10px] uppercase tracking-wider transition duration-300 shadow-lg shadow-orange-600/15 active:scale-[0.98] cursor-pointer"
+                                >
+                                  <span>☕</span>
+                                  <span>Gift Coffee Vibes</span>
+                                </button>
+                              )}
 
                               {/* Co-Pilot Seating Actions (Friend Requests & Direct Chats) */}
                               {selectedSeatDetails.userId && currentUser && selectedSeatDetails.userId !== currentUser.id && (() => {
@@ -3605,6 +3859,35 @@ export default function CockpitClient({ id }: { id: string }) {
           </div>
         </div>
       )}
+
+      {/* Floating Celebration Toast Notification Overlay */}
+      <AnimatePresence>
+        {sessionToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] px-6 py-4 rounded-3xl border backdrop-blur-xl flex items-center gap-4 shadow-2xl min-w-[320px] max-w-[450px] ${sessionToast.color}`}
+          >
+            <div className="text-3xl animate-bounce">{sessionToast.icon}</div>
+            <div className="flex-1 text-left">
+              <h5 className="font-display font-black text-sm tracking-wide leading-tight text-white">
+                {sessionToast.message}
+              </h5>
+              <p className="text-[10px] opacity-80 font-medium mt-0.5 leading-normal text-white/95">
+                {sessionToast.subMessage}
+              </p>
+            </div>
+            <button
+              onClick={() => setSessionToast(null)}
+              className="text-white/40 hover:text-white transition text-xs font-bold font-mono px-2 py-1 rounded-lg hover:bg-white/5 active:scale-95 shrink-0 cursor-pointer"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
