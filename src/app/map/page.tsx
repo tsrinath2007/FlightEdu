@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
   Compass, History, Globe, Sparkles, Navigation, Shield, Play, 
-  MapPin, Clock, Award, Landmark, User, Heart, ChevronRight, Coins
+  MapPin, Clock, Award, Landmark, User, Heart, ChevronRight, Coins,
+  Loader2, Search, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { haversineKm } from "@/lib/travel";
@@ -24,6 +25,21 @@ interface CityHub {
   description: string;
   preferredDestinations: string[]; // List of other city IDs
 }
+
+interface PlaceResult {
+  id: string;
+  name: string;
+  country: string;
+  countryCode: string;
+  lat: number;
+  lng: number;
+  type: "city" | "airport";
+  iata?: string;
+  city?: string;
+}
+
+// ... rest of GLOBAL_HUBS definition ...
+
 
 const GLOBAL_HUBS: CityHub[] = [
   { 
@@ -407,6 +423,10 @@ interface TravelHistoryItem {
   startedAt: string;
   endedAt: string;
   completed: boolean;
+  originLat?: number;
+  originLng?: number;
+  destinationLat?: number;
+  destinationLng?: number;
 }
 
 export default function InteractiveMapPage() {
@@ -416,6 +436,111 @@ export default function InteractiveMapPage() {
   const [selectedCity, setSelectedCity] = useState<CityHub | null>(GLOBAL_HUBS[1]); // Default to Bengaluru
   const [origin, setOrigin] = useState<CityHub | null>(null);
   const [destination, setDestination] = useState<CityHub | null>(null);
+
+  // Dynamic airport search and addition states
+  const [dynamicHubs, setDynamicHubs] = useState<CityHub[]>([]);
+  const [departureQuery, setDepartureQuery] = useState("");
+  const [arrivalQuery, setArrivalQuery] = useState("");
+  const [departureResults, setDepartureResults] = useState<PlaceResult[]>([]);
+  const [arrivalResults, setArrivalResults] = useState<PlaceResult[]>([]);
+  const [isSearchingDeparture, setIsSearchingDeparture] = useState(false);
+  const [isSearchingArrival, setIsSearchingArrival] = useState(false);
+
+  const allHubs = [...GLOBAL_HUBS, ...dynamicHubs];
+
+  // Search departure query handler
+  useEffect(() => {
+    if (departureQuery.trim().length < 2) {
+      setDepartureResults([]);
+      return;
+    }
+    setIsSearchingDeparture(true);
+    const delayDebounce = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/places/search?q=${encodeURIComponent(departureQuery)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setDepartureResults(data.results || []);
+        }
+      } catch (err) {
+        console.warn("Failed to search departure places:", err);
+      } finally {
+        setIsSearchingDeparture(false);
+      }
+    }, 450);
+
+    return () => clearTimeout(delayDebounce);
+  }, [departureQuery]);
+
+  // Search arrival query handler
+  useEffect(() => {
+    if (arrivalQuery.trim().length < 2) {
+      setArrivalResults([]);
+      return;
+    }
+    setIsSearchingArrival(true);
+    const delayDebounce = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/places/search?q=${encodeURIComponent(arrivalQuery)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setArrivalResults(data.results || []);
+        }
+      } catch (err) {
+        console.warn("Failed to search arrival places:", err);
+      } finally {
+        setIsSearchingArrival(false);
+      }
+    }, 450);
+
+    return () => clearTimeout(delayDebounce);
+  }, [arrivalQuery]);
+
+  const handleSelectSearchPlace = (place: PlaceResult, type: "origin" | "destination") => {
+    const codeStr = (place.iata || place.id).toUpperCase();
+    const existing = [...GLOBAL_HUBS, ...dynamicHubs].find(
+      (h) => h.code.toLowerCase() === codeStr.toLowerCase() || 
+             (Math.abs(h.lat - place.lat) < 0.005 && Math.abs(h.lng - place.lng) < 0.005)
+    );
+
+    let hub: CityHub;
+    if (existing) {
+      hub = existing;
+    } else {
+      hub = {
+        id: place.id.toLowerCase(),
+        name: place.name,
+        code: place.iata || place.id.substring(0, 3).toUpperCase(),
+        x: 0,
+        y: 0,
+        lat: place.lat,
+        lng: place.lng,
+        country: place.country,
+        timezone: "GMT+5:30",
+        description: `Custom routed airport: ${place.name} in ${place.country}.`,
+        preferredDestinations: [],
+      };
+      setDynamicHubs((prev) => [...prev, hub]);
+    }
+
+    if (type === "origin") {
+      setOrigin(hub);
+      setDepartureQuery("");
+      setDepartureResults([]);
+      if (destination?.id === hub.id) {
+        setDestination(null);
+      }
+    } else {
+      setDestination(hub);
+      setArrivalQuery("");
+      setArrivalResults([]);
+      if (origin?.id === hub.id) {
+        setOrigin(null);
+      }
+    }
+
+    setSelectedCity(hub);
+  };
   
   // Customizer & user details
   const [userCoins, setUserCoins] = useState<number>(0);
@@ -472,7 +597,7 @@ export default function InteractiveMapPage() {
 
   // Initialize or update the map
   useEffect(() => {
-    if (!leafletLoaded || !GLOBAL_HUBS) return;
+    if (!leafletLoaded) return;
 
     const L = (window as any).L;
     if (!L) return;
@@ -514,7 +639,7 @@ export default function InteractiveMapPage() {
     }).addTo(map);
 
     // Plot hubs as custom interactive markers
-    GLOBAL_HUBS.forEach((city) => {
+    allHubs.forEach((city) => {
       const isSelected = selectedCity?.id === city.id;
       const isOrigin = origin?.id === city.id;
       const isDest = destination?.id === city.id;
@@ -604,13 +729,16 @@ export default function InteractiveMapPage() {
 
     // Draw past travel history dashed flight paths
     travelHistory.forEach((hist) => {
-      const oCity = GLOBAL_HUBS.find((h) => h.code === hist.originCode);
-      const dCity = GLOBAL_HUBS.find((h) => h.code === hist.destinationCode);
-      if (oCity && dCity) {
+      const oLat = hist.originLat ?? allHubs.find((h) => h.code === hist.originCode)?.lat;
+      const oLng = hist.originLng ?? allHubs.find((h) => h.code === hist.originCode)?.lng;
+      const dLat = hist.destinationLat ?? allHubs.find((h) => h.code === hist.destinationCode)?.lat;
+      const dLng = hist.destinationLng ?? allHubs.find((h) => h.code === hist.destinationCode)?.lng;
+
+      if (oLat !== undefined && oLng !== undefined && dLat !== undefined && dLng !== undefined) {
         L.polyline(
           [
-            [oCity.lat, oCity.lng],
-            [dCity.lat, dCity.lng],
+            [oLat, oLng],
+            [dLat, dLng],
           ],
           {
             color: "#10b981", // Emerald green for past travel paths!
@@ -621,7 +749,7 @@ export default function InteractiveMapPage() {
         ).addTo(map);
       }
     });
-  }, [leafletLoaded, selectedCity, origin, destination, travelHistory, mapStyle]);
+  }, [leafletLoaded, selectedCity, origin, destination, travelHistory, mapStyle, dynamicHubs]);
 
   // Load user profile & travel history on mount
   useEffect(() => {
@@ -1475,124 +1603,267 @@ export default function InteractiveMapPage() {
 
             <AnimatePresence mode="wait">
               {activeBoardingTab === "router" ? (
-                origin && destination ? (() => {
-                  // Calculate distance and duration using GPS coordinates
-                  const distKm = haversineKm(origin.lat, origin.lng, destination.lat, destination.lng);
-                  const travelMins = (distKm / 870) * 60;
-                  const durationMinutes = Math.max(60, Math.round(travelMins + 40));
+                <motion.div
+                  key="flight-router-tab"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="space-y-4 text-xs"
+                >
+                  {/* DUAL SEARCH CONSOLE */}
+                  <div className="space-y-3">
+                    {/* Departure Input */}
+                    <div className="relative space-y-1.5">
+                      <label className="text-[7.5px] font-bold text-white/45 uppercase tracking-widest flex items-center justify-between">
+                        <span>🛫 Departure Airport</span>
+                        {origin && (
+                          <button
+                            type="button"
+                            onClick={() => setOrigin(null)}
+                            className="text-[7.5px] text-red-400 hover:text-red-300 transition uppercase tracking-wider font-extrabold flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <X className="size-2" /> Clear
+                          </button>
+                        )}
+                      </label>
 
-                  return (
-                    <motion.div
-                      key="boarding-manifest"
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 15 }}
-                      className="space-y-4 text-xs"
-                    >
-                      {/* Routing display */}
-                      <div className="flex items-center justify-between bg-white/4 border border-white/5 p-3 rounded-2xl">
-                        <div className="text-center">
-                          <span className="font-mono text-base font-extrabold text-white">{origin.code}</span>
-                          <p className="text-[9px] text-white/45 mt-0.5 truncate max-w-[60px]">{origin.name}</p>
+                      {origin ? (
+                        <div className="flex items-center justify-between p-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/5 text-emerald-400">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-[10px] truncate">{origin.name}</p>
+                            <p className="text-[8px] text-white/40 truncate">{origin.country}</p>
+                          </div>
+                          <span className="ml-2 font-mono font-extrabold text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
+                            {origin.code}
+                          </span>
                         </div>
-                        
-                        <div className="flex-1 flex flex-col items-center justify-center px-2">
-                          <span className="text-[8px] font-mono text-electric-400 font-bold uppercase">{durationMinutes} min flight</span>
-                          <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent relative mt-1">
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rounded-full bg-electric-400 flex items-center justify-center shadow-lg">
-                              <span className="text-[8px]">✈️</span>
+                      ) : (
+                        <div className="relative">
+                          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-3 text-white/30" />
+                          <input
+                            type="text"
+                            placeholder="Search departure (e.g. MAA, Delhi, London...)"
+                            value={departureQuery}
+                            onChange={(e) => setDepartureQuery(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-[10px] text-white placeholder-white/30 focus:outline-none focus:border-electric-400/60 transition"
+                          />
+                          {departureQuery.trim().length >= 2 && (
+                            <div className="absolute z-50 left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-[#0a0f26]/95 backdrop-blur-md shadow-2xl divide-y divide-white/5 scrollbar-thin">
+                              {isSearchingDeparture ? (
+                                <div className="flex items-center gap-2 p-3 text-xs text-white/40 justify-center">
+                                  <Loader2 className="size-3.5 animate-spin text-electric-400" />
+                                  <span>Searching database...</span>
+                                </div>
+                              ) : departureResults.length === 0 ? (
+                                <div className="p-3 text-xs text-white/40 text-center">
+                                  No airports found.
+                                </div>
+                              ) : (
+                                departureResults.map((result) => (
+                                  <button
+                                    key={result.id}
+                                    type="button"
+                                    onClick={() => handleSelectSearchPlace(result, "origin")}
+                                    className="w-full flex items-center justify-between p-2.5 text-left text-xs text-white hover:bg-white/5 transition cursor-pointer"
+                                  >
+                                    <div className="flex flex-col min-w-0 pr-2">
+                                      <span className="font-bold truncate text-[10px]">{result.name}</span>
+                                      <span className="text-[8px] text-white/40 truncate">
+                                        {result.city ? `${result.city}, ` : ""}{result.country}
+                                      </span>
+                                    </div>
+                                    <span className="shrink-0 font-mono font-extrabold text-[9px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                      {result.iata || "APT"}
+                                    </span>
+                                  </button>
+                                ))
+                              )}
                             </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Arrival Input */}
+                    <div className="relative space-y-1.5">
+                      <label className="text-[7.5px] font-bold text-white/45 uppercase tracking-widest flex items-center justify-between">
+                        <span>🛬 Arrival Airport</span>
+                        {destination && (
+                          <button
+                            type="button"
+                            onClick={() => setDestination(null)}
+                            className="text-[7.5px] text-red-400 hover:text-red-300 transition uppercase tracking-wider font-extrabold flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <X className="size-2" /> Clear
+                          </button>
+                        )}
+                      </label>
+
+                      {destination ? (
+                        <div className="flex items-center justify-between p-2.5 rounded-xl border border-amber-500/25 bg-amber-500/5 text-amber-400">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-[10px] truncate">{destination.name}</p>
+                            <p className="text-[8px] text-white/40 truncate">{destination.country}</p>
+                          </div>
+                          <span className="ml-2 font-mono font-extrabold text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
+                            {destination.code}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-3 text-white/30" />
+                          <input
+                            type="text"
+                            placeholder="Search destination (e.g. SIN, Tokyo, Sydney...)"
+                            value={arrivalQuery}
+                            onChange={(e) => setArrivalQuery(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-[10px] text-white placeholder-white/30 focus:outline-none focus:border-electric-400/60 transition"
+                          />
+                          {arrivalQuery.trim().length >= 2 && (
+                            <div className="absolute z-50 left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-[#0a0f26]/95 backdrop-blur-md shadow-2xl divide-y divide-white/5 scrollbar-thin">
+                              {isSearchingArrival ? (
+                                <div className="flex items-center gap-2 p-3 text-xs text-white/40 justify-center">
+                                  <Loader2 className="size-3.5 animate-spin text-electric-400" />
+                                  <span>Searching database...</span>
+                                </div>
+                              ) : arrivalResults.length === 0 ? (
+                                <div className="p-3 text-xs text-white/40 text-center">
+                                  No airports found.
+                                </div>
+                              ) : (
+                                arrivalResults.map((result) => (
+                                  <button
+                                    key={result.id}
+                                    type="button"
+                                    onClick={() => handleSelectSearchPlace(result, "destination")}
+                                    className="w-full flex items-center justify-between p-2.5 text-left text-xs text-white hover:bg-white/5 transition cursor-pointer"
+                                  >
+                                    <div className="flex flex-col min-w-0 pr-2">
+                                      <span className="font-bold truncate text-[10px]">{result.name}</span>
+                                      <span className="text-[8px] text-white/40 truncate">
+                                        {result.city ? `${result.city}, ` : ""}{result.country}
+                                      </span>
+                                    </div>
+                                    <span className="shrink-0 font-mono font-extrabold text-[9px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                                      {result.iata || "APT"}
+                                    </span>
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* BOTTOM DETAIL PORTION */}
+                  {origin && destination ? (() => {
+                    const distKm = haversineKm(origin.lat, origin.lng, destination.lat, destination.lng);
+                    const travelMins = (distKm / 870) * 60;
+                    const durationMinutes = Math.max(60, Math.round(travelMins + 40));
+
+                    return (
+                      <div className="space-y-4 pt-2 border-t border-white/5">
+                        {/* Routing display */}
+                        <div className="flex items-center justify-between bg-white/4 border border-white/5 p-3 rounded-2xl">
+                          <div className="text-center">
+                            <span className="font-mono text-base font-extrabold text-white">{origin.code}</span>
+                            <p className="text-[9px] text-white/45 mt-0.5 truncate max-w-[60px]">{origin.name}</p>
+                          </div>
+                          
+                          <div className="flex-1 flex flex-col items-center justify-center px-2">
+                            <span className="text-[8px] font-mono text-electric-400 font-bold uppercase">{durationMinutes} min flight</span>
+                            <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent relative mt-1">
+                              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rounded-full bg-electric-400 flex items-center justify-center shadow-lg">
+                                <span className="text-[8px]">✈️</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-center">
+                            <span className="font-mono text-base font-extrabold text-white">{destination.code}</span>
+                            <p className="text-[9px] text-white/45 mt-0.5 truncate max-w-[60px]">{destination.name}</p>
                           </div>
                         </div>
 
-                        <div className="text-center">
-                          <span className="font-mono text-base font-extrabold text-white">{destination.code}</span>
-                          <p className="text-[9px] text-white/45 mt-0.5 truncate max-w-[60px]">{destination.name}</p>
+                        {/* Flight mode settings */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => setSessionMode(sessionMode === "CHILL" ? "HARDCORE" : "CHILL")}
+                            className={`p-2.5 rounded-xl border transition text-left flex flex-col cursor-pointer ${
+                              sessionMode === "HARDCORE"
+                                ? "border-red-500/40 bg-red-500/5 text-red-400"
+                                : "border-white/5 bg-white/4 text-white/70 hover:text-white"
+                            }`}
+                          >
+                            <span className="text-[7.5px] font-mono font-bold uppercase text-white/45 mb-0.5">Flight Mode</span>
+                            <span className="text-[10px] font-bold">{sessionMode === "CHILL" ? "😌 Chill Mode" : "😈 Hardcore"}</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              if (userCoins >= 300) {
+                                setIsPrivate(!isPrivate);
+                              } else {
+                                alert(`Insufficient coins: You need at least 300 focus coins to charter a private flight (Current Balance: 🪙 ${userCoins}).`);
+                              }
+                            }}
+                            className={`p-2.5 rounded-xl border transition text-left flex flex-col cursor-pointer ${
+                              isPrivate
+                                ? "border-yellow-500/40 bg-yellow-500/5 text-yellow-400"
+                                : "border-white/5 bg-white/4 text-white/70 hover:text-white"
+                            }`}
+                          >
+                            <span className="text-[7.5px] font-mono font-bold uppercase text-white/45 mb-0.5">Privacy settings</span>
+                            <span className="text-[10px] font-bold">{isPrivate ? "🔒 Private Charter" : "🌍 Public Cabin"}</span>
+                          </button>
                         </div>
-                      </div>
 
-                      {/* Flight mode settings */}
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => setSessionMode(sessionMode === "CHILL" ? "HARDCORE" : "CHILL")}
-                          className={`p-2.5 rounded-xl border transition text-left flex flex-col ${
-                            sessionMode === "HARDCORE"
-                              ? "border-red-500/40 bg-red-500/5 text-red-400"
-                              : "border-white/5 bg-white/4 text-white/70 hover:text-white"
-                          }`}
-                        >
-                          <span className="text-[7.5px] font-mono font-bold uppercase text-white/45 mb-0.5">Flight Mode</span>
-                          <span className="text-[10px] font-bold">{sessionMode === "CHILL" ? "😌 Chill Mode" : "😈 Hardcore"}</span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            if (userCoins >= 300) {
-                              setIsPrivate(!isPrivate);
-                            } else {
-                              alert(`Insufficient coins: You need at least 300 focus coins to charter a private flight (Current Balance: 🪙 ${userCoins}).`);
-                            }
-                          }}
-                          className={`p-2.5 rounded-xl border transition text-left flex flex-col ${
-                            isPrivate
-                              ? "border-yellow-500/40 bg-yellow-500/5 text-yellow-400"
-                              : "border-white/5 bg-white/4 text-white/70 hover:text-white"
-                          }`}
-                        >
-                          <span className="text-[7.5px] font-mono font-bold uppercase text-white/45 mb-0.5">Privacy settings</span>
-                          <span className="text-[10px] font-bold">{isPrivate ? "🔒 Private Charter" : "🌍 Public Cabin"}</span>
-                        </button>
-                      </div>
-
-                      {/* Ask Focus Subject (what he is studying) */}
-                      <div className="space-y-1.5 border-t border-white/5 pt-3">
-                        <label className="text-[7.5px] font-bold text-white/45 uppercase tracking-widest flex items-center gap-1">
-                          What are you studying today? <span className="text-red-400 font-normal lowercase font-sans text-[7px] tracking-normal">(Mandatory)</span>
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Next.js, Organic Chemistry, UI Design..."
-                          value={studySubject}
-                          onChange={(e) => setStudySubject(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-[10px] text-white placeholder-white/30 focus:outline-none focus:border-electric-400/60 transition duration-300"
-                        />
-                      </div>
-
-                      {/* Error indicator */}
-                      {errorText && (
-                        <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-2.5 text-[10px] text-red-400">
-                          ⚠️ {errorText}
+                        {/* Ask Focus Subject (what he is studying) */}
+                        <div className="space-y-1.5 border-t border-white/5 pt-3">
+                          <label className="text-[7.5px] font-bold text-white/45 uppercase tracking-widest flex items-center gap-1">
+                            What are you studying today? <span className="text-red-400 font-normal lowercase font-sans text-[7px] tracking-normal">(Mandatory)</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Next.js, Organic Chemistry, UI Design..."
+                            value={studySubject}
+                            onChange={(e) => setStudySubject(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-[10px] text-white placeholder-white/30 focus:outline-none focus:border-electric-400/60 transition duration-300"
+                          />
                         </div>
-                      )}
 
-                      {/* BOARD FLIGHT DIRECT ACTION BUTTON */}
-                      <Button
-                        size="lg"
-                        className="w-full shadow-lg shadow-electric-500/20 uppercase tracking-widest font-extrabold text-[10px] py-4 bg-gradient-to-r from-electric-500 to-blue-600 hover:from-electric-400 hover:to-blue-500"
-                        loading={creatingSession}
-                        onClick={handleBoardFlight}
-                      >
-                        {isPrivate
-                          ? `Engage Engines · 🪙 300`
-                          : `${sessionMode === "CHILL" ? "😌" : "😈"} Board Cabin · ${durationMinutes}m flight`}
-                      </Button>
-                    </motion.div>
-                  );
-                })() : (
-                  <motion.div 
-                    key="compass-ready"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="text-center py-6 text-white/40 leading-relaxed font-mono"
-                  >
-                    <Compass className="size-6 text-white/20 mx-auto mb-2 animate-spin-slow" />
-                    <p className="text-[10px] font-bold text-white/60 uppercase">Flight Router Ready</p>
-                    <p className="text-[8px] text-white/30 max-w-[180px] mx-auto mt-1 leading-normal">
-                      Select a city pin on the radar map to designate departure (🛫) and arrival (🛬) points to board direct!
-                    </p>
-                  </motion.div>
-                )
+                        {/* Error indicator */}
+                        {errorText && (
+                          <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-2.5 text-[10px] text-red-400">
+                            ⚠️ {errorText}
+                          </div>
+                        )}
+
+                        {/* BOARD FLIGHT DIRECT ACTION BUTTON */}
+                        <Button
+                          size="lg"
+                          className="w-full shadow-lg shadow-electric-500/20 uppercase tracking-widest font-extrabold text-[10px] py-4 bg-gradient-to-r from-electric-500 to-blue-600 hover:from-electric-400 hover:to-blue-500"
+                          loading={creatingSession}
+                          onClick={handleBoardFlight}
+                        >
+                          {isPrivate
+                            ? `Engage Engines · 🪙 300`
+                            : `${sessionMode === "CHILL" ? "😌" : "😈"} Board Cabin · ${durationMinutes}m flight`}
+                        </Button>
+                      </div>
+                    );
+                  })() : (
+                    <div className="text-center py-6 text-white/40 leading-relaxed font-mono border-t border-white/5 pt-6">
+                      <Compass className="size-6 text-white/20 mx-auto mb-2 animate-spin-slow" />
+                      <p className="text-[10px] font-bold text-white/60 uppercase">Flight Router Ready</p>
+                      <p className="text-[8px] text-white/30 max-w-[180px] mx-auto mt-1 leading-normal">
+                        Select airport pins on the radar map OR search above to designate departure (🛫) and arrival (🛬) points to board direct!
+                      </p>
+                    </div>
+                  )}
+                </motion.div>
               ) : (
                 <motion.div
                   key="boarding-code-tab"
