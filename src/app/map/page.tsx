@@ -37,7 +37,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "UAE", 
     timezone: "GMT+4", 
     description: "Ultra-modern desert metropolis, gateway between East and West.",
-    preferredDestinations: ["blr", "hyd", "lhr", "sin", "bom", "del", "cdg", "doh", "cpt", "cai"] 
+    preferredDestinations: ["blr", "hyd", "lhr", "sin", "bom", "del", "cdg", "doh", "cpt", "cai", "maa", "ccu"] 
   },
   { 
     id: "blr", 
@@ -50,7 +50,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "India", 
     timezone: "GMT+5:30", 
     description: "The Silicon Valley of India, beautiful gardens and tech hubs.",
-    preferredDestinations: ["dxb", "hyd", "sin", "hnd", "bom", "del"] 
+    preferredDestinations: ["dxb", "hyd", "sin", "hnd", "bom", "del", "kjb", "vtz", "maa", "ccu"] 
   },
   { 
     id: "hyd", 
@@ -63,7 +63,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "India", 
     timezone: "GMT+5:30", 
     description: "Historic City of Pearls, famous for biryani and high-tech parks.",
-    preferredDestinations: ["dxb", "blr", "sin", "lhr", "bom", "del"] 
+    preferredDestinations: ["dxb", "blr", "sin", "lhr", "bom", "del", "kjb", "vtz", "maa", "ccu"] 
   },
   { 
     id: "sin", 
@@ -76,7 +76,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "Singapore", 
     timezone: "GMT+8", 
     description: "Futuristic garden city state, financial capital of Southeast Asia.",
-    preferredDestinations: ["dxb", "blr", "hyd", "syd", "hnd", "hkg", "bkk"] 
+    preferredDestinations: ["dxb", "blr", "hyd", "syd", "hnd", "hkg", "bkk", "maa", "ccu"] 
   },
   { 
     id: "lhr", 
@@ -89,7 +89,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "United Kingdom", 
     timezone: "GMT+1", 
     description: "Vibrant global cultural center, historic architecture and financial hub.",
-    preferredDestinations: ["dxb", "jfk", "hyd", "cdg", "fra", "ams"] 
+    preferredDestinations: ["dxb", "jfk", "hyd", "cdg", "fra", "ams", "bom", "del"] 
   },
   { 
     id: "jfk", 
@@ -115,7 +115,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "Japan", 
     timezone: "GMT+9", 
     description: "High-tech metropolis blending neon skyscrapers and ancient temples.",
-    preferredDestinations: ["sin", "blr", "syd", "icn", "hkg"] 
+    preferredDestinations: ["sin", "blr", "syd", "icn", "hkg", "del"] 
   },
   { 
     id: "syd", 
@@ -141,7 +141,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "India", 
     timezone: "GMT+5:30", 
     description: "Historic gateway city of India, home of Bollywood and massive finance centers.",
-    preferredDestinations: ["dxb", "blr", "hyd", "sin", "lhr"] 
+    preferredDestinations: ["dxb", "blr", "hyd", "sin", "lhr", "del", "kjb", "vtz", "maa", "ccu"] 
   },
   { 
     id: "del", 
@@ -154,7 +154,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "India", 
     timezone: "GMT+5:30", 
     description: "Vibrant capital of India, blending thousands of years of history with modern politics.",
-    preferredDestinations: ["dxb", "blr", "hyd", "lhr", "hnd"] 
+    preferredDestinations: ["dxb", "blr", "hyd", "lhr", "hnd", "bom", "kjb", "vtz", "maa", "ccu"] 
   },
   { 
     id: "lax", 
@@ -232,7 +232,7 @@ const GLOBAL_HUBS: CityHub[] = [
     country: "Hong Kong", 
     timezone: "GMT+8", 
     description: "Breathtaking vertical skyline, bustling harbor, shopping, and culinary wonders.",
-    preferredDestinations: ["sin", "hnd", "dxb", "lhr"] 
+    preferredDestinations: ["sin", "hnd", "dxb", "lhr", "ccu"] 
   },
   { 
     id: "gru", 
@@ -337,6 +337,58 @@ const GLOBAL_HUBS: CityHub[] = [
     timezone: "GMT+1", 
     description: "Canals, tulips, art museums, and incredibly bicycle-friendly cobblestone streets.",
     preferredDestinations: ["lhr", "cdg", "dxb", "jfk"] 
+  },
+  {
+    id: "kjb",
+    name: "Kurnool",
+    code: "KJB",
+    x: 64.5,
+    y: 50.5,
+    lat: 15.7163,
+    lng: 78.1692,
+    country: "India",
+    timezone: "GMT+5:30",
+    description: "Historic city gateway to the scenic Orvakal rock formations and Rayalaseema heritage landmarks of Andhra Pradesh.",
+    preferredDestinations: ["hyd", "blr", "bom", "del", "vtz", "maa"]
+  },
+  {
+    id: "vtz",
+    name: "Visakhapatnam",
+    code: "VTZ",
+    x: 67,
+    y: 48.5,
+    lat: 17.7212,
+    lng: 83.2245,
+    country: "India",
+    timezone: "GMT+5:30",
+    description: "The Jewel of the East Coast, beautiful coastal ports, maritime museums, and sandy beaches of Andhra Pradesh.",
+    preferredDestinations: ["hyd", "blr", "bom", "del", "maa", "kjb"]
+  },
+  {
+    id: "maa",
+    name: "Chennai",
+    code: "MAA",
+    x: 66,
+    y: 52,
+    lat: 12.9941,
+    lng: 80.1709,
+    country: "India",
+    timezone: "GMT+5:30",
+    description: "Gateway to the South, rich Carnatic musical legacy, architectural temples, and coastal Marina Beach walks.",
+    preferredDestinations: ["blr", "hyd", "sin", "dxb", "bom", "del", "vtz", "kjb", "ccu"]
+  },
+  {
+    id: "ccu",
+    name: "Kolkata",
+    code: "CCU",
+    x: 68.5,
+    y: 45,
+    lat: 22.6547,
+    lng: 88.4467,
+    country: "India",
+    timezone: "GMT+5:30",
+    description: "The Cultural Capital of India, historic colonial architecture, bridge views, and rich literary heritage.",
+    preferredDestinations: ["del", "bom", "blr", "sin", "hkg", "maa"]
   }
 ];
 
