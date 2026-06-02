@@ -1245,8 +1245,26 @@ export default function CockpitClient({ id }: { id: string }) {
   };
 
   const syncCoinsToProfile = async (overrideCoins?: number) => {
-    const finalCoins = overrideCoins !== undefined ? overrideCoins : Math.min(100, Math.round(coinsEarned));
+    let currentMode = session?.mode;
+    if (!currentMode) {
+      try {
+        const cachedConfig = localStorage.getItem(`flight_config_${sessionId}`);
+        if (cachedConfig) {
+          const parsed = JSON.parse(cachedConfig);
+          currentMode = parsed.mode;
+        }
+      } catch (err) {
+        console.warn("Fail-safe session cache read failed:", err);
+      }
+    }
+
+    let finalCoins = overrideCoins !== undefined ? overrideCoins : Math.min(100, Math.round(coinsEarned));
     const isCompleted = secondsRemaining === 0;
+
+    // Refund the 500 upfront hardcore coins if they successfully completed the flight!
+    if (overrideCoins === undefined && isCompleted && currentMode === "HARDCORE") {
+      finalCoins += 500;
+    }
 
     // Persist earned coins back to the localStorage profile cache
     try {
@@ -1376,11 +1394,11 @@ export default function CockpitClient({ id }: { id: string }) {
     let finalCoins = Math.min(100, Math.round(coinsEarned));
 
     if (currentMode === "HARDCORE") {
-      const confirmEject = confirm("⚠️ WARNING: Hardcore Flight Mode engaged. Ejecting early will cost -500 focus coins! Do you still want to eject?");
+      const confirmEject = confirm("⚠️ WARNING: Hardcore Flight Mode engaged. Ejecting early will forfeit your 500 coins deposit paid upfront! Do you still want to eject?");
       if (!confirmEject) return;
       
-      // Deduct 500 focus coins for early ejection in Hardcore mode!
-      finalCoins = -500;
+      // Since 500 coins was already deducted upfront, we deduct 0 more on exit
+      finalCoins = 0;
     }
     
     // Clear persistent timer keys on exit to prevent leaks

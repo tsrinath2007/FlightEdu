@@ -336,6 +336,18 @@ export default function BoardingClient({ id }: { id: string }) {
       alert("⚠️ Declaring your focus subject is mandatory before boarding the flight.");
       return;
     }
+    const isHardcore = session?.mode === "HARDCORE";
+    const hardcoreDeposit = isHardcore ? 500 : 0;
+    const totalCost = selectedAirline.cost + selectedClass.cost + hardcoreDeposit;
+
+    if (userCoins < totalCost) {
+      if (isHardcore) {
+        alert(`⚠️ Insufficient focus coins! Hardcore Mode requires a 500 coin security deposit upfront, plus premium selections. You need at least ${totalCost} coins, but you only have ${userCoins} coins.`);
+      } else {
+        alert(`⚠️ Insufficient focus coins! You need at least ${totalCost} coins to board this premium flight class, but you only have ${userCoins} coins.`);
+      }
+      return;
+    }
     setShowManifestModal(true);
   };
 
@@ -351,7 +363,10 @@ export default function BoardingClient({ id }: { id: string }) {
       } catch {}
     }
 
-    const totalCost = selectedAirline.cost + selectedClass.cost;
+    const isHardcore = session?.mode === "HARDCORE";
+    const hardcoreDeposit = isHardcore ? 500 : 0;
+    const totalCost = selectedAirline.cost + selectedClass.cost + hardcoreDeposit;
+
     if (totalCost > 0) {
       try {
         const res = await fetch("/api/user/coins", {
