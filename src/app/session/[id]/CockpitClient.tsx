@@ -4036,6 +4036,26 @@ interface FriendsChatThreadProps {
   friendId: string;
 }
 
+function parseBoardingTicket(content: string) {
+  if (!content.includes("Check out my filed focus boarding ticket!")) {
+    return null;
+  }
+  
+  const focusMatch = content.match(/📚 Focus:\s*(.*)/i);
+  const cruiseMatch = content.match(/⏱️ Cruise:\s*(.*)/i);
+  const fleetMatch = content.match(/✈️ Fleet:\s*(.*)/i);
+  const accruedMatch = content.match(/🪙 Accrued:\s*(.*)/i);
+  const urlMatch = content.match(/🔗\s*(https?:\/\/[^\s\n]+)/i);
+
+  return {
+    focus: focusMatch ? focusMatch[1].trim() : "Focus Study",
+    cruise: cruiseMatch ? cruiseMatch[1].trim() : "Flexible",
+    fleet: fleetMatch ? fleetMatch[1].trim() : "Voyage Fleet",
+    accrued: accruedMatch ? accruedMatch[1].trim() : "0 coins",
+    url: urlMatch ? urlMatch[1].trim() : "#",
+  };
+}
+
 function FriendsChatThread({ friendId }: FriendsChatThreadProps) {
   const [messages, setMessages] = useState<any[]>([]);
   const [typedMessage, setTypedMessage] = useState("");
@@ -4119,6 +4139,78 @@ function FriendsChatThread({ friendId }: FriendsChatThreadProps) {
         ) : (
           messages.map((m) => {
             const isMe = m.senderId !== friendId;
+            const ticketData = parseBoardingTicket(m.content);
+
+            if (ticketData) {
+              return (
+                <div
+                  key={m.id}
+                  className={`flex w-full ${isMe ? "justify-end" : "justify-start"}`}
+                >
+                  <div className="max-w-[85%] w-full sm:max-w-[80%] rounded-[24px] border border-amber-500/30 bg-[#070c18]/95 shadow-[0_0_25px_rgba(245,158,11,0.15)] relative overflow-hidden p-5 flex flex-col gap-3 font-sans transition-all hover:border-amber-500/50">
+                    {/* Ticket Header Gradient */}
+                    <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500" />
+                    
+                    {/* Ticket Title & Brand */}
+                    <div className="flex items-center justify-between text-white border-b border-white/5 pb-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm">🎫</span>
+                        <span className="text-[9px] font-black tracking-widest uppercase text-amber-400 font-mono">
+                          VERIFIED VOYAGE TICKET
+                        </span>
+                      </div>
+                      <span className="text-[8px] font-mono text-white/40 uppercase">GoFocusGen Cabin</span>
+                    </div>
+
+                    {/* Focus Subject */}
+                    <div className="space-y-0.5">
+                      <p className="text-[8px] uppercase font-bold text-white/30 tracking-wider">Flight Focus</p>
+                      <h4 className="text-xs font-black text-white leading-tight">
+                        📚 {ticketData.focus}
+                      </h4>
+                    </div>
+
+                    {/* Flight Details Grid */}
+                    <div className="grid grid-cols-2 gap-3 bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                      <div>
+                        <p className="text-[8px] font-mono text-white/30 uppercase">Cruise Duration</p>
+                        <p className="text-[11px] font-bold text-white mt-0.5">⏱️ {ticketData.cruise}</p>
+                      </div>
+                      <div>
+                        <p className="text-[8px] font-mono text-white/30 uppercase">Fleet Model</p>
+                        <p className="text-[11px] font-bold text-white mt-0.5 truncate max-w-[130px]">✈️ {ticketData.fleet}</p>
+                      </div>
+                    </div>
+
+                    {/* Accrued coins and link action */}
+                    <div className="flex items-center justify-between mt-1 pt-1.5 border-t border-dashed border-white/10">
+                      <div>
+                        <p className="text-[8px] font-mono text-white/30 uppercase">Rewards Accrued</p>
+                        <p className="text-xs font-black text-emerald-400 mt-0.5">🪙 {ticketData.accrued}</p>
+                      </div>
+
+                      <a
+                        href={ticketData.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 px-3.5 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-500/25 active:scale-95 transition cursor-pointer"
+                      >
+                        Pull Out Pass 🎫
+                      </a>
+                    </div>
+
+                    {/* Message Timestamp */}
+                    <div className="flex items-center justify-between text-[8px] text-white/20 mt-1">
+                      <span>{isMe ? "Sent by You" : "Received"}</span>
+                      <span className="font-mono">
+                        {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div
                 key={m.id}
