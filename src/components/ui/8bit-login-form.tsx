@@ -159,13 +159,12 @@ export default function LoginForm() {
                   <label htmlFor="password" className="text-[9px] font-bold text-white uppercase block">
                     Password
                   </label>
-                  <a
-                    href="#"
-                    onClick={() => alert("Autopilot Override: Please use Magic Link login to recover your account!")}
+                  <Link
+                    href="/forgot-password"
                     className="text-[9px] text-[#86868d] hover:text-white underline underline-offset-2 uppercase transition-colors"
                   >
                     Forgot password?
-                  </a>
+                  </Link>
                 </div>
                 <input
                   id="password"
