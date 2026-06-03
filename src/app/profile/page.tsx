@@ -663,8 +663,16 @@ export default function ProfilePage() {
       };
 
       // 4. Try to get authoritative data from DB (may fail if DB is paused)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        try {
+          controller.abort();
+        } catch (e) {}
+      }, 5000);
+
       try {
-        const res = await fetch("/api/user/onboard");
+        const res = await fetch("/api/user/onboard", { signal: controller.signal });
+        clearTimeout(timeoutId);
         if (res.ok) {
           const data = await res.json();
           if (data.user && data.user.id) {
@@ -751,8 +759,16 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function loadFlights() {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        try {
+          controller.abort();
+        } catch (e) {}
+      }, 5000);
+
       try {
-        const res = await fetch("/api/user/flights");
+        const res = await fetch("/api/user/flights", { signal: controller.signal });
+        clearTimeout(timeoutId);
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.flights) {
@@ -776,8 +792,16 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function loadBadges() {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        try {
+          controller.abort();
+        } catch (e) {}
+      }, 5000);
+
       try {
-        const res = await fetch("/api/user/badges");
+        const res = await fetch("/api/user/badges", { signal: controller.signal });
+        clearTimeout(timeoutId);
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.badges) {
