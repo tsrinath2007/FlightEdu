@@ -33,8 +33,8 @@ async function main() {
     // 2. Start transaction block
     await client.query('BEGIN;');
 
-    // 3. Update User coins
-    await client.query('UPDATE "User" SET coins = $1 WHERE id = $2;', [newCoins, userId]);
+    // 3. Update User coins and set receivedWelcomeBonus to true
+    await client.query('UPDATE "User" SET coins = $1, "receivedWelcomeBonus" = true WHERE id = $2;', [newCoins, userId]);
 
     // 4. Insert welcome transaction entry with exact multi-line formatting and emojis
     const welcomeMessage = `yo 👋

@@ -28,6 +28,7 @@ model User {
   distractibility String?
   callDistraction String?
   onboarded      Boolean   @default(false)
+  receivedWelcomeBonus Boolean @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
