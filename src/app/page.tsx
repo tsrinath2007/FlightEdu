@@ -96,14 +96,20 @@ export default function LandingPortalPage() {
         // User has active session, check their onboarding completion
         try {
           const res = await fetch("/api/user/onboard");
+          if (!res.ok) {
+            // Invalid, expired, or stale session
+            setCheckLoading(false);
+            return;
+          }
           const status = await res.json() as { onboarded: boolean };
           if (status.onboarded) {
             router.push("/dashboard");
           } else {
             router.push("/onboarding");
           }
-        } catch {
-          router.push("/onboarding");
+        } catch (err) {
+          console.warn("Failed to check onboarding status:", err);
+          setCheckLoading(false);
         }
       } else {
         setCheckLoading(false);

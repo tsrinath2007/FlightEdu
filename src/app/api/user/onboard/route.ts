@@ -76,7 +76,7 @@ export async function GET() {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ onboarded: false });
+      return NextResponse.json({ error: "Unauthorized", onboarded: false }, { status: 401 });
     }
 
     let onboarded = false;
