@@ -327,16 +327,21 @@ export default function OnboardingPage() {
         return;
       }
 
-      // Check if they are already onboarded in the database
+      // Check if they are already onboarded in the database with a 5s client-side timeout fallback
       try {
-        const statusRes = await fetch("/api/user/onboard");
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const statusRes = await fetch("/api/user/onboard", { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
         const status = await statusRes.json() as { onboarded: boolean };
         if (status.onboarded) {
           router.push("/dashboard");
           return;
         }
       } catch (err) {
-        console.warn("Failed to check onboarding status:", err);
+        console.warn("Failed to check onboarding status or request timed out:", err);
       }
 
       const userPhone = user.user_metadata?.phone ?? "";
