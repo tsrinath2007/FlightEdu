@@ -81,24 +81,17 @@ npm install
 ```
 
 ### 3. Setup Local Environment Variables
-Create a `.env` file in the root directory. Copy the guidelines from `.env.example`:
-```env
-# Database Connections
-DATABASE_URL="postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true"
-DIRECT_URL="postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres"
+Create a `.env` file in the root directory and configure the required environment variables:
 
-# Supabase Auth
-NEXT_PUBLIC_SUPABASE_URL="https://[ref].supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="[anon-key]"
-SUPABASE_SERVICE_ROLE_KEY="[role-key]"
+- `DATABASE_URL` (Prisma connection pooler URL)
+- `DIRECT_URL` (Direct connection URL for migrations)
+- `NEXT_PUBLIC_SUPABASE_URL` (Supabase API URL)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Supabase Anon public key)
+- `SUPABASE_SERVICE_ROLE_KEY` (Supabase Service role key)
+- `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (Google Maps API key)
+- `ANTHROPIC_API_KEY` (Anthropic Claude API key)
+- `NEXT_PUBLIC_APP_URL` (Local development app URL)
 
-# Map & AI Services
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="[google-maps-api-key]"
-ANTHROPIC_API_KEY="[anthropic-api-key]"
-
-# Local App Target
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-```
 
 ### 4. Database Setup & Migrations
 Synchronize your schema models and seed files with PostgreSQL using Prisma:
