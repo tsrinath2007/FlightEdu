@@ -70,9 +70,40 @@ export async function GET(request: Request) {
         }
       }
       
-      const recoveryFlow = cookieStore.get("gofocusgen_recovery_flow")?.value === "true";
+      const type = searchParams.get("type");
+      let isRecoveryFlow = 
+        cookieStore.get("gofocusgen_recovery_flow")?.value === "true" ||
+        next?.startsWith("/reset-password") ||
+        type === "recovery";
+
+      // Attempt to inspect JWT AMR claim to check if session was initiated by password recovery
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          const payloadBase64 = session.access_token.split(".")[1];
+          if (payloadBase64) {
+            const base64 = payloadBase64.replace(/-/g, "+").replace(/_/g, "/");
+            const payloadJson = atob(base64);
+            const payload = JSON.parse(payloadJson);
+            const amr = payload.amr;
+            if (Array.isArray(amr)) {
+              const hasRecoveryAmr = amr.some((entry: any) => {
+                if (typeof entry === "string") return entry === "recovery";
+                if (entry && typeof entry === "object") return entry.method === "recovery";
+                return false;
+              });
+              if (hasRecoveryAmr) {
+                isRecoveryFlow = true;
+              }
+            }
+          }
+        }
+      } catch (jwtError) {
+        console.error("Direct JWT AMR recovery check failed:", jwtError);
+      }
+
       let destination = next ?? (onboarded ? "/dashboard" : "/onboarding");
-      if (recoveryFlow) {
+      if (isRecoveryFlow) {
         destination = "/reset-password";
       }
 
@@ -83,10 +114,8 @@ export async function GET(request: Request) {
         response.cookies.set(name, value, options);
       });
 
-      if (recoveryFlow) {
-        // Clear the recovery flow cookie
-        response.cookies.set("gofocusgen_recovery_flow", "", { maxAge: 0, path: "/" });
-      }
+      // Clear the recovery flow cookie if it was set
+      response.cookies.set("gofocusgen_recovery_flow", "", { maxAge: 0, path: "/" });
 
       return response;
     }
