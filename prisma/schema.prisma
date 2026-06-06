@@ -31,6 +31,7 @@ model User {
   receivedWelcomeBonus Boolean @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  dream          String?
 
   hostedSessions      Session[]            @relation("HostedSessions")
   sessionParticipants SessionParticipant[]
@@ -186,3 +187,14 @@ model PromoCode {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 }
+
+model SessionEvent {
+  id          String   @id @default(cuid())
+  sessionId   String
+  senderId    String
+  senderName  String
+  targetSeat  String
+  type        String   // 'CLAP', 'CHEER', 'COFFEE'
+  createdAt   DateTime @default(now())
+}
+

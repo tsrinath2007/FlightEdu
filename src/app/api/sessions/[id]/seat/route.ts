@@ -39,9 +39,10 @@ export async function POST(
       console.warn("Failed to ensure Session record exists, proceeding anyway:", e);
     }
 
-    const { seatNumber, studySubject } = await request.json() as {
+    const { seatNumber, studySubject, dream } = await request.json() as {
       seatNumber: string;
       studySubject?: string;
+      dream?: string;
     };
 
     if (!seatNumber) {
@@ -72,15 +73,18 @@ export async function POST(
       );
     }
 
-    // 2. If studySubject is specified, update user's studyTime subject in DB
-    if (studySubject) {
+    // 2. If studySubject or dream is specified, update user in DB
+    if (studySubject || dream !== undefined) {
       try {
         await prisma.user.update({
           where: { id: user.id },
-          data: { studyTime: studySubject },
+          data: {
+            ...(studySubject ? { studyTime: studySubject } : {}),
+            ...(dream !== undefined ? { dream } : {}),
+          },
         });
       } catch (err) {
-        console.warn("Failed to sync study subject to user profile:", err);
+        console.warn("Failed to sync study subject/dream to user profile:", err);
       }
     }
 

@@ -24,6 +24,7 @@ export async function GET(
                 studyDuration: true,
                 distractibility: true,
                 callDistraction: true,
+                dream: true,
               },
             },
           },

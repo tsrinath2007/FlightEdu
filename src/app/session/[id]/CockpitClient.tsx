@@ -234,8 +234,9 @@ interface MultiplayerPilot {
   avatarActivity: ActivityType;
   isActive: boolean;
   userId?: string;
-  dream?: string;
+  dream?: string | null;
   isMe?: boolean;
+  pilotId?: string | null;
 }
 
 const INITIAL_MULTIPLAYER_PILOTS: MultiplayerPilot[] = [
@@ -313,6 +314,7 @@ export default function CockpitClient({ id }: { id: string }) {
   const [myDream, setMyDream] = useState("Fly high, reach uni, study my dream job, and conquer this study session!");
   const [studySubject, setStudySubject] = useState("Focus Study");
   const passengerName = currentUser?.name || "YOU";
+  const lastCheckedTimeRef = useRef<number>(Date.now());
 
   // Sound Effects settings sync
   const [soundEffectsEnabled, setSoundEffectsEnabled] = useState(false);
@@ -585,6 +587,8 @@ export default function CockpitClient({ id }: { id: string }) {
               avatarActivity: "LAPTOP" as ActivityType,
               isActive: true,
               userId: u.id || p.userId,
+              pilotId: u.pilotId || null,
+              dream: u.dream || null,
             };
           });
           
@@ -751,8 +755,21 @@ export default function CockpitClient({ id }: { id: string }) {
   const [clapCounts, setClapCounts] = useState<Record<string, number>>({});
   const [cheerCounts, setCheerCounts] = useState<Record<string, number>>({});
 
+  const postInteractionEvent = async (type: "CLAP" | "CHEER" | "COFFEE", targetSeat: string) => {
+    try {
+      await fetch(`/api/sessions/${sessionId}/event`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, targetSeat })
+      });
+    } catch (e) {
+      console.warn("Failed to log interaction event:", e);
+    }
+  };
+
   const handleClap = (seat: string) => {
     setClapCounts(prev => ({ ...prev, [seat]: (prev[seat] || 0) + 1 }));
+    postInteractionEvent("CLAP", seat);
     
     const target = activePilots.find(p => p.seat === seat);
     const targetName = target ? target.name : `Cadet ${seat}`;
@@ -776,6 +793,7 @@ export default function CockpitClient({ id }: { id: string }) {
 
   const handleCheer = (seat: string) => {
     setCheerCounts(prev => ({ ...prev, [seat]: (prev[seat] || 0) + 1 }));
+    postInteractionEvent("CHEER", seat);
     
     const target = activePilots.find(p => p.seat === seat);
     const targetName = target ? target.name : `Cadet ${seat}`;
@@ -810,14 +828,15 @@ export default function CockpitClient({ id }: { id: string }) {
     setSelectedSeatDetails(activePilots[prevIndex]);
   };
 
-  const syncSeatToDatabase = useCallback(async (seatNum: string, currentSubject?: string): Promise<{ ok: boolean; error?: string }> => {
+  const syncSeatToDatabase = useCallback(async (seatNum: string, currentSubject?: string, currentDream?: string): Promise<{ ok: boolean; error?: string }> => {
     try {
       const res = await fetch(`/api/sessions/${sessionId}/seat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           seatNumber: seatNum,
-          studySubject: currentSubject
+          studySubject: currentSubject,
+          dream: currentDream
         }),
       });
       if (!res.ok) {
@@ -1006,6 +1025,87 @@ export default function CockpitClient({ id }: { id: string }) {
     }, 5000);
     return () => clearInterval(interval);
   }, [sessionId, fetchParticipants, fetchFriendships]);
+
+  // Poll for cockpit interaction events (claps, cheers, coffee vibes)
+  useEffect(() => {
+    if (!config?.seatNumber) return;
+
+    const pollEvents = async () => {
+      try {
+        const since = lastCheckedTimeRef.current;
+        const res = await fetch(`/api/sessions/${sessionId}/event?since=${since}&t=${Date.now()}`, {
+          cache: "no-store",
+        });
+        if (res.ok) {
+          const data = await res.json() as { events: any[] };
+          if (data.events && data.events.length > 0) {
+            let maxTime = since;
+            for (const event of data.events) {
+              const eventTime = new Date(event.createdAt).getTime();
+              if (eventTime > maxTime) {
+                maxTime = eventTime;
+              }
+
+              // Process event only if targeted to my seat and sent by someone else
+              if (event.targetSeat === config.seatNumber && event.senderId !== currentUser?.id) {
+                if (event.type === "CLAP") {
+                  showSessionToast(
+                    "Focus Celebrated! 👏",
+                    `${event.senderName} clapped for your focus!`,
+                    "👏",
+                    "border-blue-500/40 text-blue-400 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.25)]"
+                  );
+                  if (soundEffectsEnabled) {
+                    try {
+                      const clapAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+                      clapAudio.volume = 0.2;
+                      clapAudio.play().catch(() => {});
+                    } catch {}
+                  }
+                } else if (event.type === "CHEER") {
+                  showSessionToast(
+                    "Dream Cheered! 🎉",
+                    `${event.senderName} cheered your study dream!`,
+                    "🎉",
+                    "border-yellow-500/40 text-yellow-400 bg-yellow-500/10 shadow-[0_0_15px_rgba(245,158,11,0.25)]"
+                  );
+                  if (soundEffectsEnabled) {
+                    try {
+                      const cheerAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav");
+                      cheerAudio.volume = 0.2;
+                      cheerAudio.play().catch(() => {});
+                    } catch {}
+                  }
+                } else if (event.type === "COFFEE") {
+                  showSessionToast(
+                    `${event.senderName} sent you warm Coffee Vibes! ☕`,
+                    `A hot cup of study focus fuel has arrived at seat ${config.seatNumber}!`,
+                    "☕",
+                    "border-orange-500/40 text-orange-400 bg-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.25)]"
+                  );
+                  setSendingEnergy(config.seatNumber);
+                  if (soundEffectsEnabled) {
+                    try {
+                      const sweep = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav");
+                      sweep.volume = 0.2;
+                      sweep.play().catch(() => {});
+                    } catch {}
+                  }
+                  setTimeout(() => setSendingEnergy(null), 2500);
+                }
+              }
+            }
+            lastCheckedTimeRef.current = maxTime + 1;
+          }
+        }
+      } catch (err) {
+        console.warn("Error polling interaction events:", err);
+      }
+    };
+
+    const interval = setInterval(pollEvents, 5000);
+    return () => clearInterval(interval);
+  }, [sessionId, config, currentUser, soundEffectsEnabled]);
 
   // Autopilot Focus Timer engine (using precise system time intervals to prevent drift and refresh loss)
   useEffect(() => {
@@ -1359,6 +1459,7 @@ export default function CockpitClient({ id }: { id: string }) {
 
   const sendFocusVibes = (targetSeat: string) => {
     setSendingEnergy(targetSeat);
+    postInteractionEvent("COFFEE", targetSeat);
     
     const target = activePilots.find(p => p.seat === targetSeat);
     const targetName = target ? target.name : `Cadet ${targetSeat}`;
@@ -1593,7 +1694,8 @@ export default function CockpitClient({ id }: { id: string }) {
               avatarActivity,
               isActive,
               isMe: true,
-              dream: myDream
+              dream: myDream,
+              pilotId: currentUser?.pilotId || null,
             };
             setSelectedSeatDetails(myDetails);
             if (soundEffectsEnabled) {
@@ -2522,7 +2624,7 @@ export default function CockpitClient({ id }: { id: string }) {
                                       {selectedSeatDetails.name}
                                     </h4>
                                     <p className="text-[9px] text-white/40 font-mono">
-                                      @{selectedSeatDetails.userId ? `pilot_${selectedSeatDetails.userId.substring(0, 5)}` : `crew_${selectedSeatDetails.seat}`}
+                                      @{selectedSeatDetails.pilotId || `seat_${selectedSeatDetails.seat}`}
                                     </p>
                                   </div>
                                 </div>
@@ -2610,6 +2712,9 @@ export default function CockpitClient({ id }: { id: string }) {
                                       const val = e.target.value;
                                       setMyDream(val);
                                       localStorage.setItem("gofocusgen_my_dream", val);
+                                      if (config) {
+                                        syncSeatToDatabase(config.seatNumber, undefined, val).catch(() => {});
+                                      }
                                       setSelectedSeatDetails(prev => prev ? { ...prev, dream: val } : null);
                                     }}
                                     placeholder="Write your study dream..."
@@ -2659,7 +2764,7 @@ export default function CockpitClient({ id }: { id: string }) {
                                         setSelectedChatFriend({
                                           id: selectedSeatDetails.userId,
                                           name: selectedSeatDetails.name,
-                                          pilotId: `seat_${selectedSeatDetails.seat}`,
+                                          pilotId: selectedSeatDetails.pilotId || `seat_${selectedSeatDetails.seat}`,
                                         });
                                       }}
                                       className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-electric-500 to-indigo-600 hover:from-electric-400 hover:to-indigo-500 text-white font-extrabold text-[10px] uppercase tracking-wider transition duration-300 shadow-lg shadow-electric-500/15 active:scale-[0.98] cursor-pointer"
