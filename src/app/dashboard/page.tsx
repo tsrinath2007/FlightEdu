@@ -46,6 +46,7 @@ export default function DashboardPage() {
   const [promoCode, setPromoCode] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoMessage, setPromoMessage] = useState<{ success: boolean; text: string } | null>(null);
+  const [receivedWelcomeBonus, setReceivedWelcomeBonus] = useState<boolean>(true);
 
   // Travel Achievements Progress States
   const [totalHours, setTotalHours] = useState<number>(0);
@@ -127,6 +128,9 @@ export default function DashboardPage() {
           if (data.user.avatarUrl) {
             setAvatarPreview(data.user.avatarUrl);
             localStorage.setItem("gofocusgen_avatar", data.user.avatarUrl);
+          }
+          if (data.user.receivedWelcomeBonus !== undefined) {
+            setReceivedWelcomeBonus(data.user.receivedWelcomeBonus);
           }
           localStorage.setItem("gofocusgen_onboarding", JSON.stringify(data.user));
         }
@@ -266,6 +270,7 @@ export default function DashboardPage() {
         setPromoMessage({ success: true, text: data.message });
         setUserCoins(data.coins);
         setPromoCode("");
+        setReceivedWelcomeBonus(true);
         
         // Refresh notifications to show the welcome alert immediately
         const notifRes = await fetch("/api/user/notifications");
@@ -564,6 +569,36 @@ export default function DashboardPage() {
             {totalRooms} sessions active right now
           </p>
         </div>
+
+        {/* Promo Code Info Banner for new users */}
+        {!loading && !receivedWelcomeBonus && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="mb-4 overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600/20 via-fuchsia-600/10 to-violet-600/20 border border-violet-500/40 p-4 shadow-[0_0_20px_rgba(139,92,246,0.3)] text-left backdrop-blur-md relative group cursor-pointer"
+            onClick={() => setShowSettingsModal(true)}
+          >
+            {/* Ambient neon pulse behind the card */}
+            <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 to-fuchsia-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+            <div className="flex items-center gap-3.5 relative z-10">
+              <span className="text-3xl animate-bounce shrink-0" style={{ animationDuration: "2.5s" }}>🎁</span>
+              <div className="min-w-0 flex-1">
+                <p className="font-display font-black text-violet-300 text-xs tracking-wider uppercase flex items-center gap-1.5">
+                  <span>Starter Pack Cockpit Unlock</span>
+                  <span className="size-1.5 rounded-full bg-violet-400 animate-ping" />
+                </p>
+                <p className="text-white/90 text-[11px] font-semibold mt-1 leading-relaxed">
+                  Use transponder code <span className="text-amber-400 font-extrabold font-mono tracking-wider bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">WELCOME2026</span> for a free <span className="text-yellow-300 font-black">2500 Focus Coins</span>!
+                </p>
+                <p className="text-[9px] text-violet-300/60 font-mono mt-1.5 font-bold uppercase tracking-wide flex items-center gap-1">
+                  <span>⚙️ Open Settings to claim</span>
+                  <span className="transition-transform group-hover:translate-x-1 inline-block">→</span>
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Glowing Gold Admin Coin Alerts Banner */}
         {adminNotifs.length > 0 && (
