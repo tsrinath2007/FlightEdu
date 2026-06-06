@@ -33,18 +33,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "This promo code has been disabled." }, { status: 400 });
     }
 
-    // Check if this user has already redeemed this specific code
-    const alreadyRedeemed = await prisma.transaction.findFirst({
+    // Check if this user has already redeemed or has been blocked from this specific code
+    const existingPromoTx = await prisma.transaction.findFirst({
       where: {
         userId: user.id,
         reason: {
-          contains: `Promo code ${promo.code} redeemed`,
+          contains: `Promo code ${promo.code}`,
           mode: "insensitive"
         }
       }
     });
 
-    if (alreadyRedeemed) {
+    if (existingPromoTx) {
+      const reasonLower = existingPromoTx.reason.toLowerCase();
+      if (reasonLower.includes("blocked") || reasonLower.includes("disabled")) {
+        return NextResponse.json({ error: "This promo code is disabled for your account." }, { status: 400 });
+      }
       return NextResponse.json({ error: "Promo code has already been redeemed." }, { status: 400 });
     }
 
