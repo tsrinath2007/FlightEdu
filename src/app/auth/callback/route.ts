@@ -64,7 +64,14 @@ export async function GET(request: Request) {
             email: user.email,
             name: user.user_metadata?.name ?? user.user_metadata?.full_name ?? null,
             avatarUrl: user.user_metadata?.avatar_url ?? null,
-            coins: 0,
+            coins: 2500,
+            receivedWelcomeBonus: true,
+            transactions: {
+              create: {
+                amount: 2500,
+                reason: "Welcome onboard! +2500 Focus Coins credited to your cockpit treasury. Time to lock in, no cap! ✈️🔥",
+              }
+            }
           },
         });
         onboarded = dbUser?.onboarded ?? false;

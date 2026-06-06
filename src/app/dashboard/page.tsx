@@ -454,7 +454,9 @@ export default function DashboardPage() {
                                           🪙
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                          <p className="text-[9px] font-bold text-white leading-tight">Admin Reward</p>
+                                          <p className="text-[9px] font-bold text-white leading-tight">
+                                            {notif.reason.toLowerCase().includes("welcome") ? "Welcome Gift! 🎁" : "Admin Reward"}
+                                          </p>
                                           <p className="text-[7px] text-white/70 mt-0.5">{notif.reason}</p>
                                           <p className="text-[6px] font-mono text-white/30 mt-0.5">{new Date(notif.createdAt).toLocaleDateString()}</p>
                                         </div>
@@ -536,9 +538,15 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3 relative z-10">
                   <span className="text-2xl animate-pulse">🪙</span>
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-yellow-400 text-sm tracking-wide leading-tight">Focus Reward Granted!</p>
+                    <p className="font-bold text-yellow-400 text-sm tracking-wide leading-tight">
+                      {notif.reason.toLowerCase().includes("welcome") ? "Welcome Gift! 🎁" : "Focus Reward Granted!"}
+                    </p>
                     <p className="text-white/80 text-xs font-medium mt-0.5 leading-relaxed">
-                      You received <span className="text-yellow-300 font-extrabold">{notif.amount}</span> focus coins from Admin
+                      {notif.reason.toLowerCase().includes("welcome") ? (
+                        <>You received a <span className="text-yellow-300 font-extrabold">{notif.amount}</span> coin welcome bonus!</>
+                      ) : (
+                        <>You received <span className="text-yellow-300 font-extrabold">{notif.amount}</span> focus coins from Admin</>
+                      )}
                     </p>
                     <p className="text-[10px] text-white/55 font-mono mt-1 font-semibold italic">"{notif.reason}"</p>
                   </div>
