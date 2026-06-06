@@ -10,16 +10,15 @@ export async function GET(request: Request) {
 
   if (code) {
     const cookieStore = await cookies();
-    
-    // We declare the redirect response first so we can attach the cookies directly to it!
-    const response = NextResponse.redirect(`${origin}/onboarding`);
-
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!url || !anonKey) {
       return NextResponse.redirect(`${origin}/login?error=supabase_not_configured`);
     }
+
+    // Collect cookies to set dynamically
+    const sessionCookies: { name: string; value: string; options: any }[] = [];
 
     const supabase = createServerClient(
       url,
@@ -30,9 +29,14 @@ export async function GET(request: Request) {
             return cookieStore.getAll();
           },
           setAll(cookiesToSet) {
-            for (const { name, value, options } of cookiesToSet) {
-              response.cookies.set(name, value, options);
-            }
+            cookiesToSet.forEach((cookie) => {
+              const idx = sessionCookies.findIndex((c) => c.name === cookie.name);
+              if (idx !== -1) {
+                sessionCookies[idx] = cookie;
+              } else {
+                sessionCookies.push(cookie);
+              }
+            });
           },
         },
       }
@@ -67,9 +71,13 @@ export async function GET(request: Request) {
       }
       
       const destination = next ?? (onboarded ? "/dashboard" : "/onboarding");
+      const response = NextResponse.redirect(`${origin}${destination}`);
       
-      // Update the redirect location in the response header while keeping the cookies attached!
-      response.headers.set("Location", `${origin}${destination}`);
+      // Write all collected cookies to the response object
+      sessionCookies.forEach(({ name, value, options }) => {
+        response.cookies.set(name, value, options);
+      });
+
       return response;
     }
   }
