@@ -43,6 +43,9 @@ export default function DashboardPage() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [soundEffectsEnabled, setSoundEffectsEnabled] = useState(false);
   const [focusRemindersEnabled, setFocusRemindersEnabled] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoMessage, setPromoMessage] = useState<{ success: boolean; text: string } | null>(null);
 
   // Travel Achievements Progress States
   const [totalHours, setTotalHours] = useState<number>(0);
@@ -244,6 +247,44 @@ export default function DashboardPage() {
         setFlightInvites((prev) => prev.filter((inv) => inv.sessionId !== sessionId));
       }
     } catch {}
+  };
+
+  const handleRedeemPromo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!promoCode.trim()) return;
+    setPromoLoading(true);
+    setPromoMessage(null);
+
+    try {
+      const res = await fetch("/api/promo/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: promoCode }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setPromoMessage({ success: true, text: data.message });
+        setUserCoins(data.coins);
+        setPromoCode("");
+        
+        // Refresh notifications to show the welcome alert immediately
+        const notifRes = await fetch("/api/user/notifications");
+        if (notifRes.ok) {
+          const notifData = await notifRes.json();
+          if (notifData.notifications) {
+            const dismissed = JSON.parse(localStorage.getItem("dismissed_admin_notifs") || "[]") as string[];
+            const active = notifData.notifications.filter((n: any) => !dismissed.includes(n.id));
+            setAdminNotifs(active);
+          }
+        }
+      } else {
+        setPromoMessage({ success: false, text: data.error || "Redemption failed." });
+      }
+    } catch (err) {
+      setPromoMessage({ success: false, text: "Connection error." });
+    } finally {
+      setPromoLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -633,7 +674,7 @@ export default function DashboardPage() {
                   <h3 className="font-display text-lg font-bold tracking-wide">GoFocusGen Settings</h3>
                 </div>
                 <button
-                  onClick={() => setShowSettingsModal(false)}
+                  onClick={() => { setShowSettingsModal(false); setPromoCode(""); setPromoMessage(null); }}
                   className="p-1 rounded-full hover:bg-[#EBE7DF] transition cursor-pointer text-[#8C7A78] border-none bg-transparent"
                 >
                   ✕
@@ -724,6 +765,41 @@ export default function DashboardPage() {
                         />
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                {/* Section: Promo Code */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-mono tracking-widest text-[#8C7A78] uppercase font-bold">Promo Code</p>
+                  <div className="rounded-xl bg-white p-4 border border-[#EBE7DF] space-y-3">
+                    <p className="text-[10px] text-[#8C7A78] uppercase leading-relaxed font-semibold">
+                      Enter a cockpit transponder promo code to claim bonus focus coins:
+                    </p>
+                    <form onSubmit={handleRedeemPromo} className="flex gap-2">
+                      <input
+                        type="text"
+                        required
+                        placeholder="WELCOME2026"
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value)}
+                        disabled={promoLoading}
+                        className="flex-1 bg-[#FAF8F5] border border-[#EBE7DF] rounded-xl px-3 py-2 text-xs font-mono text-[#4A3E3D] outline-none placeholder:text-[#FAF8F5]/30 uppercase"
+                      />
+                      <button
+                        type="submit"
+                        disabled={promoLoading}
+                        className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-[10px] uppercase rounded-xl shadow-md transition cursor-pointer select-none border-none outline-none disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      >
+                        {promoLoading ? "Redeeming..." : "Redeem"}
+                      </button>
+                    </form>
+                    {promoMessage && (
+                      <p className={`text-[9px] font-bold uppercase ${
+                        promoMessage.success ? "text-emerald-600" : "text-red-500"
+                      }`}>
+                        {promoMessage.text}
+                      </p>
+                    )}
                   </div>
                 </div>
 

@@ -54,14 +54,7 @@ export async function POST(request: Request) {
           distractibility: body.distractibility,
           callDistraction: body.callDistraction,
           onboarded: true,
-          coins: 2500,
-          receivedWelcomeBonus: true,
-          transactions: {
-            create: {
-              amount: 2500,
-              reason: "Welcome onboard! +2500 Focus Coins credited to your cockpit treasury. Time to lock in, no cap! ✈️🔥",
-            }
-          }
+          coins: 0,
         },
       });
     } catch (dbErr) {
@@ -118,49 +111,6 @@ export async function GET() {
       if (dbUser) {
         onboarded = dbUser.onboarded;
 
-        // Auto-award welcome bonus of 2500 coins if not received yet!
-        if (!dbUser.receivedWelcomeBonus) {
-          try {
-            const updated = await prisma.user.update({
-              where: { id: user.id },
-              data: {
-                coins: { increment: 2500 },
-                receivedWelcomeBonus: true,
-                transactions: {
-                  create: {
-                    amount: 2500,
-                    reason: "Welcome onboard! +2500 Focus Coins credited to your cockpit treasury. Time to lock in, no cap! ✈️🔥",
-                  }
-                }
-              },
-              select: {
-                onboarded: true,
-                receivedWelcomeBonus: true,
-                id: true,
-                name: true,
-                email: true,
-                phone: true,
-                gender: true,
-                pilotId: true,
-                age: true,
-                studyTime: true,
-                studyDuration: true,
-                distractibility: true,
-                callDistraction: true,
-                coins: true,
-                avatarUrl: true,
-                totalHours: true,
-                currentStreak: true,
-                longestStreak: true,
-                streakFreezes: true,
-                lastStudyDate: true,
-              }
-            });
-            dbUser = updated;
-          } catch (bonusErr) {
-            console.error("Failed to dynamically award welcome bonus:", bonusErr);
-          }
-        }
 
         // --- STREAK PROTECTION & FREEZE ENGINE ---
         let currentStreak = dbUser.currentStreak;
