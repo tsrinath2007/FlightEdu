@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     if (existingPromoTx) {
       const reasonLower = existingPromoTx.reason.toLowerCase();
       if (reasonLower.includes("blocked") || reasonLower.includes("disabled")) {
-        return NextResponse.json({ error: "This promo code is disabled for your account." }, { status: 400 });
+        return NextResponse.json({ error: "This promo code is already given by admin." }, { status: 400 });
       }
       return NextResponse.json({ error: "Promo code has already been redeemed." }, { status: 400 });
     }

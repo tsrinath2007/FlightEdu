@@ -11,10 +11,11 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch transactions representing admin grants (e.g. admin, reward, welcome, gift, bonus, grant)
+    // Fetch transactions representing admin grants (where amount is greater than 0)
     const adminNotifs = await prisma.transaction.findMany({
       where: {
         userId: user.id,
+        amount: { gt: 0 },
         OR: [
           { reason: { contains: "admin", mode: "insensitive" } },
           { reason: { contains: "reward", mode: "insensitive" } },
