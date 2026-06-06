@@ -803,6 +803,32 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
+                {/* Section: Promo Code */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-mono tracking-widest text-[#8C7A78] uppercase font-bold">Promo Code</p>
+                  <form onSubmit={handleRedeemPromo} className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Enter Promo Code"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm rounded-xl border border-[#EBE7DF] bg-[#FAF8F5] focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono placeholder:text-gray-400 text-gray-800"
+                    />
+                    <button
+                      type="submit"
+                      disabled={promoLoading || !promoCode.trim()}
+                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-xl shadow transition cursor-pointer disabled:opacity-50"
+                    >
+                      {promoLoading ? "..." : "Redeem"}
+                    </button>
+                  </form>
+                  {promoMessage && (
+                    <p className={`text-xs font-semibold ${promoMessage.success ? "text-emerald-600" : "text-rose-600"}`}>
+                      {promoMessage.text}
+                    </p>
+                  )}
+                </div>
+
                 {/* Section: Support */}
                 <div className="space-y-3">
                   <p className="text-[10px] font-mono tracking-widest text-[#8C7A78] uppercase font-bold">Support & Feedback</p>

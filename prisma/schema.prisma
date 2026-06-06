@@ -179,3 +179,10 @@ model ChatMessage {
 
   @@index([senderId, receiverId])
 }
+
+model PromoCode {
+  code      String   @id
+  coins     Int      @default(2500)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}

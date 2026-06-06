@@ -20,16 +20,25 @@ export async function POST(request: Request) {
 
     const upperCode = rawCode.toUpperCase();
 
-    if (upperCode !== "WELCOME2026") {
+    // Query the database to find the promo code dynamically
+    const promo = await prisma.promoCode.findUnique({
+      where: { code: upperCode }
+    });
+
+    if (!promo) {
       return NextResponse.json({ error: "Invalid promo code." }, { status: 400 });
     }
 
-    // Check if this user has already redeemed the WELCOME2026 code
+    if (!promo.isActive) {
+      return NextResponse.json({ error: "This promo code has been disabled." }, { status: 400 });
+    }
+
+    // Check if this user has already redeemed this specific code
     const alreadyRedeemed = await prisma.transaction.findFirst({
       where: {
         userId: user.id,
         reason: {
-          contains: "WELCOME2026",
+          contains: `Promo code ${promo.code} redeemed`,
           mode: "insensitive"
         }
       }
@@ -39,16 +48,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Promo code has already been redeemed." }, { status: 400 });
     }
 
-    // Award 2500 coins to user, set receivedWelcomeBonus to true, and log the transaction
+    // Award coins dynamically from the promo code record and log the transaction
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
-        coins: { increment: 2500 },
-        receivedWelcomeBonus: true,
+        coins: { increment: promo.coins },
+        // If they redeem the welcome promo code, we can flag receivedWelcomeBonus as true
+        receivedWelcomeBonus: promo.code === "WELCOME2026" ? true : undefined,
         transactions: {
           create: {
-            amount: 2500,
-            reason: "Promo code WELCOME2026 redeemed! +2500 Focus Coins credited to your cockpit treasury. Time to lock in, no cap! ✈️🔥",
+            amount: promo.coins,
+            reason: `Promo code ${promo.code} redeemed! +${promo.coins} Focus Coins credited to your cockpit treasury. Time to lock in, no cap! ✈️🔥`,
           }
         }
       },
@@ -60,7 +70,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       coins: updatedUser.coins,
-      message: "Promo code WELCOME2026 redeemed successfully! +2500 Focus Coins added."
+      message: `Promo code ${promo.code} redeemed successfully! +${promo.coins} Focus Coins added.`
     });
   } catch (error) {
     console.error("Promo redeem error:", error);
