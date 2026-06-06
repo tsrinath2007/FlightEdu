@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/auth", "/demo"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/auth", "/demo", "/forgot-password", "/reset-password"];
 
 export async function proxy(request: NextRequest) {
   const url = request.nextUrl.clone();
