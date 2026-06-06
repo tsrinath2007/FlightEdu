@@ -56,6 +56,8 @@ export default function ForgotPasswordPage() {
     if (error) {
       setError(error.message);
     } else {
+      // Set a secure first-party recovery flow cookie (expires in 30 minutes)
+      document.cookie = "gofocusgen_recovery_flow=true; path=/; max-age=1800; SameSite=Lax";
       setSuccess(true);
     }
     setLoading(false);

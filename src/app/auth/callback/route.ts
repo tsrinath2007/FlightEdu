@@ -70,13 +70,23 @@ export async function GET(request: Request) {
         }
       }
       
-      const destination = next ?? (onboarded ? "/dashboard" : "/onboarding");
+      const recoveryFlow = cookieStore.get("gofocusgen_recovery_flow")?.value === "true";
+      let destination = next ?? (onboarded ? "/dashboard" : "/onboarding");
+      if (recoveryFlow) {
+        destination = "/reset-password";
+      }
+
       const response = NextResponse.redirect(`${origin}${destination}`);
       
       // Write all collected cookies to the response object
       sessionCookies.forEach(({ name, value, options }) => {
         response.cookies.set(name, value, options);
       });
+
+      if (recoveryFlow) {
+        // Clear the recovery flow cookie
+        response.cookies.set("gofocusgen_recovery_flow", "", { maxAge: 0, path: "/" });
+      }
 
       return response;
     }
