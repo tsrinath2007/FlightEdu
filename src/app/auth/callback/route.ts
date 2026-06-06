@@ -45,9 +45,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
-      const cookieNames = cookieStore.getAll().map(c => c.name).join(", ");
-      const debugMsg = `${error.message} (Cookies received: [${cookieNames}])`;
-      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(debugMsg)}`);
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`);
     }
 
     // Sync user to our database directly (prevents HTTP fetch deadlocks & cookie passing failures!)
