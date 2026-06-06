@@ -66,6 +66,20 @@ export default function LoginForm() {
 
   useEffect(() => {
     injectRetroFont();
+    
+    // Check for query parameters for errors
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlError = params.get("error");
+      if (urlError) {
+        // Humanize common errors
+        if (urlError === "otp_expired" || urlError.toLowerCase().includes("expired") || urlError.toLowerCase().includes("invalid")) {
+          setError("Email link is invalid or has expired. Please request a new link.");
+        } else {
+          setError(urlError);
+        }
+      }
+    }
   }, []);
 
   async function handleEmailLogin(e: React.FormEvent) {

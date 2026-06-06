@@ -77,10 +77,24 @@ export default function LandingPortalPage() {
     async function checkExistingSession() {
       // Fail-safe: If Supabase falls back to Site URL and appends ?code=..., forward it to /auth/callback immediately!
       if (typeof window !== "undefined") {
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get("code");
+        const searchParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        
+        const code = searchParams.get("code") || hashParams.get("code");
         if (code) {
           router.push(`/auth/callback?code=${code}`);
+          return;
+        }
+
+        const error = searchParams.get("error") || hashParams.get("error");
+        const errorDesc = 
+          searchParams.get("error_description") || 
+          hashParams.get("error_description") || 
+          searchParams.get("error_code") || 
+          hashParams.get("error_code");
+          
+        if (error || errorDesc) {
+          router.push(`/login?error=${encodeURIComponent(errorDesc || error || "auth_failed")}`);
           return;
         }
       }
