@@ -391,6 +391,10 @@ export default function CockpitClient({ id }: { id: string }) {
       .then((data) => {
         if (data.user) {
           setCurrentUser(data.user);
+          if (data.user.coins !== undefined) {
+            setWalletCoins(data.user.coins);
+            localStorage.setItem(`wallet_coins_${sessionId}`, String(data.user.coins));
+          }
         }
       })
       .catch(() => {});
@@ -921,7 +925,7 @@ export default function CockpitClient({ id }: { id: string }) {
       localStorage.setItem(`wallet_coins_${sessionId}`, String(profileCoins));
     }
 
-    const savedOwned = localStorage.getItem(`owned_customizer_items`);
+    const savedOwned = localStorage.getItem(`owned_customizer_items_v2`);
     if (savedOwned) {
       try {
         setOwnedItems(JSON.parse(savedOwned));
@@ -931,7 +935,7 @@ export default function CockpitClient({ id }: { id: string }) {
     } else {
       const initialOwned = ["hair_spiky", "clothing_tanktop", "eyes_glossy", "activity_LAPTOP"];
       setOwnedItems(initialOwned);
-      localStorage.setItem(`owned_customizer_items`, JSON.stringify(initialOwned));
+      localStorage.setItem(`owned_customizer_items_v2`, JSON.stringify(initialOwned));
     }
 
     const savedHair = localStorage.getItem(`avatar_hair`);
@@ -1432,10 +1436,38 @@ export default function CockpitClient({ id }: { id: string }) {
     }
   };
 
-  const purchaseItem = (id: string, price: number, type: "hair" | "clothing" | "eyes" | "activity", value: string) => {
+  const purchaseItem = async (id: string, price: number, type: "hair" | "clothing" | "eyes" | "activity", value: string) => {
     if (walletCoins < price) {
       alert("⚠️ Insufficient Focus Coins! Keep studying on autopilot to earn more coins.");
       return;
+    }
+
+    try {
+      const res = await fetch("/api/user/coins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          coinsEarned: -price,
+          sessionId,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to deduct coins from database");
+      }
+
+      const dbData = await res.json() as { success: boolean; coins?: number };
+      if (!dbData.success || dbData.coins === undefined) {
+        throw new Error("DB coin deduction was not successful");
+      }
+
+      setWalletCoins(dbData.coins);
+      localStorage.setItem(`wallet_coins_${sessionId}`, String(dbData.coins));
+    } catch (err) {
+      console.error("Purchase error syncing to DB, trying local fallback:", err);
+      const newCoins = walletCoins - price;
+      setWalletCoins(newCoins);
+      localStorage.setItem(`wallet_coins_${sessionId}`, String(newCoins));
     }
 
     if (soundEffectsEnabled) {
@@ -1446,13 +1478,9 @@ export default function CockpitClient({ id }: { id: string }) {
       } catch (e) {}
     }
 
-    const newCoins = walletCoins - price;
-    setWalletCoins(newCoins);
-    localStorage.setItem(`wallet_coins_${sessionId}`, String(newCoins));
-
     const updatedOwned = [...ownedItems, id];
     setOwnedItems(updatedOwned);
-    localStorage.setItem(`owned_customizer_items`, JSON.stringify(updatedOwned));
+    localStorage.setItem(`owned_customizer_items_v2`, JSON.stringify(updatedOwned));
 
     equipItem(type, value, id);
   };
