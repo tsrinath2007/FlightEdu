@@ -2960,9 +2960,9 @@ export default function CockpitClient({ id }: { id: string }) {
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                             {[
                               { id: "activity_LAPTOP", name: "Laptop", value: "LAPTOP", price: 0, icon: "💻", desc: "Alternating rapid typing with terminal code glow." },
-                              { id: "activity_BOOK", name: "Book", value: "BOOK", price: 120, icon: "📚", desc: "Comfy sitting sway reading and slow pages turning." },
-                              { id: "activity_WRITING", name: "Writing", value: "WRITING", price: 180, icon: "📝", desc: "Focused notebook note scribbling and pencil sketch." },
-                              { id: "activity_CHILL", name: "Coffee Chill", value: "CHILL", price: 250, icon: "☕", desc: "Steaming coffee/tea sipping lift cycle." },
+                              { id: "activity_BOOK", name: "Book", value: "BOOK", price: 300, icon: "📚", desc: "Comfy sitting sway reading and slow pages turning." },
+                              { id: "activity_WRITING", name: "Writing", value: "WRITING", price: 450, icon: "📝", desc: "Focused notebook note scribbling and pencil sketch." },
+                              { id: "activity_CHILL", name: "Coffee Chill", value: "CHILL", price: 600, icon: "☕", desc: "Steaming coffee/tea sipping lift cycle." },
                             ].map((item) => {
                               const isOwned = item.price === 0 || ownedItems.includes(item.id);
                               const isEquipped = avatarActivity === item.value;
@@ -3023,9 +3023,9 @@ export default function CockpitClient({ id }: { id: string }) {
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 {[
                                   { id: "hair_spiky", name: "Spiky Black", value: "spiky", color: "black", price: 0, desc: "Classic spiky bangs style." },
-                                  { id: "hair_bob", name: "Sleek Bob", value: "bob", color: "purple", price: 100, desc: "Clean rounded bob styling." },
-                                  { id: "hair_curls", name: "Curly Buns", value: "curls", color: "blonde", price: 120, desc: "Fluffy side twin buns styling." },
-                                  { id: "hair_pilot", name: "Pilot Cap", value: "pilot", color: "black", price: 200, desc: "Official flight crew peaked visor cap." },
+                                  { id: "hair_bob", name: "Sleek Bob", value: "bob", color: "purple", price: 250, desc: "Clean rounded bob styling." },
+                                  { id: "hair_curls", name: "Curly Buns", value: "curls", color: "blonde", price: 350, desc: "Fluffy side twin buns styling." },
+                                  { id: "hair_pilot", name: "Pilot Cap", value: "pilot", color: "black", price: 500, desc: "Official flight crew peaked visor cap." },
                                 ].map((item) => {
                                   const isOwned = item.price === 0 || ownedItems.includes(item.id);
                                   const isEquipped = avatarHair === item.value;
@@ -3072,9 +3072,9 @@ export default function CockpitClient({ id }: { id: string }) {
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 {[
                                   { id: "clothing_tanktop", name: "Black Tank Top", value: "tanktop", price: 0, desc: "Default cool tank collar tee." },
-                                  { id: "clothing_hoodie", name: "Cozy Hoodie", value: "hoodie", price: 150, desc: "Cozy light sky drawstring hoodie." },
-                                  { id: "clothing_uniform", name: "Pilot Suit", value: "uniform", price: 300, desc: "Official navy pilot crew suit & gold tie." },
-                                  { id: "clothing_rose_tee", name: "Rose Tee", value: "rose_tee", price: 120, desc: "Warm pastel crewneck rose shirt." },
+                                  { id: "clothing_hoodie", name: "Cozy Hoodie", value: "hoodie", price: 450, desc: "Cozy light sky drawstring hoodie." },
+                                  { id: "clothing_uniform", name: "Pilot Suit", value: "uniform", price: 800, desc: "Official navy pilot crew suit & gold tie." },
+                                  { id: "clothing_rose_tee", name: "Rose Tee", value: "rose_tee", price: 300, desc: "Warm pastel crewneck rose shirt." },
                                 ].map((item) => {
                                   const isOwned = item.price === 0 || ownedItems.includes(item.id);
                                   const isEquipped = avatarClothing === item.value;
@@ -3122,8 +3122,8 @@ export default function CockpitClient({ id }: { id: string }) {
                         {customizeTab === "daily" && (
                           <div className="grid grid-cols-2 gap-4">
                             {[
-                              { id: "perk_espresso", name: "Lofi Espresso Multiplier", price: 100, icon: "☕", desc: "Adds +0.5x multiplier to focus coins earned." },
-                              { id: "perk_shield", name: "Focus Shield Boost", price: 150, icon: "🛡️", desc: "Improves pressure comfort rating, boosting focus focus stability." },
+                              { id: "perk_espresso", name: "Lofi Espresso Multiplier", price: 200, icon: "☕", desc: "Adds +0.5x multiplier to focus coins earned." },
+                              { id: "perk_shield", name: "Focus Shield Boost", price: 250, icon: "🛡️", desc: "Improves pressure comfort rating, boosting focus focus stability." },
                             ].map((item) => {
                               const isOwned = ownedItems.includes(item.id);
                               return (
