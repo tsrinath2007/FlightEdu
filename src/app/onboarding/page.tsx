@@ -36,8 +36,8 @@ const INITIAL_DATA: OnboardingData = {
   email: "",
   phone: "",
   pilotId: "",
-  gender: "prefer_not_to_say",
-  age: "21",
+  gender: "male",
+  age: "",
   studyTime: "",
   studyDuration: "",
   distractibility: "",
@@ -363,7 +363,7 @@ export default function OnboardingPage() {
         name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? "",
         email: user.email ?? "",
         phone: userPhone,
-        gender: user.user_metadata?.gender ?? "prefer_not_to_say",
+        gender: user.user_metadata?.gender ?? "male",
       }));
       setAuthLoading(false);
     }
@@ -405,6 +405,7 @@ export default function OnboardingPage() {
         newErrors.pilotId = "Still verifying callsign availability...";
       }
     } else if (step === 2) {
+      if (!data.age) newErrors.age = "Please select your age bracket";
       if (!data.studyTime) newErrors.studyTime = "Please select your departure slot";
     } else if (step === 3) {
       if (!data.studyDuration) newErrors.studyDuration = "Please select your cruise duration";
@@ -775,6 +776,9 @@ export default function OnboardingPage() {
                         </div>
                       ))}
                     </div>
+                    {errors.age && (
+                      <p className="mt-2 text-xs text-coral-400">{errors.age}</p>
+                    )}
                   </div>
 
                   <div>
