@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoMessage, setPromoMessage] = useState<{ success: boolean; text: string } | null>(null);
   const [receivedWelcomeBonus, setReceivedWelcomeBonus] = useState<boolean>(false);
+  const [bannerDismissed, setBannerDismissed] = useState<boolean>(false);
 
   // Travel Achievements Progress States
   const [totalHours, setTotalHours] = useState<number>(0);
@@ -57,6 +58,11 @@ export default function DashboardPage() {
 
   // Load custom user details and avatar on user changes
   useEffect(() => {
+    const dismissed = localStorage.getItem("gofocusgen_dismissed_welcome_banner");
+    if (dismissed === "true") {
+      setBannerDismissed(true);
+    }
+
     // A. Perform local key migration immediately to ensure any existing legacy progress is synced
     const legacyPrefixes = ["flightedu", "focuszen", "voyageiq"];
     const targetPrefix = "gofocusgen";
@@ -588,29 +594,42 @@ export default function DashboardPage() {
         </div>
 
         {/* Promo Code Info Banner for new users */}
-        {!loading && !receivedWelcomeBonus && (
+        {!loading && !receivedWelcomeBonus && !bannerDismissed && (
           <motion.div
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            className="mb-4 overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600/20 via-fuchsia-600/10 to-violet-600/20 border border-violet-500/40 p-4 shadow-[0_0_20px_rgba(139,92,246,0.3)] text-left backdrop-blur-md relative group cursor-pointer"
+            className="mb-4 overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600/30 via-fuchsia-600/15 to-violet-900/30 border-2 border-violet-500/50 p-5 sm:p-6 shadow-[0_0_25px_rgba(139,92,246,0.4)] text-left backdrop-blur-md relative group cursor-pointer transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_0_35px_rgba(139,92,246,0.5)]"
             onClick={() => setShowSettingsModal(true)}
           >
             {/* Ambient neon pulse behind the card */}
-            <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 to-fuchsia-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-            <div className="flex items-center gap-3.5 relative z-10">
-              <span className="text-3xl animate-bounce shrink-0" style={{ animationDuration: "2.5s" }}>🎁</span>
+            {/* Dismiss Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setBannerDismissed(true);
+                localStorage.setItem("gofocusgen_dismissed_welcome_banner", "true");
+              }}
+              className="absolute top-3.5 right-3.5 text-white/40 hover:text-white/80 hover:bg-white/10 p-1.5 rounded-full transition z-30 flex items-center justify-center cursor-pointer border-none bg-transparent"
+              title="Dismiss warning banner"
+            >
+              <span className="text-xs">✕</span>
+            </button>
+
+            <div className="flex items-start gap-4 relative z-10 pr-6">
+              <span className="text-4xl sm:text-5xl animate-bounce shrink-0 mt-0.5" style={{ animationDuration: "2.5s" }}>🎁</span>
               <div className="min-w-0 flex-1">
-                <p className="font-display font-black text-violet-300 text-xs tracking-wider uppercase flex items-center gap-1.5">
+                <p className="font-display font-black text-violet-200 text-xs sm:text-sm tracking-wider uppercase flex items-center gap-2">
                   <span>Starter Pack Cockpit Unlock</span>
-                  <span className="size-1.5 rounded-full bg-violet-400 animate-ping" />
+                  <span className="size-2 rounded-full bg-violet-400 animate-ping" />
                 </p>
-                <p className="text-white/90 text-[11px] font-semibold mt-1 leading-relaxed">
-                  Use transponder code <span className="text-amber-400 font-extrabold font-mono tracking-wider bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">WELCOME2026</span> for a free <span className="text-yellow-300 font-black">2500 Focus Coins</span>!
+                <p className="text-white/90 text-xs sm:text-sm font-semibold mt-1.5 leading-relaxed">
+                  Use transponder code <span className="text-amber-400 font-extrabold font-mono tracking-wider bg-amber-400/20 px-2 py-0.5 rounded border border-amber-400/30">WELCOME2026</span> for a free <span className="text-yellow-300 font-black">2500 Focus Coins</span>!
                 </p>
-                <p className="text-[9px] text-violet-300/60 font-mono mt-1.5 font-bold uppercase tracking-wide flex items-center gap-1">
+                <p className="text-[10px] text-violet-300/80 font-mono mt-2.5 font-bold uppercase tracking-wide flex items-center gap-1">
                   <span>⚙️ Open Settings to claim</span>
-                  <span className="transition-transform group-hover:translate-x-1 inline-block">→</span>
+                  <span className="transition-transform group-hover:translate-x-1.5 inline-block">→</span>
                 </p>
               </div>
             </div>
