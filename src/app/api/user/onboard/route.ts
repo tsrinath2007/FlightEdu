@@ -155,6 +155,7 @@ export async function GET() {
             },
             select: {
               onboarded: true,
+              receivedWelcomeBonus: true,
               id: true,
               name: true,
               email: true,

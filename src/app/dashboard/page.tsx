@@ -46,7 +46,7 @@ export default function DashboardPage() {
   const [promoCode, setPromoCode] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoMessage, setPromoMessage] = useState<{ success: boolean; text: string } | null>(null);
-  const [receivedWelcomeBonus, setReceivedWelcomeBonus] = useState<boolean>(true);
+  const [receivedWelcomeBonus, setReceivedWelcomeBonus] = useState<boolean>(false);
 
   // Travel Achievements Progress States
   const [totalHours, setTotalHours] = useState<number>(0);
@@ -92,6 +92,7 @@ export default function DashboardPage() {
         if (parsed.streakFreezes !== undefined) setUserStreakFreezes(parsed.streakFreezes);
         if (parsed.totalHours !== undefined) setTotalHours(parsed.totalHours);
         if (parsed.completedFlightsCount !== undefined) setCompletedFlightsCount(parsed.completedFlightsCount);
+        if (parsed.receivedWelcomeBonus !== undefined) setReceivedWelcomeBonus(parsed.receivedWelcomeBonus);
       } catch {}
     }
 
@@ -269,8 +270,24 @@ export default function DashboardPage() {
       if (res.ok && data.success) {
         setPromoMessage({ success: true, text: data.message });
         setUserCoins(data.coins);
+        const isWelcomeCode = promoCode.trim().toUpperCase() === "WELCOME2026";
         setPromoCode("");
-        setReceivedWelcomeBonus(true);
+        if (isWelcomeCode) {
+          setReceivedWelcomeBonus(true);
+        }
+        
+        // Update local storage cache
+        const cached = localStorage.getItem("gofocusgen_onboarding");
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            parsed.coins = data.coins;
+            if (isWelcomeCode) {
+              parsed.receivedWelcomeBonus = true;
+            }
+            localStorage.setItem("gofocusgen_onboarding", JSON.stringify(parsed));
+          } catch {}
+        }
         
         // Refresh notifications to show the welcome alert immediately
         const notifRes = await fetch("/api/user/notifications");
