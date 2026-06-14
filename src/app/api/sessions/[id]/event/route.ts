@@ -57,6 +57,37 @@ export async function GET(
     const { id: sessionId } = await params;
     const { searchParams } = new URL(request.url);
     const sinceStr = searchParams.get("since");
+
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Verify user is session host or an accepted participant
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+      select: { hostId: true },
+    });
+
+    if (!session) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    }
+
+    const isHost = session.hostId === user.id;
+    const isParticipant = await prisma.sessionParticipant.findFirst({
+      where: {
+        sessionId,
+        userId: user.id,
+        isAccepted: true,
+      },
+      select: { id: true },
+    });
+
+    if (!isHost && !isParticipant) {
+      return NextResponse.json({ error: "Access denied to session events" }, { status: 403 });
+    }
     
     // Default to events from the last 30 seconds if since parameter is not provided
     const sinceDate = sinceStr 

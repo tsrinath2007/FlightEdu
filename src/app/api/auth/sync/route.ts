@@ -17,6 +17,10 @@ export async function POST(request: Request) {
     avatarUrl?: string;
   };
 
+  if (body.id !== user.id) {
+    return NextResponse.json({ error: "Forbidden: Cannot sync different user profile" }, { status: 403 });
+  }
+
   try {
     const dbUser = await prisma.user.upsert({
       where: { id: body.id },

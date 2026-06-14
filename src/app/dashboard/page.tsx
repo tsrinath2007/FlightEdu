@@ -125,6 +125,10 @@ export default function DashboardPage() {
         throw new Error("fail");
       })
       .then((data) => {
+        if (data.onboarded === false && !(typeof window !== "undefined" && window.location.search.includes("simulated=true"))) {
+          router.replace("/onboarding");
+          return;
+        }
         if (data.user) {
           if (data.user.name) setDisplayName(data.user.name);
           if (data.user.coins !== undefined) setUserCoins(data.user.coins);

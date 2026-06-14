@@ -675,6 +675,10 @@ export default function ProfilePage() {
         clearTimeout(timeoutId);
         if (res.ok) {
           const data = await res.json();
+          if (data.onboarded === false && !(typeof window !== "undefined" && window.location.search.includes("simulated=true"))) {
+            router.replace("/onboarding");
+            return;
+          }
           if (data.user && data.user.id) {
             // DB returned data — DB is authoritative, especially for coins
             const dbProfile = {

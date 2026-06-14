@@ -766,6 +766,10 @@ export default function InteractiveMapPage() {
     fetch("/api/user/onboard")
       .then((res) => res.json())
       .then((data) => {
+        if (data.onboarded === false && !(typeof window !== "undefined" && window.location.search.includes("simulated=true"))) {
+          router.replace("/onboarding");
+          return;
+        }
         if (data.user) {
           if (data.user.coins !== undefined) setUserCoins(data.user.coins);
           if (data.user.studyTime) setStudySubject(data.user.studyTime);

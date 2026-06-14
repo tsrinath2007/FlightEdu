@@ -297,6 +297,10 @@ export default function BoardingClient({ id }: { id: string }) {
     fetch("/api/user/onboard")
       .then((res) => res.json())
       .then((data: any) => {
+        if (data.onboarded === false && !(typeof window !== "undefined" && window.location.search.includes("simulated=true"))) {
+          router.replace("/onboarding");
+          return;
+        }
         if (data.user) {
           if (data.user.name) setPassengerName(data.user.name);
           if (data.user.studyTime) setStudySubject(data.user.studyTime);

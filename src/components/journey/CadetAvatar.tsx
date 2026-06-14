@@ -82,9 +82,9 @@ export function CadetAvatar({
         )}
 
         {/* Torso & Clothing Layer */}
-        <div className="relative w-2/3 h-1/3 flex justify-center items-end overflow-visible z-10">
+        <div className="relative w-2/3 h-[38%] flex justify-center items-end overflow-visible z-10">
           {/* Base Torso Body */}
-          <div className="absolute bottom-0 w-4/5 h-full rounded-t-3xl bg-orange-100 border border-amber-900/10 shadow-[inset_0_-8px_10px_rgba(0,0,0,0.05)] overflow-visible">
+          <div className="absolute bottom-0 w-full h-full rounded-t-3xl bg-orange-100 border border-amber-900/10 shadow-[inset_0_-8px_10px_rgba(0,0,0,0.05)] overflow-visible">
             
             {/* Black Tank Top */}
             {clothing === "tanktop" && (
@@ -138,7 +138,7 @@ export function CadetAvatar({
             y: activity === "BOOK" || activity === "WRITING" ? (isActive ? 4 : 2) : 0,
             rotate: activity === "WRITING" ? -1.5 : 0,
           }}
-          className="relative w-1/2 h-1/2 flex items-center justify-center overflow-visible z-20"
+          className="relative w-1/2 h-[45%] flex items-center justify-center overflow-visible z-20"
         >
           {/* Base Face structure */}
           <div className="relative w-4/5 h-4/5 bg-orange-100 rounded-full border border-amber-900/10 shadow-[inset_0_-4px_8px_rgba(0,0,0,0.06)] flex flex-col justify-center items-center overflow-visible">
@@ -255,16 +255,16 @@ export function CadetAvatar({
 
               {/* Pilot Cap */}
               {hairStyle === "pilot" && (
-                <div className="absolute inset-x-[-4px] top-[-14px] h-12 overflow-visible">
+                <div className="absolute inset-x-[-4px] top-[-12px] h-6 overflow-visible">
                   {/* Hair under cap */}
-                  <div className="absolute bottom-0 inset-x-3 h-5 bg-neutral-900 rounded-b" />
+                  <div className="absolute bottom-0 inset-x-3 h-2 bg-neutral-900 rounded-b" />
                   {/* Visor shield */}
-                  <div className="absolute bottom-1 inset-x-1.5 h-3.5 bg-neutral-950 rounded-b-md border-b-2 border-amber-500" />
+                  <div className="absolute bottom-0.5 inset-x-1 h-2 bg-neutral-950 rounded-b-md border-b border-amber-500/80" />
                   {/* Cap crown */}
-                  <div className="absolute -top-1.5 inset-x-1 h-8 bg-gradient-to-b from-slate-800 to-slate-900 rounded-t-[18px] border-t border-slate-600/30 flex items-center justify-center">
+                  <div className="absolute top-0 inset-x-0.5 h-4 bg-gradient-to-b from-slate-800 to-slate-900 rounded-t-[14px] border-t border-slate-600/30 flex items-center justify-center">
                     {/* Golden Emblem badge */}
-                    <div className="size-2.5 bg-amber-500 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_6px_rgba(245,158,11,0.6)]">
-                      <span className="text-[4px] text-black">✈️</span>
+                    <div className="size-2 bg-amber-500 rounded-full flex items-center justify-center shadow-[0_0_4px_rgba(245,158,11,0.6)]">
+                      <span className="text-[3px] text-black">✈️</span>
                     </div>
                   </div>
                 </div>

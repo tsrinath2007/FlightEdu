@@ -33,6 +33,17 @@ export default function LeaderboardPage() {
   const [localUserId, setLocalUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    fetch("/api/user/onboard")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.onboarded === false && !(typeof window !== "undefined" && window.location.search.includes("simulated=true"))) {
+          router.replace("/onboarding");
+        }
+      })
+      .catch(() => {});
+  }, [router]);
+
+  useEffect(() => {
     // Attempt to parse local user id from cached onboarding
     try {
       const onboardCache = localStorage.getItem("gofocusgen_onboarding");

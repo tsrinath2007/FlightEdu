@@ -389,6 +389,10 @@ export default function CockpitClient({ id }: { id: string }) {
     fetch("/api/user/onboard")
       .then((res) => res.json())
       .then((data) => {
+        if (data.onboarded === false && !(typeof window !== "undefined" && window.location.search.includes("simulated=true"))) {
+          router.replace("/onboarding");
+          return;
+        }
         if (data.user) {
           setCurrentUser(data.user);
           if (data.user.coins !== undefined) {
@@ -420,12 +424,13 @@ export default function CockpitClient({ id }: { id: string }) {
       if (otherPilots.length === 0) return;
 
       const randomPilot = otherPilots[Math.floor(Math.random() * otherPilots.length)];
+      const randomPilotDisplayName = randomPilot.pilotId ? `@${randomPilot.pilotId}` : randomPilot.name;
       const actions = ["CLAP", "CHEER", "COFFEE"] as const;
       const randomAction = actions[Math.floor(Math.random() * actions.length)];
 
       if (randomAction === "CLAP") {
         showSessionToast(
-          `${randomPilot.name} clapped for your focus! 👏`,
+          `${randomPilotDisplayName} clapped for your focus! 👏`,
           `They celebrated your task: "${studySubject || "Focus Study"}"`,
           "👏",
           "border-blue-500/40 text-blue-400 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.25)]"
@@ -439,7 +444,7 @@ export default function CockpitClient({ id }: { id: string }) {
         }
       } else if (randomAction === "CHEER") {
         showSessionToast(
-          `${randomPilot.name} cheered your dream! 🎉`,
+          `${randomPilotDisplayName} cheered your dream! 🎉`,
           `They love your goal: "${myDream}"`,
           "🎉",
           "border-yellow-500/40 text-yellow-400 bg-yellow-500/10 shadow-[0_0_15px_rgba(245,158,11,0.25)]"
@@ -453,7 +458,7 @@ export default function CockpitClient({ id }: { id: string }) {
         }
       } else {
         showSessionToast(
-          `${randomPilot.name} sent you warm Coffee Vibes! ☕`,
+          `${randomPilotDisplayName} sent you warm Coffee Vibes! ☕`,
           `A hot cup of study focus fuel has arrived at seat ${config.seatNumber}!`,
           "☕",
           "border-orange-500/40 text-orange-400 bg-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.25)]"
@@ -776,12 +781,12 @@ export default function CockpitClient({ id }: { id: string }) {
     postInteractionEvent("CLAP", seat);
     
     const target = activePilots.find(p => p.seat === seat);
-    const targetName = target ? target.name : `Cadet ${seat}`;
+    const targetDisplayName = target?.pilotId ? `@${target.pilotId}` : (target ? target.name : `Cadet ${seat}`);
     const targetSubject = target ? target.subject : "study";
     
     showSessionToast(
       "Focus Celebrated! 👏",
-      `You clapped for ${targetName}'s focus on "${targetSubject}"!`,
+      `You clapped for ${targetDisplayName}'s focus on "${targetSubject}"!`,
       "👏",
       "border-blue-500/40 text-blue-400 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.25)]"
     );
@@ -800,11 +805,11 @@ export default function CockpitClient({ id }: { id: string }) {
     postInteractionEvent("CHEER", seat);
     
     const target = activePilots.find(p => p.seat === seat);
-    const targetName = target ? target.name : `Cadet ${seat}`;
+    const targetDisplayName = target?.pilotId ? `@${target.pilotId}` : (target ? target.name : `Cadet ${seat}`);
     
     showSessionToast(
       "Dream Cheered! 🎉",
-      `You cheered for ${targetName}'s study dream!`,
+      `You cheered for ${targetDisplayName}'s study dream!`,
       "🎉",
       "border-yellow-500/40 text-yellow-400 bg-yellow-500/10 shadow-[0_0_15px_rgba(245,158,11,0.25)]"
     );
@@ -1052,10 +1057,12 @@ export default function CockpitClient({ id }: { id: string }) {
 
               // Process event only if targeted to my seat and sent by someone else
               if (event.targetSeat === config.seatNumber && event.senderId !== currentUser?.id) {
+                const senderPilot = activePilots.find(p => p.userId === event.senderId);
+                const senderDisplayName = senderPilot?.pilotId ? `@${senderPilot.pilotId}` : event.senderName;
                 if (event.type === "CLAP") {
                   showSessionToast(
                     "Focus Celebrated! 👏",
-                    `${event.senderName} clapped for your focus!`,
+                    `${senderDisplayName} clapped for your focus!`,
                     "👏",
                     "border-blue-500/40 text-blue-400 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.25)]"
                   );
@@ -1069,7 +1076,7 @@ export default function CockpitClient({ id }: { id: string }) {
                 } else if (event.type === "CHEER") {
                   showSessionToast(
                     "Dream Cheered! 🎉",
-                    `${event.senderName} cheered your study dream!`,
+                    `${senderDisplayName} cheered your study dream!`,
                     "🎉",
                     "border-yellow-500/40 text-yellow-400 bg-yellow-500/10 shadow-[0_0_15px_rgba(245,158,11,0.25)]"
                   );
@@ -1082,7 +1089,7 @@ export default function CockpitClient({ id }: { id: string }) {
                   }
                 } else if (event.type === "COFFEE") {
                   showSessionToast(
-                    `${event.senderName} sent you warm Coffee Vibes! ☕`,
+                    `${senderDisplayName} sent you warm Coffee Vibes! ☕`,
                     `A hot cup of study focus fuel has arrived at seat ${config.seatNumber}!`,
                     "☕",
                     "border-orange-500/40 text-orange-400 bg-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.25)]"
@@ -1490,11 +1497,11 @@ export default function CockpitClient({ id }: { id: string }) {
     postInteractionEvent("COFFEE", targetSeat);
     
     const target = activePilots.find(p => p.seat === targetSeat);
-    const targetName = target ? target.name : `Cadet ${targetSeat}`;
+    const targetDisplayName = target?.pilotId ? `@${target.pilotId}` : (target ? target.name : `Cadet ${targetSeat}`);
     
     showSessionToast(
       "Coffee Vibes Gifted! ☕",
-      `You sent fresh, warm focus fuel to ${targetName} at seat ${targetSeat}!`,
+      `You sent fresh, warm focus fuel to ${targetDisplayName} at seat ${targetSeat}!`,
       "☕",
       "border-orange-500/40 text-orange-400 bg-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.25)]"
     );
@@ -3666,7 +3673,7 @@ export default function CockpitClient({ id }: { id: string }) {
                             </div>
                             <div>
                               <p className="text-xs font-bold text-white leading-tight">{u.name}</p>
-                              <p className="text-[9px] font-mono text-white/40 mt-0.5">ID: {u.pilotId}</p>
+                              <p className="text-[9px] font-mono text-white/40 mt-0.5">ID: {u.pilotId ? `@${u.pilotId}` : "No Callsign"}</p>
                             </div>
                           </div>
                           {isAlreadyInCabin ? (

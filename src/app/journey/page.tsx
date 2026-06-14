@@ -34,6 +34,10 @@ export default function JourneyPage() {
         throw new Error("fail");
       })
       .then((data) => {
+        if (data.onboarded === false && !(typeof window !== "undefined" && window.location.search.includes("simulated=true"))) {
+          router.replace("/onboarding");
+          return;
+        }
         if (data.user && typeof data.user.coins === "number") {
           setUserCoins(data.user.coins);
         }

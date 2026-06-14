@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { computePilotRank } from "@/lib/pilotRank";
 import {
   Award,
@@ -136,6 +137,20 @@ function getFriendRankAndBadges(user: PublicUser) {
 }
 
 export default function FriendsPage() {
+  const router = useRouter();
+
+  // Enforce onboarding check on mount
+  useEffect(() => {
+    fetch("/api/user/onboard")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.onboarded === false && !(typeof window !== "undefined" && window.location.search.includes("simulated=true"))) {
+          router.replace("/onboarding");
+        }
+      })
+      .catch(() => {});
+  }, [router]);
+
   const [activeTab, setActiveTab] = useState<"crew" | "add" | "requests">("crew");
   const [friends, setFriends] = useState<FriendshipData[]>([]);
   const [incoming, setIncoming] = useState<FriendshipData[]>([]);
