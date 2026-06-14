@@ -34,7 +34,33 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 301);
   }
 
-  let response = NextResponse.next({ request });
+  // Generate a cryptographically secure random base64 nonce
+  const nonce = btoa(crypto.randomUUID());
+
+  // Format the Content-Security-Policy header
+  const cspHeader = `
+    default-src 'self';
+    script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval';
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    img-src 'self' blob: data: https://api.dicebear.com https://*.openstreetmap.org https://images.unsplash.com;
+    font-src 'self' data: https://fonts.gstatic.com;
+    connect-src 'self' https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://api.dicebear.com https://*.vercel-insights.com;
+    frame-ancestors 'none';
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+  `.replace(/\s{2,}/g, " ").trim();
+
+  // Clone headers and inject custom request headers so that layout/server components can read them
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", cspHeader);
+
+  let response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -54,7 +80,11 @@ export async function proxy(request: NextRequest) {
             for (const { name, value } of cookiesToSet) {
               request.cookies.set(name, value);
             }
-            response = NextResponse.next({ request });
+            response = NextResponse.next({
+              request: {
+                headers: requestHeaders,
+              },
+            });
             for (const { name, value, options } of cookiesToSet) {
               response.cookies.set(name, value, options);
             }
@@ -88,6 +118,10 @@ export async function proxy(request: NextRequest) {
   if (user && (pathname === "/login" || pathname === "/register")) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
+
+  // Set response headers for Content Security Policy & nonce tracking
+  response.headers.set("Content-Security-Policy", cspHeader);
+  response.headers.set("x-nonce", nonce);
 
   return response;
 }
