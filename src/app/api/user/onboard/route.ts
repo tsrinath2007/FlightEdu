@@ -111,6 +111,22 @@ export async function GET() {
       if (dbUser) {
         onboarded = dbUser.onboarded;
 
+        // Server-side self-healing: if they have a pilotId in the database but are marked
+        // onboarded = false (due to a previous failed database update during onboarding),
+        // we automatically heal their status to true.
+        if (!onboarded && dbUser.pilotId) {
+          try {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { onboarded: true },
+            });
+            onboarded = true;
+          } catch (healErr) {
+            console.error("Failed to automatically self-heal onboarding status:", healErr);
+            // Treat as onboarded in-memory since they clearly chose a callsign
+            onboarded = true;
+          }
+        }
 
         // --- STREAK PROTECTION & FREEZE ENGINE ---
         let currentStreak = dbUser.currentStreak;
@@ -182,7 +198,12 @@ export async function GET() {
         }
       }
     } catch (dbErr) {
-      console.warn("Database lookup failed, falling back to false:", dbErr);
+      console.error("Database lookup failed in onboarding API route:", dbErr);
+      // Fail with a 500 error instead of false so client doesn't redirect user to onboarding
+      return NextResponse.json(
+        { error: "Database lookup failed", onboarded: false },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -190,6 +211,7 @@ export async function GET() {
       user: fullUser ?? { id: user.id, email: user.email, name: user.user_metadata?.full_name ?? user.user_metadata?.name },
     });
   } catch (err) {
-    return NextResponse.json({ onboarded: false });
+    console.error("General error in onboarding GET API:", err);
+    return NextResponse.json({ error: "Internal server error", onboarded: false }, { status: 500 });
   }
 }
