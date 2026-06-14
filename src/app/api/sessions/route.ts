@@ -2,8 +2,22 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { nanoid } from "@/lib/nanoid";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
+  try {
+    const ip = getClientIp(request);
+    const limiter = rateLimit(ip, 10, 60000); // 10 requests per minute
+    if (!limiter.success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again in a minute." },
+        { status: 429 }
+      );
+    }
+  } catch (err) {
+    console.warn("Failed to execute session create rate limiting check:", err);
+  }
+
   let userId: string | null = null;
   let userEmail: string = "guest@gofocusgen.com";
   let userName: string = "Simulated Guest";
