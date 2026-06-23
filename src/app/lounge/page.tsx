@@ -434,7 +434,15 @@ export default function LoungePage() {
                             <div key={log.id} className="bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-2xl p-4 transition-all duration-300">
                               <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-2 text-[10px] font-mono text-white/40">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-xs">{log.avatarUrl || "✈️"}</span>
+                                  {log.avatarUrl && (log.avatarUrl.startsWith("http://") || log.avatarUrl.startsWith("https://")) ? (
+                                    <img
+                                      src={log.avatarUrl}
+                                      alt={log.name}
+                                      className="size-5 rounded-full border border-white/10 bg-white/5 object-cover"
+                                    />
+                                  ) : (
+                                    <span className="text-xs">{log.avatarUrl || "✈️"}</span>
+                                  )}
                                   <span className="font-bold text-white/80">{log.name}</span>
                                 </div>
                                 <span>{dateStr} {timeStr}</span>
@@ -493,7 +501,15 @@ export default function LoungePage() {
                                 </td>
                                 <td className="py-4 px-4">
                                   <div className="flex items-center gap-2.5">
-                                    <span className="text-lg">{entry.avatarUrl || "✈️"}</span>
+                                    {entry.avatarUrl && (entry.avatarUrl.startsWith("http://") || entry.avatarUrl.startsWith("https://")) ? (
+                                      <img
+                                        src={entry.avatarUrl}
+                                        alt={entry.name}
+                                        className="size-6 rounded-full border border-white/10 bg-white/5 object-cover"
+                                      />
+                                    ) : (
+                                      <span className="text-lg">{entry.avatarUrl || "✈️"}</span>
+                                    )}
                                     <span className="font-semibold text-white/80">{entry.name}</span>
                                   </div>
                                 </td>
@@ -531,7 +547,15 @@ function CardTemplate({ pilot, progressPercent }: { pilot: ActivePilot; progress
       {/* Top Tag bar */}
       <div className="flex items-center justify-between border-b border-white/5 pb-2.5 mb-3 text-[9px] font-mono">
         <div className="flex items-center gap-1.5 text-white/40">
-          <span>{pilot.avatarUrl || "✈️"}</span>
+          {pilot.avatarUrl && (pilot.avatarUrl.startsWith("http://") || pilot.avatarUrl.startsWith("https://")) ? (
+            <img
+              src={pilot.avatarUrl}
+              alt={pilot.name}
+              className="size-5 rounded-full border border-white/10 bg-white/5 object-cover"
+            />
+          ) : (
+            <span>{pilot.avatarUrl || "✈️"}</span>
+          )}
           <span className="font-bold text-white/80">{pilot.name}</span>
           {pilot.isSimulated && (
             <span className="text-[8px] bg-white/5 border border-white/10 px-1 rounded-sm text-white/30 uppercase">
