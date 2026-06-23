@@ -194,7 +194,7 @@ export default function LoungePage() {
             </p>
 
             <p className="text-white/60 text-sm mt-6 leading-relaxed">
-              Our ground crew is currently prepping the In-Flight Lounge space. The Co-Pilots Lounge, Live presence maps, and Flight Logs will be unlocked in a future build release.
+              Our ground crew is currently prepping the In-Flight Lounge space. Please note that access to this area requires a rank of <strong>Co-Pilot or higher (Co-Pilot+)</strong>. Once the lounge is ready and open for boarding, you will receive a notification to join.
             </p>
 
             <div className="mt-8 flex flex-col items-center gap-3 w-full">
