@@ -455,7 +455,7 @@ export default function LandingPortalPage() {
                 <div className="p-3.5 bg-white/[0.02] border border-blue-500/10 rounded-2xl space-y-2.5">
                   <div className="flex items-center justify-between text-[8px] font-mono text-electric-400 uppercase tracking-wider">
                     <span>⚡ AI FLIGHT SYLLABUS: {demoRoute.subject}</span>
-                    <span className="text-white/40">Real-Time adaptivity active</span>
+                    <span className="text-white/40">UNDER PROCESS</span>
                   </div>
                   <div className="space-y-2">
                     {demoRoute.syllabus.map((s, idx) => (

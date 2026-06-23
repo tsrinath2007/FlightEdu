@@ -32,6 +32,7 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   dream          String?
+  flightLog      String?
 
   hostedSessions      Session[]            @relation("HostedSessions")
   sessionParticipants SessionParticipant[]

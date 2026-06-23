@@ -2544,6 +2544,7 @@ export default function ProfilePage() {
 function BottomNav() {
   const items = [
     { icon: "🏠", label: "Home", href: "/dashboard" },
+    { icon: "☕", label: "Lounge", href: "/lounge" },
     { icon: "👥", label: "Friends", href: "/friends" },
     { icon: "🗺️", label: "Map", href: "/map" },
     { icon: "✈️", label: "Journey", href: "/journey" },
