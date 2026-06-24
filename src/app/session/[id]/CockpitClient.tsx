@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plane, Shield, Compass, Navigation, Award, Volume2, VolumeX, AlertTriangle, 
-  Play, Pause, LogOut, CheckCircle2, ChevronRight, ChevronLeft, Compass as AltimeterIcon,
+  Play, Pause, LogOut, CheckCircle2, ChevronRight, ChevronLeft, ChevronDown, Compass as AltimeterIcon,
   Users, Info, Sparkles, User, RotateCcw, ZoomIn, ZoomOut, ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
   ShoppingBag, Heart, Send, Loader2
 } from "lucide-react";
@@ -313,13 +313,17 @@ export default function CockpitClient({ id }: { id: string }) {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [myDream, setMyDream] = useState("Fly high, reach uni, study my dream job, and conquer this study session!");
   const [studySubject, setStudySubject] = useState("Focus Study");
-  const [aiSyllabus, setAiSyllabus] = useState<{ phase: string; task: string; completed: boolean }[]>([]);
+  const [aiSyllabus, setAiSyllabus] = useState<any[]>([]);
   const [aiSyllabusLoading, setAiSyllabusLoading] = useState(false);
   const passengerName = currentUser?.name || "YOU";
 
+  const fetchedSyllabusRef = useRef<string | null>(null);
+
   // Load AI Flight Syllabus
   useEffect(() => {
-    if (session && studySubject) {
+    const cacheKey = `${sessionId}_${studySubject}`;
+    if (session && studySubject && fetchedSyllabusRef.current !== cacheKey) {
+      fetchedSyllabusRef.current = cacheKey;
       setAiSyllabusLoading(true);
       fetch("/api/ai/syllabus", {
         method: "POST",
@@ -332,13 +336,43 @@ export default function CockpitClient({ id }: { id: string }) {
             setAiSyllabus(data.syllabus.map((s: any) => ({
               ...s,
               completed: false,
+              details: s.details || [],
+              completedDetails: new Array(s.details ? s.details.length : 0).fill(false),
+              isExpanded: false
             })));
           }
         })
-        .catch((err) => console.error("Failed to load AI syllabus:", err))
+        .catch((err) => {
+          console.error("Failed to load AI syllabus:", err);
+          fetchedSyllabusRef.current = null;
+        })
         .finally(() => setAiSyllabusLoading(false));
     }
-  }, [session, studySubject]);
+  }, [session, studySubject, sessionId]);
+
+  const togglePhaseExpand = (idx: number) => {
+    setAiSyllabus((prev) =>
+      prev.map((item, i) => (i === idx ? { ...item, isExpanded: !item.isExpanded } : item))
+    );
+  };
+
+  const toggleSubTask = (phaseIdx: number, detailIdx: number) => {
+    setAiSyllabus((prev) =>
+      prev.map((item, i) => {
+        if (i === phaseIdx) {
+          const nextCompletedDetails = [...(item.completedDetails || [])];
+          nextCompletedDetails[detailIdx] = !nextCompletedDetails[detailIdx];
+          const allDone = nextCompletedDetails.length > 0 && nextCompletedDetails.every(val => val);
+          return {
+            ...item,
+            completedDetails: nextCompletedDetails,
+            completed: allDone ? true : item.completed,
+          };
+        }
+        return item;
+      })
+    );
+  };
   const lastCheckedTimeRef = useRef<number>(Date.now());
 
   // Sound Effects settings sync
@@ -1178,9 +1212,18 @@ export default function CockpitClient({ id }: { id: string }) {
         const cruiseLimit = totalDurationSeconds * 0.8;
         setAiSyllabus((prev) =>
           prev.map((item, idx) => {
-            if (idx === 0 && elapsed > takeoffLimit) return { ...item, completed: true };
-            if (idx === 1 && elapsed > cruiseLimit) return { ...item, completed: true };
-            if (idx === 2 && elapsed >= totalDurationSeconds) return { ...item, completed: true };
+            let autoComplete = false;
+            if (idx === 0 && elapsed > takeoffLimit) autoComplete = true;
+            if (idx === 1 && elapsed > cruiseLimit) autoComplete = true;
+            if (idx === 2 && elapsed >= totalDurationSeconds) autoComplete = true;
+
+            if (autoComplete) {
+              return {
+                ...item,
+                completed: true,
+                completedDetails: item.completedDetails ? item.completedDetails.map(() => true) : [],
+              };
+            }
             return item;
           })
         );
@@ -2233,25 +2276,75 @@ export default function CockpitClient({ id }: { id: string }) {
                   {aiSyllabus.map((item, idx) => (
                     <div 
                       key={idx}
-                      className={`flex items-start gap-3 p-3 rounded-xl border transition ${
+                      onClick={() => togglePhaseExpand(idx)}
+                      className={`cursor-pointer rounded-xl border transition p-3.5 select-none ${
                         item.completed 
-                          ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-300"
-                          : "bg-white/4 border-white/5 text-white/70"
+                          ? "bg-emerald-500/[0.03] border-emerald-500/20 text-emerald-300/90"
+                          : "bg-white/4 border-white/5 text-white/70 hover:bg-white/[0.06] hover:border-white/10"
                       }`}
                     >
-                      <CheckCircle2 className={`size-4 mt-0.5 flex-shrink-0 ${item.completed ? "text-emerald-400" : "text-white/20"}`} />
-                      <div className="text-left">
-                        <span className={`text-[8.5px] font-mono font-bold uppercase px-1.5 py-0.2 rounded ${
-                          idx === 0 
-                            ? "bg-electric-500/10 border border-electric-500/20 text-electric-300"
-                            : idx === 1 
-                              ? "bg-purple-500/10 border border-purple-500/20 text-purple-300"
-                              : "bg-amber-500/10 border border-amber-500/20 text-amber-300"
-                        }`}>
-                          {item.phase}
-                        </span>
-                        <p className="text-[11px] leading-relaxed mt-1.5 font-sans">{item.task}</p>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <CheckCircle2 className={`size-4 mt-0.5 flex-shrink-0 ${item.completed ? "text-emerald-400" : "text-white/20"}`} />
+                          <div className="text-left font-sans">
+                            <span className={`text-[8.5px] font-mono font-bold uppercase px-1.5 py-0.5 rounded ${
+                              idx === 0 
+                                ? "bg-electric-500/10 border border-electric-500/20 text-electric-300"
+                                : idx === 1 
+                                  ? "bg-purple-500/10 border border-purple-500/20 text-purple-300"
+                                  : "bg-amber-500/10 border border-amber-500/20 text-amber-300"
+                            }`}>
+                              {item.phase}
+                            </span>
+                            <p className="text-[11px] leading-relaxed mt-2 font-medium">{item.task}</p>
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0 mt-0.5 text-white/30 hover:text-white/60 transition">
+                          <ChevronDown className={`size-4 transform transition-transform duration-300 ${item.isExpanded ? "rotate-180 text-amber-400" : ""}`} />
+                        </div>
                       </div>
+
+                      {/* Collapsible Details Checklist */}
+                      {item.isExpanded && item.details && item.details.length > 0 && (
+                        <div 
+                          className="mt-3.5 pt-3.5 border-t border-white/5 space-y-2.5"
+                          onClick={(e) => e.stopPropagation()} // Prevent collapsing when interacting with items
+                        >
+                          <div className="text-[8.5px] font-mono font-bold tracking-widest text-white/30 uppercase mb-1">
+                            📋 Phase Checklist
+                          </div>
+                          {item.details.map((detail: string, dIdx: number) => {
+                            const isDetailDone = item.completedDetails?.[dIdx] ?? false;
+                            return (
+                              <label
+                                key={dIdx}
+                                className={`flex items-start gap-2.5 p-2 rounded-lg border cursor-pointer transition text-left ${
+                                  isDetailDone
+                                    ? "bg-emerald-500/[0.02] border-emerald-500/10 text-emerald-400/80"
+                                    : "bg-white/[0.02] border-white/5 text-white/50 hover:bg-white/[0.04] hover:text-white/70"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isDetailDone}
+                                  onChange={() => toggleSubTask(idx, dIdx)}
+                                  className="sr-only" // Hide native checkbox
+                                />
+                                <div className={`size-3.5 rounded border mt-0.5 flex items-center justify-center flex-shrink-0 transition ${
+                                  isDetailDone
+                                    ? "border-emerald-500 bg-emerald-500 text-navy-950"
+                                    : "border-white/20 bg-transparent"
+                                }`}>
+                                  {isDetailDone && <span className="text-[9px] font-black leading-none">✓</span>}
+                                </div>
+                                <span className={`text-[10px] leading-snug font-sans ${isDetailDone ? "line-through opacity-80" : ""}`}>
+                                  {detail}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -12,6 +12,22 @@ function generateFallbackSyllabus(subject: string, durationMin: number) {
   let cruiseTask = "Implement practice problems and build a hands-on mini-project.";
   let descentTask = "Run optimization testing, review mistake logs, and finalize notes.";
 
+  let takeoffDetails: string[] = [
+    "Define study scope and key learning outcomes",
+    "Collect references, tutorials, and documentation",
+    "Review terminology basics and foundational definitions"
+  ];
+  let cruiseDetails: string[] = [
+    "Work through core chapters and standard examples",
+    "Build simple code snippets or solve topic worksheets",
+    "Review complex areas and take detailed study notes"
+  ];
+  let descentDetails: string[] = [
+    "Summarize key insights and compile mistake logs",
+    "Take a quiz or practice testing under time constraints",
+    "Organize notes into a cheatsheet structure"
+  ];
+
   // Check C/C++ first to avoid overlapping other rules
   const isCStyle = 
     subjectLower === "c" || 
@@ -28,34 +44,169 @@ function generateFallbackSyllabus(subject: string, durationMin: number) {
     takeoffTask = "Learn C syntax foundations: study main functions, declare variables, understand data types, and practice basic console Input/Output (printf/scanf).";
     cruiseTask = "Master C control flow: write conditional structures (if-else, switch), execute loops (while, for), and build custom reusable functions.";
     descentTask = "Examine C memory layout: learn pointer declarations, address referencing (&/*), dynamic memory allocation (malloc), and compile/test code.";
+    takeoffDetails = [
+      "Understand main() structure & void/int return types",
+      "Declare variables using int, float, char, and double",
+      "Practice formatting output with printf & placeholders (%d, %f, %c)",
+      "Read user inputs using scanf and memory reference operators (&)"
+    ];
+    cruiseDetails = [
+      "Write conditional flow structures (if, else-if, else)",
+      "Implement multi-case logic using switch-case statements",
+      "Code looping algorithms using while and for loops",
+      "Define custom functions with arguments and return types"
+    ];
+    descentDetails = [
+      "Learn pointer declarations and dereferencing (* and &)",
+      "Understand dynamic memory allocation using malloc() and free()",
+      "Compile code from terminal using gcc compiler options",
+      "Practice debugging basic pointer runtime segfaults"
+    ];
   } else if (subjectLower.includes("rust") || subjectLower.includes("cargo") || subjectLower.includes("wasm")) {
     takeoffTask = "Set up cargo project structure, define core structs & traits, and review memory safety rules (ownership, borrowing, lifetimes).";
     cruiseTask = "Write application logic, implement match control flow structures, compile loops, and resolve borrowing compiler errors.";
     descentTask = "Run cargo test, check memory/bounds safety, write error handling logs, and compile final binaries.";
+    takeoffDetails = [
+      "Understand cargo initialization and workspace layouts",
+      "Declare immutable and mutable variables using let mut",
+      "Write basic print macros (println!, print!)",
+      "Explore pattern matching with match and option types"
+    ];
+    cruiseDetails = [
+      "Learn ownership rules, move semantics, and references",
+      "Resolve borrowing rules and lifetime compiler warnings",
+      "Define custom structures (struct) and trait implementations",
+      "Write loop controls using loop, while, and for expressions"
+    ];
+    descentDetails = [
+      "Write unit tests under the #[cfg(test)] module annotation",
+      "Handle errors gracefully using Result<T, E> and expect()",
+      "Compile project files, inspect compile warnings, and resolve cargo build errors"
+    ];
   } else if (subjectLower.includes("javascript") || subjectLower.includes("js") || subjectLower.includes("typescript") || subjectLower.includes("ts")) {
     takeoffTask = "Learn JS/TS syntax foundations: declare variables (let/const), build type interfaces, and set up basic script blocks.";
     cruiseTask = "Master logic flow: write array operations, construct control loops, build asynchronous async/await event pipelines, and update DOM structures.";
     descentTask = "Validate logic flow: debug script runtime in console, audit closures/scopes, and run compiler type checking.";
+    takeoffDetails = [
+      "Declare scopes using var, let, and const correctly",
+      "Understand primitive types and complex Object structures",
+      "Declare type interfaces and type assertions in TypeScript",
+      "Set up simple script modules and console execution paths"
+    ];
+    cruiseDetails = [
+      "Manipulate arrays using map, filter, reduce, and find",
+      "Create asynchronous promise blocks using async/await",
+      "Attach event listeners to dynamic DOM elements",
+      "Write arrow functions and understand 'this' scope bindings"
+    ];
+    descentDetails = [
+      "Run console testing, use debugger, and catch logic exceptions",
+      "Identify closures, execution contexts, and call stacks",
+      "Run TypeScript tsc compiler checks for clean builds"
+    ];
   } else if (subjectLower.includes("react") || subjectLower.includes("next")) {
     takeoffTask = "Master React/Next.js basics: study file structure conventions, build layout trees, utilize component props, and manage JSX syntax.";
     cruiseTask = "Manage React state flow: utilize hooks (useState, useEffect), control lifecycle rendering, and compose responsive component hierarchies.";
     descentTask = "Optimize web performance: audit hydration errors, implement performance hooks (useMemo, useCallback), and run build check validations.";
+    takeoffDetails = [
+      "Learn component anatomy & write JSX elements",
+      "Pass data down using props and handle defaults",
+      "Study next-gen layout structures (layout.tsx, page.tsx)",
+      "Import styles and configure simple Tailwind layout configurations"
+    ];
+    cruiseDetails = [
+      "Manage state changes using the useState React hook",
+      "Trigger side effects & API fetches using the useEffect hook",
+      "Learn state lifting and sharing data between components",
+      "Build responsive visual layout trees using components"
+    ];
+    descentDetails = [
+      "Define client vs server component boundaries ('use client')",
+      "Implement memoization using useMemo & useCallback hooks",
+      "Configure and debug SSR hydration mismatch warnings",
+      "Run compiler checks and verify local Next.js production builds"
+    ];
   } else if (subjectLower.includes("python")) {
     takeoffTask = "Learn Python syntax basics: understand indentation rules, declare variables/lists/dictionaries, and print console statements.";
     cruiseTask = "Build logic flow: write conditional loops (for, while), define custom parameter functions (def), and parse standard modules.";
-    descentTask = "Review Python code execution: manage exceptions (try-except), test local script scopes, and write clear unit tests.";
+    descentTask = "Review Python code execution: manage exceptions (try-except), test local script scopes, and write clean unit tests.";
+    takeoffDetails = [
+      "Study python indentation and basic syntax formats",
+      "Declare lists, tuples, and dictionary mapping keys",
+      "Write standard print outputs with f-strings format formatting",
+      "Verify local python script interpreter installation"
+    ];
+    cruiseDetails = [
+      "Implement logical flow checks (if, elif, else)",
+      "Code iteration scripts using for loops and range() limits",
+      "Define custom functions using def with parameter keywords",
+      "Import standard modules and libraries (math, json, os)"
+    ];
+    descentDetails = [
+      "Catch script failures using try-except-finally blocks",
+      "Manage module structures and pip package installs",
+      "Write automated unit tests using unittest or pytest tools"
+    ];
   } else if (subjectLower.includes("java")) {
     takeoffTask = "Study Java OOP basics: set up main class structures, declare primitives, write variable declarations, and study class models.";
     cruiseTask = "Design Java control flow: write conditional branches, configure looping statements, construct class methods, and implement interfaces.";
     descentTask = "Validate execution: compile JVM bytecode, manage throws/try-catch exception handlers, and test collections arrays.";
+    takeoffDetails = [
+      "Define public class and static main entrypoint templates",
+      "Understand primitive data structures and object instantiation",
+      "Review the pillars of OOP (Inheritance, Polymorphism)"
+    ];
+    cruiseDetails = [
+      "Code Java control loops and switch conditional selectors",
+      "Structure class constructor patterns and getter/setter methods",
+      "Implement custom interfaces and override superclass methods",
+      "Store data arrays in ArrayList or HashMap collections"
+    ];
+    descentDetails = [
+      "Compile java source code using javac compiler tools",
+      "Handle runtime errors using try-catch blocks and custom exceptions",
+      "Review thread execution flows and check naming formats"
+    ];
   } else if (subjectLower.includes("sql") || subjectLower.includes("database") || subjectLower.includes("postgres") || subjectLower.includes("mysql")) {
     takeoffTask = "Learn SQL selectors: study relational tables, query datasets using SELECT/FROM, and filter rows using WHERE statements.";
     cruiseTask = "Master query relationship flow: perform table relationships using JOINs, apply aggregation groups (GROUP BY), and write HAVING filters.";
     descentTask = "Optimize queries: check execution index performance, analyze query plans with EXPLAIN, and test database transaction commits.";
+    takeoffDetails = [
+      "Study relational schema design and table structures",
+      "Query record columns using SELECT, FROM, and aliases",
+      "Filter rows using WHERE conditions and regex LIKE"
+    ];
+    cruiseDetails = [
+      "Query related table data using INNER JOIN and LEFT JOIN",
+      "Group matching stats using GROUP BY and aggregate functions",
+      "Apply logical filters to grouped rows using HAVING syntax",
+      "Write simple nested queries (subqueries) for dynamic targets"
+    ];
+    descentDetails = [
+      "Create indexing strategies on frequently queried keys",
+      "Check query performance paths using the EXPLAIN command",
+      "Understand database transaction scopes (COMMIT, ROLLBACK)"
+    ];
   } else if (subjectLower.includes("html") || subjectLower.includes("css") || subjectLower.includes("flexbox") || subjectLower.includes("tailwind")) {
     takeoffTask = "Structure web pages: build HTML document trees, code semantic tags (nav, header), and write basic CSS rules.";
     cruiseTask = "Style responsive layout flows: design grids/containers (Flexbox/Grid), define positions, and configure transition styles.";
     descentTask = "Audit visual styling: verify mobile responsiveness breakpoints, debug styling using browser inspectors, and validate standards.";
+    takeoffDetails = [
+      "Structure document files using semantic tags (header, footer)",
+      "Embed links, images, tables, and lists into HTML layouts",
+      "Understand CSS selectors, styling targets, and color codes"
+    ];
+    cruiseDetails = [
+      "Design layout rows using Flexbox directions and alignments",
+      "Create complex grids using CSS Grid template areas",
+      "Position elements using static, relative, absolute, and fixed",
+      "Configure hover and focus styling animation transitions"
+    ];
+    descentDetails = [
+      "Validate responsiveness using mobile viewport simulation",
+      "Debug style overlapping issues using Chrome DevTools elements",
+      "Audit accessibility tags (aria-label, alt image text)"
+    ];
   } else if (subjectLower.includes("chem") || subjectLower.includes("chemistry")) {
     takeoffTask = "Identify chemical reactions, balance molecular equations, and list starting reagent properties.";
     cruiseTask = "Analyze reaction mechanisms step-by-step, draft synthesis pathways, and calculate yield metrics.";
@@ -91,9 +242,9 @@ function generateFallbackSyllabus(subject: string, durationMin: number) {
   }
 
   return [
-    { phase: `Takeoff (${takeoffMin}m)`, task: takeoffTask },
-    { phase: `Cruise (${cruiseMin}m)`, task: cruiseTask },
-    { phase: `Descent (${descentMin}m)`, task: descentTask }
+    { phase: `Takeoff (${takeoffMin}m)`, task: takeoffTask, details: takeoffDetails },
+    { phase: `Cruise (${cruiseMin}m)`, task: cruiseTask, details: cruiseDetails },
+    { phase: `Descent (${descentMin}m)`, task: descentTask, details: descentDetails }
   ];
 }
 
@@ -121,19 +272,33 @@ Takeoff phase should be about 15-20% of the duration (${Math.round(duration * 0.
 Cruise phase should be about 60-70% of the duration (${Math.round(duration * 0.6)} to ${Math.round(duration * 0.7)} minutes).
 Descent phase should be about 15-20% of the duration (${Math.round(duration * 0.15)} to ${Math.round(duration * 0.2)} minutes).
 
+For each phase, provide a high-level task and exactly 3 to 5 specific, actionable step-by-step sub-tasks (details) styled like a W3Schools progressive learning checklist.
+
 The output must be JSON in the format:
 {
   "syllabus": [
-    { "phase": "Takeoff (Xm)", "task": "Task description here..." },
-    { "phase": "Cruise (Ym)", "task": "Task description here..." },
-    { "phase": "Descent (Zm)", "task": "Task description here..." }
+    { 
+      "phase": "Takeoff (Xm)", 
+      "task": "Task description here...", 
+      "details": ["Step 1", "Step 2", "Step 3"] 
+    },
+    { 
+      "phase": "Cruise (Ym)", 
+      "task": "Task description here...", 
+      "details": ["Step 1", "Step 2", "Step 3"] 
+    },
+    { 
+      "phase": "Descent (Zm)", 
+      "task": "Task description here...", 
+      "details": ["Step 1", "Step 2", "Step 3"] 
+    }
   ]
 }
 Return only the raw JSON. Do not include markdown code block formatting or any explanation outside the JSON.`;
 
       const response = await anthropic.messages.create({
         model: "claude-3-5-sonnet-20241022",
-        max_tokens: 400,
+        max_tokens: 800,
         messages: [{ role: "user", content: prompt }],
       });
 
