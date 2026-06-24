@@ -35,8 +35,8 @@ const FEATURES = [
   },
   {
     icon: "🤖",
-    title: "AI Co-Pilot Study Plans (UNDER PROCESS)",
-    description: "Receive fully custom study plans synthesized dynamically by our flight AI, tailored specifically to your chosen subject and voyage duration. (Currently under development)",
+    title: "AI Co-Pilot Study Plans",
+    description: "Receive fully custom study plans synthesized dynamically by our flight AI, tailored specifically to your chosen subject and cruise duration.",
   },
   {
     icon: "🏆",
@@ -70,7 +70,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "How personalized are the AI co-pilot study plans?",
-    answer: "Extremely personalized! When you start a flight, you input your study topic (e.g. 'Intro to Rust' or 'Biochemistry Exam Prep'). Our AI Co-Pilot analyzes the topic and divides it into precise milestones mapped to your takeoff, cruise, and descent phases, providing a step-by-step custom syllabus for that specific flight's duration. (Feature currently UNDER PROCESS / Under Development)",
+    answer: "Extremely personalized! When you start a flight, you input your study topic (e.g. 'Intro to Rust' or 'Biochemistry Exam Prep'). Our AI Co-Pilot analyzes the topic and divides it into precise milestones mapped to your takeoff, cruise, and descent phases, providing a step-by-step custom syllabus for that specific flight's duration.",
   },
   {
     question: "What is the difference between Chill and Hardcore modes?",
@@ -455,7 +455,7 @@ export default function LandingPortalPage() {
                 <div className="p-3.5 bg-white/[0.02] border border-blue-500/10 rounded-2xl space-y-2.5">
                   <div className="flex items-center justify-between text-[8px] font-mono text-electric-400 uppercase tracking-wider">
                     <span>⚡ AI FLIGHT SYLLABUS: {demoRoute.subject}</span>
-                    <span className="text-white/40">UNDER PROCESS</span>
+                    <span className="text-white/40">Real-Time adaptivity active</span>
                   </div>
                   <div className="space-y-2">
                     {demoRoute.syllabus.map((s, idx) => (
@@ -511,8 +511,8 @@ export default function LandingPortalPage() {
           </div>
           <div className="p-5 rounded-3xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition duration-300">
             <span className="text-2xl">2️⃣</span>
-            <h4 className="font-bold text-sm text-white mt-3">AI Flight Syllabus (UNDER PROCESS)</h4>
-            <p className="text-[11px] text-white/40 mt-1">Input your study goal. Our AI divides it into takeoff, cruise, and descent checkpoints. (Currently under development)</p>
+            <h4 className="font-bold text-sm text-white mt-3">AI Flight Syllabus</h4>
+            <p className="text-[11px] text-white/40 mt-1">Input your study goal. Our AI divides it into takeoff, cruise, and descent checkpoints.</p>
           </div>
           <div className="p-5 rounded-3xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition duration-300">
             <span className="text-2xl">3️⃣</span>

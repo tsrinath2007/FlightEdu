@@ -7,7 +7,7 @@ import {
   Plane, Shield, Compass, Navigation, Award, Volume2, VolumeX, AlertTriangle, 
   Play, Pause, LogOut, CheckCircle2, ChevronRight, ChevronLeft, Compass as AltimeterIcon,
   Users, Info, Sparkles, User, RotateCcw, ZoomIn, ZoomOut, ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
-  ShoppingBag, Heart, Send
+  ShoppingBag, Heart, Send, Loader2
 } from "lucide-react";
 import { CadetAvatar, HairStyle, ClothingStyle, EyesStyle, ActivityType } from "@/components/journey/CadetAvatar";
 
@@ -313,7 +313,32 @@ export default function CockpitClient({ id }: { id: string }) {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [myDream, setMyDream] = useState("Fly high, reach uni, study my dream job, and conquer this study session!");
   const [studySubject, setStudySubject] = useState("Focus Study");
+  const [aiSyllabus, setAiSyllabus] = useState<{ phase: string; task: string; completed: boolean }[]>([]);
+  const [aiSyllabusLoading, setAiSyllabusLoading] = useState(false);
   const passengerName = currentUser?.name || "YOU";
+
+  // Load AI Flight Syllabus
+  useEffect(() => {
+    if (session && studySubject) {
+      setAiSyllabusLoading(true);
+      fetch("/api/ai/syllabus", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject: studySubject, duration: session.duration }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.syllabus) {
+            setAiSyllabus(data.syllabus.map((s: any) => ({
+              ...s,
+              completed: false,
+            })));
+          }
+        })
+        .catch((err) => console.error("Failed to load AI syllabus:", err))
+        .finally(() => setAiSyllabusLoading(false));
+    }
+  }, [session, studySubject]);
   const lastCheckedTimeRef = useRef<number>(Date.now());
 
   // Sound Effects settings sync
@@ -1145,6 +1170,17 @@ export default function CockpitClient({ id }: { id: string }) {
         if (elapsed > 30) {
           setChecklist((prev) => prev.map((item) => item.id === 4 ? { ...item, completed: true } : item));
         }
+
+        const takeoffLimit = totalDurationSeconds * 0.2;
+        const cruiseLimit = totalDurationSeconds * 0.8;
+        setAiSyllabus((prev) =>
+          prev.map((item, idx) => {
+            if (idx === 0 && elapsed > takeoffLimit) return { ...item, completed: true };
+            if (idx === 1 && elapsed > cruiseLimit) return { ...item, completed: true };
+            if (idx === 2 && elapsed >= totalDurationSeconds) return { ...item, completed: true };
+            return item;
+          })
+        );
 
         // --- Pilot Presence Check Security System ---
         const presenceActive = localStorage.getItem(`flight_presence_check_active_${sessionId}`) === "true";
@@ -2171,6 +2207,56 @@ export default function CockpitClient({ id }: { id: string }) {
                   <span className="text-[10px] text-emerald-400">{config?.aircraft?.comfort || "★★★★★"}</span>
                 </div>
               </div>
+            </div>
+
+            {/* AI Flight Syllabus */}
+            <div className="rounded-3xl border border-white/10 bg-navy-900/30 p-6 backdrop-blur-md mb-6">
+              <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
+                <h3 className="font-display text-xs font-black tracking-widest text-electric-400 uppercase flex items-center gap-1.5">
+                  <span>🤖 AI Flight Syllabus</span>
+                </h3>
+                <span className="text-[8px] font-mono text-white/30 uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded">
+                  Radar Online
+                </span>
+              </div>
+
+              {aiSyllabusLoading ? (
+                <div className="flex flex-col items-center justify-center py-6 gap-2 text-white/40">
+                  <Loader2 className="size-6 animate-spin text-electric-400" />
+                  <span className="text-[10px] font-mono uppercase tracking-wider">Synthesizing milestones...</span>
+                </div>
+              ) : aiSyllabus.length > 0 ? (
+                <div className="space-y-3">
+                  {aiSyllabus.map((item, idx) => (
+                    <div 
+                      key={idx}
+                      className={`flex items-start gap-3 p-3 rounded-xl border transition ${
+                        item.completed 
+                          ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-300"
+                          : "bg-white/4 border-white/5 text-white/70"
+                      }`}
+                    >
+                      <CheckCircle2 className={`size-4 mt-0.5 flex-shrink-0 ${item.completed ? "text-emerald-400" : "text-white/20"}`} />
+                      <div className="text-left">
+                        <span className={`text-[8.5px] font-mono font-bold uppercase px-1.5 py-0.2 rounded ${
+                          idx === 0 
+                            ? "bg-electric-500/10 border border-electric-500/20 text-electric-300"
+                            : idx === 1 
+                              ? "bg-purple-500/10 border border-purple-500/20 text-purple-300"
+                              : "bg-amber-500/10 border border-amber-500/20 text-amber-300"
+                        }`}>
+                          {item.phase}
+                        </span>
+                        <p className="text-[11px] leading-relaxed mt-1.5 font-sans">{item.task}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[10px] font-mono text-white/30 italic text-center py-4">
+                  Syllabus offline. Check transponder logs.
+                </p>
+              )}
             </div>
 
             {/* Focus checklist log */}
