@@ -6,24 +6,56 @@ function generateFallbackSyllabus(subject: string, durationMin: number) {
   const descentMin = Math.max(5, Math.round(durationMin * 0.15));
   const cruiseMin = durationMin - takeoffMin - descentMin;
 
-  const subjectLower = subject.toLowerCase();
+  const subjectLower = subject.toLowerCase().trim();
   
   let takeoffTask = "Review core foundational concepts and write down key definitions.";
   let cruiseTask = "Implement practice problems and build a hands-on mini-project.";
   let descentTask = "Run optimization testing, review mistake logs, and finalize notes.";
 
-  if (subjectLower.includes("rust") || subjectLower.includes("cargo") || subjectLower.includes("wasm")) {
-    takeoffTask = "Set up cargo project structure, define core structs & traits, and review memory safety rules.";
-    cruiseTask = "Write the main application loops, implement custom handlers, and resolve ownership compiler errors.";
-    descentTask = "Run cargo test, check memory leaks, document the crate, and review compile warnings.";
+  // Check C/C++ first to avoid overlapping other rules
+  const isCStyle = 
+    subjectLower === "c" || 
+    subjectLower.startsWith("c ") || 
+    subjectLower.endsWith(" c") || 
+    subjectLower.includes(" c ") || 
+    subjectLower.includes("c++") || 
+    subjectLower.includes("cpp") || 
+    subjectLower.includes("c programming") || 
+    subjectLower.includes("c-programming") ||
+    subjectLower.includes("objective-c");
+
+  if (isCStyle) {
+    takeoffTask = "Learn C syntax foundations: study main functions, declare variables, understand data types, and practice basic console Input/Output (printf/scanf).";
+    cruiseTask = "Master C control flow: write conditional structures (if-else, switch), execute loops (while, for), and build custom reusable functions.";
+    descentTask = "Examine C memory layout: learn pointer declarations, address referencing (&/*), dynamic memory allocation (malloc), and compile/test code.";
+  } else if (subjectLower.includes("rust") || subjectLower.includes("cargo") || subjectLower.includes("wasm")) {
+    takeoffTask = "Set up cargo project structure, define core structs & traits, and review memory safety rules (ownership, borrowing, lifetimes).";
+    cruiseTask = "Write application logic, implement match control flow structures, compile loops, and resolve borrowing compiler errors.";
+    descentTask = "Run cargo test, check memory/bounds safety, write error handling logs, and compile final binaries.";
   } else if (subjectLower.includes("javascript") || subjectLower.includes("js") || subjectLower.includes("typescript") || subjectLower.includes("ts")) {
-    takeoffTask = "Initialize codebase, declare modules & types, and review core API reference docs.";
-    cruiseTask = "Implement logical functions, build dynamic UI event handlers, and chain array/object helper methods.";
-    descentTask = "Run console testing, optimize garbage collection and complexity, and write simple unit tests.";
+    takeoffTask = "Learn JS/TS syntax foundations: declare variables (let/const), build type interfaces, and set up basic script blocks.";
+    cruiseTask = "Master logic flow: write array operations, construct control loops, build asynchronous async/await event pipelines, and update DOM structures.";
+    descentTask = "Validate logic flow: debug script runtime in console, audit closures/scopes, and run compiler type checking.";
   } else if (subjectLower.includes("react") || subjectLower.includes("next")) {
-    takeoffTask = "Set up file structure, verify API layouts, declare component props, and initialize states.";
-    cruiseTask = "Build hooks integration, manage side effects, and compose responsive component trees.";
-    descentTask = "Audit web accessibility guidelines, optimize render performance, and test production build bundlers.";
+    takeoffTask = "Master React/Next.js basics: study file structure conventions, build layout trees, utilize component props, and manage JSX syntax.";
+    cruiseTask = "Manage React state flow: utilize hooks (useState, useEffect), control lifecycle rendering, and compose responsive component hierarchies.";
+    descentTask = "Optimize web performance: audit hydration errors, implement performance hooks (useMemo, useCallback), and run build check validations.";
+  } else if (subjectLower.includes("python")) {
+    takeoffTask = "Learn Python syntax basics: understand indentation rules, declare variables/lists/dictionaries, and print console statements.";
+    cruiseTask = "Build logic flow: write conditional loops (for, while), define custom parameter functions (def), and parse standard modules.";
+    descentTask = "Review Python code execution: manage exceptions (try-except), test local script scopes, and write clear unit tests.";
+  } else if (subjectLower.includes("java")) {
+    takeoffTask = "Study Java OOP basics: set up main class structures, declare primitives, write variable declarations, and study class models.";
+    cruiseTask = "Design Java control flow: write conditional branches, configure looping statements, construct class methods, and implement interfaces.";
+    descentTask = "Validate execution: compile JVM bytecode, manage throws/try-catch exception handlers, and test collections arrays.";
+  } else if (subjectLower.includes("sql") || subjectLower.includes("database") || subjectLower.includes("postgres") || subjectLower.includes("mysql")) {
+    takeoffTask = "Learn SQL selectors: study relational tables, query datasets using SELECT/FROM, and filter rows using WHERE statements.";
+    cruiseTask = "Master query relationship flow: perform table relationships using JOINs, apply aggregation groups (GROUP BY), and write HAVING filters.";
+    descentTask = "Optimize queries: check execution index performance, analyze query plans with EXPLAIN, and test database transaction commits.";
+  } else if (subjectLower.includes("html") || subjectLower.includes("css") || subjectLower.includes("flexbox") || subjectLower.includes("tailwind")) {
+    takeoffTask = "Structure web pages: build HTML document trees, code semantic tags (nav, header), and write basic CSS rules.";
+    cruiseTask = "Style responsive layout flows: design grids/containers (Flexbox/Grid), define positions, and configure transition styles.";
+    descentTask = "Audit visual styling: verify mobile responsiveness breakpoints, debug styling using browser inspectors, and validate standards.";
   } else if (subjectLower.includes("chem") || subjectLower.includes("chemistry")) {
     takeoffTask = "Identify chemical reactions, balance molecular equations, and list starting reagent properties.";
     cruiseTask = "Analyze reaction mechanisms step-by-step, draft synthesis pathways, and calculate yield metrics.";
@@ -53,9 +85,9 @@ function generateFallbackSyllabus(subject: string, durationMin: number) {
     cruiseTask = "Implement forward pass calculus, execute gradient backpropagation, and write gradient descent loops.";
     descentTask = "Plot training loss curves, analyze overfitting ratios, and adjust model hyperparameter settings.";
   } else {
-    takeoffTask = `Review core concepts and foundational definitions for ${subject}.`;
-    cruiseTask = `Complete active study cycles, solve practice problems, and build mini-examples.`;
-    descentTask = `Test your retention of ${subject} under time pressure and compile notes summary.`;
+    takeoffTask = `Review core concepts and foundational definitions for ${subject} in a structured sequence.`;
+    cruiseTask = `Step-by-step mastery: Complete active learning cycles, solve topic exercises, and write mini-examples.`;
+    descentTask = `Test your retention of ${subject} under focus, review mistake patterns, and compile a summary.`;
   }
 
   return [

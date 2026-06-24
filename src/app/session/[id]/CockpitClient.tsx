@@ -1035,14 +1035,17 @@ export default function CockpitClient({ id }: { id: string }) {
           aircraft: resolvedAircraft,
         };
         setConfig(merged as any);
+        setStudySubject(merged.studySubject || "Focus Study");
         // Never await/throw from useEffect — fire-and-forget
         syncSeatToDatabase(merged.seatNumber, merged.studySubject).catch(() => {});
       } catch (e) {
         console.error("Config parse fail:", e);
         setConfig(def as any);
+        setStudySubject(def.studySubject || "Focus Study");
       }
     } else {
       setConfig(def as any);
+      setStudySubject(def.studySubject || "Focus Study");
       syncSeatToDatabase(def.seatNumber, def.studySubject).catch(() => {});
     }
 
