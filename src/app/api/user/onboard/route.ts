@@ -105,6 +105,7 @@ export async function GET() {
           longestStreak: true,
           streakFreezes: true,
           lastStudyDate: true,
+          freezeCooldownStart: true,
         },
       });
 
@@ -132,11 +133,14 @@ export async function GET() {
         let currentStreak = dbUser.currentStreak;
         let streakFreezes = dbUser.streakFreezes ?? 2;
         let lastStudyDate = dbUser.lastStudyDate;
+        let freezeCooldownStart = dbUser.freezeCooldownStart;
         let dbUpdated = false;
 
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        // 1. Process Idle Streak Freeze Decays
         if (lastStudyDate) {
-          const now = new Date();
-          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
           const lastDate = new Date(lastStudyDate);
           const lastStudyDay = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate());
 
@@ -161,6 +165,32 @@ export async function GET() {
           }
         }
 
+        // 2. Process Auto-Replenish Cooldown (wait for 8 days to get another freeze, up to max 3)
+        if (streakFreezes < 3) {
+          if (!freezeCooldownStart) {
+            freezeCooldownStart = now;
+            dbUpdated = true;
+          } else {
+            const cooldownTime = now.getTime() - new Date(freezeCooldownStart).getTime();
+            const cooldownDays = Math.floor(cooldownTime / (1000 * 60 * 60 * 24));
+            if (cooldownDays >= 8) {
+              const freezesToAdd = Math.floor(cooldownDays / 8);
+              const nextFreezesCount = Math.min(3, streakFreezes + freezesToAdd);
+              
+              streakFreezes = nextFreezesCount;
+              if (streakFreezes >= 3) {
+                freezeCooldownStart = null;
+              } else {
+                freezeCooldownStart = new Date(new Date(freezeCooldownStart).getTime() + freezesToAdd * 8 * 24 * 60 * 60 * 1000);
+              }
+              dbUpdated = true;
+            }
+          }
+        } else if (freezeCooldownStart) {
+          freezeCooldownStart = null;
+          dbUpdated = true;
+        }
+
         if (dbUpdated) {
           const updatedUser = await prisma.user.update({
             where: { id: user.id },
@@ -168,6 +198,7 @@ export async function GET() {
               currentStreak,
               streakFreezes,
               lastStudyDate,
+              freezeCooldownStart,
             },
             select: {
               onboarded: true,
@@ -190,6 +221,7 @@ export async function GET() {
               longestStreak: true,
               streakFreezes: true,
               lastStudyDate: true,
+              freezeCooldownStart: true,
             },
           });
           fullUser = updatedUser;

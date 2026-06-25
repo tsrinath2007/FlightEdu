@@ -36,6 +36,9 @@ export default function DashboardPage() {
   const [userCoins, setUserCoins] = useState<number>(0);
   const [userStreak, setUserStreak] = useState<number>(0);
   const [userStreakFreezes, setUserStreakFreezes] = useState<number>(2);
+  const [freezeCooldownStart, setFreezeCooldownStart] = useState<string | null>(null);
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
   const [flightInvites, setFlightInvites] = useState<any[]>([]);
   const [adminNotifs, setAdminNotifs] = useState<any[]>([]);
@@ -96,6 +99,7 @@ export default function DashboardPage() {
         if (parsed.currentStreak !== undefined) setUserStreak(parsed.currentStreak);
         if (parsed.longestStreak !== undefined) setUserLongestStreak(parsed.longestStreak);
         if (parsed.streakFreezes !== undefined) setUserStreakFreezes(parsed.streakFreezes);
+        if (parsed.freezeCooldownStart !== undefined) setFreezeCooldownStart(parsed.freezeCooldownStart);
         if (parsed.totalHours !== undefined) setTotalHours(parsed.totalHours);
         if (parsed.completedFlightsCount !== undefined) setCompletedFlightsCount(parsed.completedFlightsCount);
         if (parsed.receivedWelcomeBonus !== undefined) setReceivedWelcomeBonus(parsed.receivedWelcomeBonus);
@@ -135,6 +139,7 @@ export default function DashboardPage() {
           if (data.user.currentStreak !== undefined) setUserStreak(data.user.currentStreak);
           if (data.user.longestStreak !== undefined) setUserLongestStreak(data.user.longestStreak);
           if (data.user.streakFreezes !== undefined) setUserStreakFreezes(data.user.streakFreezes);
+          if (data.user.freezeCooldownStart !== undefined) setFreezeCooldownStart(data.user.freezeCooldownStart);
           if (data.user.totalHours !== undefined) setTotalHours(data.user.totalHours);
           if (data.user.avatarUrl) {
             setAvatarPreview(data.user.avatarUrl);
@@ -199,6 +204,66 @@ export default function DashboardPage() {
       })
       .catch(() => {});
   }, [user]);
+
+  const getCooldownText = () => {
+    if (!freezeCooldownStart || userStreakFreezes >= 3) return null;
+    const start = new Date(freezeCooldownStart);
+    const next = new Date(start.getTime() + 8 * 24 * 60 * 60 * 1000);
+    const now = new Date();
+    const diff = next.getTime() - now.getTime();
+    if (diff <= 0) return "Ready soon (refresh page)";
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    
+    if (days > 0) {
+      return `${days}d ${hours}h remaining`;
+    }
+    return `${hours}h remaining`;
+  };
+
+  const handleBuyStreakFreeze = async () => {
+    if (userStreakFreezes >= 3) {
+      setPurchaseError("Max capacity of 3 freezes reached!");
+      return;
+    }
+    if (userCoins < 450) {
+      setPurchaseError("Insufficient coins. You need 450 coins.");
+      return;
+    }
+    
+    setPurchaseLoading(true);
+    setPurchaseError(null);
+    try {
+      const res = await fetch("/api/user/streak-freeze/buy", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to purchase");
+      }
+      
+      setUserCoins(data.coins);
+      setUserStreakFreezes(data.streakFreezes);
+      setFreezeCooldownStart(data.freezeCooldownStart);
+      
+      // Update local storage cache
+      const cached = localStorage.getItem("gofocusgen_onboarding");
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          parsed.coins = data.coins;
+          parsed.streakFreezes = data.streakFreezes;
+          parsed.freezeCooldownStart = data.freezeCooldownStart;
+          localStorage.setItem("gofocusgen_onboarding", JSON.stringify(parsed));
+        } catch {}
+      }
+    } catch (err: any) {
+      setPurchaseError(err.message || "Something went wrong");
+    } finally {
+      setPurchaseLoading(false);
+    }
+  };
 
   // Simulate live feed: add a new person every 8 seconds
   useEffect(() => {
@@ -1071,9 +1136,43 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Streak Freezes Available Segment (Premium layout with custom checklist icon matching screenshot!) */}
-                    <div className="flex items-center gap-3 mt-6 justify-center text-sm font-semibold border-t border-white/5 pt-4 text-white/90">
-                      <StreakFreezeIcon />
-                      <span>{userStreakFreezes} {userStreakFreezes === 1 ? 'streak freeze' : 'streak freezes'} ready to use</span>
+                    <div className="border-t border-white/5 mt-6 pt-4 space-y-3">
+                      <div className="flex items-center justify-between text-sm font-semibold text-white/90">
+                        <div className="flex items-center gap-3">
+                          <StreakFreezeIcon />
+                          <span>{userStreakFreezes} / 3 {userStreakFreezes === 1 ? 'streak freeze' : 'streak freezes'} ready</span>
+                        </div>
+                        {userStreakFreezes < 3 && userCoins >= 450 && (
+                          <button
+                            onClick={handleBuyStreakFreeze}
+                            disabled={purchaseLoading}
+                            className="px-3 py-1 text-[10px] uppercase font-bold tracking-wider bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 text-white rounded-full transition shadow-md shadow-orange-500/20 cursor-pointer"
+                          >
+                            {purchaseLoading ? "Buying..." : "Buy (+1) • 450 🪙"}
+                          </button>
+                        )}
+                        {userStreakFreezes < 3 && userCoins < 450 && (
+                          <div className="text-[10px] text-white/40 font-bold uppercase tracking-wider bg-white/5 px-2.5 py-1 rounded-full" title="Need 450 coins to buy a freeze">
+                            Buy • 450 🪙
+                          </div>
+                        )}
+                        {userStreakFreezes >= 3 && (
+                          <div className="text-[10px] text-green-400 font-bold uppercase tracking-wider bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full">
+                            Max Capacity
+                          </div>
+                        )}
+                      </div>
+
+                      {userStreakFreezes < 3 && freezeCooldownStart && (
+                        <div className="text-[10px] font-medium text-cyan-400 bg-cyan-950/20 border border-cyan-850/20 px-3 py-1.5 rounded-xl flex items-center justify-between animate-pulse">
+                          <span className="flex items-center gap-1.5">❄️ Cooldown:</span>
+                          <span className="font-mono font-bold">{getCooldownText()}</span>
+                        </div>
+                      )}
+
+                      {purchaseError && (
+                        <p className="text-[10px] font-semibold text-red-400 text-center">{purchaseError}</p>
+                      )}
                     </div>
                   </div>
 

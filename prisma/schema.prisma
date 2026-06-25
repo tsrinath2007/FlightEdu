@@ -19,6 +19,7 @@ model User {
   longestStreak  Int       @default(0)
   streakFreezes  Int       @default(2)   // Streak freeze protections (starts at 2, max 3)
   lastStudyDate  DateTime?
+  freezeCooldownStart DateTime?
   unlockedMaps   String[]  @default([])
   age            String?
   phone          String?

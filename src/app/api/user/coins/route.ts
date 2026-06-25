@@ -40,6 +40,7 @@ export async function POST(request: Request) {
           streakFreezes: true,
           lastStudyDate: true,
           totalHours: true,
+          freezeCooldownStart: true,
         },
       });
 
@@ -70,16 +71,30 @@ export async function POST(request: Request) {
         if (diffDays === 1) {
           // Continued study streak (yesterday to today)
           newStreak = dbUser.currentStreak + 1;
-          // Award 1 streak freeze for completing a week of streak (7 days)
-          if (newStreak % 7 === 0) {
+          // Award 1 streak freeze for completing a week of streak (7 days) ONLY if they haven't run out of freezes entirely (count > 0)
+          if (newStreak % 7 === 0 && newStreakFreezes > 0) {
             newStreakFreezes = Math.min(3, newStreakFreezes + 1);
           }
         } else if (diffDays === 0) {
           // Already studied today, maintain the current streak
           newStreak = dbUser.currentStreak;
         } else {
-          // Streak broken (diffDays > 1), restart streak at 1
-          newStreak = 1;
+          // Streak is endangered / broken! (diffDays > 1)
+          const daysToFreeze = diffDays - 1;
+          if (newStreakFreezes >= daysToFreeze) {
+            // We have enough streak freezes to cover the idle period up to yesterday!
+            newStreakFreezes -= daysToFreeze;
+            // Now, they are studying TODAY, so their new streak continues!
+            newStreak = dbUser.currentStreak + 1;
+            // Also award weekly streak completion if applicable
+            if (newStreak % 7 === 0 && newStreakFreezes > 0) {
+              newStreakFreezes = Math.min(3, newStreakFreezes + 1);
+            }
+          } else {
+            // Not enough freezes, streak is broken!
+            newStreakFreezes = 0;
+            newStreak = 1; // Restart streak at 1 because they are studying today!
+          }
         }
       }
 
@@ -118,8 +133,9 @@ export async function POST(request: Request) {
           longestStreak: Math.max(dbUser.longestStreak, newStreak),
           streakFreezes: newStreakFreezes,
           lastStudyDate: newLastStudyDate,
+          freezeCooldownStart: newStreakFreezes >= 3 ? null : (dbUser.freezeCooldownStart || now),
         },
-        select: { coins: true, currentStreak: true, streakFreezes: true },
+        select: { coins: true, currentStreak: true, streakFreezes: true, freezeCooldownStart: true },
       });
 
       return NextResponse.json({
@@ -127,6 +143,7 @@ export async function POST(request: Request) {
         coins: updated.coins,
         currentStreak: updated.currentStreak,
         streakFreezes: updated.streakFreezes,
+        freezeCooldownStart: updated.freezeCooldownStart,
       });
     } catch (dbErr) {
       console.warn("DB coin and streak sync failed:", dbErr);
