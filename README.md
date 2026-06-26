@@ -1,4 +1,4 @@
-# ✈️ VoyageIQ & GoFocusGen 🧭
+# ✈️ VoyageIQ & GoFocusGen 
 
 > **Study like you're travelling the world.** Translate real-world travel paths into dedicated focus blocks, land at international airports, earn focus coins, and unlock global territories.
 
