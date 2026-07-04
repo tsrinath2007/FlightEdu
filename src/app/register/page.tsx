@@ -2,12 +2,13 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/brand/Logo";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 
 const COUNTRY_CODES = [
   { code: "+91", country: "India", flag: "🇮🇳" },
@@ -36,6 +37,10 @@ export default function RegisterPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<any>(null);
+  const hcaptchaSiteKey = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY;
 
   function handlePilotIdChange(val: string) {
     const cleanVal = val.toLowerCase().replace(/[^a-z0-9_]/g, ""); // Allow only lowercase alphanumeric and underscores
@@ -88,6 +93,11 @@ export default function RegisterPage() {
       return;
     }
 
+    if (hcaptchaSiteKey && !captchaToken) {
+      setError("Please verify you are not a bot (Captcha required).");
+      return;
+    }
+
     setLoading(true);
     setError("");
     const supabase = createClient();
@@ -99,11 +109,16 @@ export default function RegisterPage() {
       options: {
         data: { name, pilotId, phone: fullPhone, gender },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
+        captchaToken: captchaToken || undefined,
       },
     });
 
     if (error) {
       setError(error.message);
+      if (captchaRef.current) {
+        captchaRef.current.reset();
+        setCaptchaToken(null);
+      }
     } else {
       // Persist details locally for offline-first profile synchronization
       const localTaken = localStorage.getItem("taken_pilot_ids");
@@ -303,6 +318,23 @@ export default function RegisterPage() {
                   >
                     ⚡ {error}
                   </motion.p>
+                )}
+
+                {/* hCaptcha Widget */}
+                {hcaptchaSiteKey && (
+                  <div className="flex justify-center my-4">
+                    <HCaptcha
+                      ref={captchaRef}
+                      sitekey={hcaptchaSiteKey}
+                      onVerify={(token) => setCaptchaToken(token)}
+                      onExpire={() => setCaptchaToken(null)}
+                      onError={(err) => {
+                        console.error("hCaptcha Error:", err);
+                        setCaptchaToken(null);
+                      }}
+                      theme="dark"
+                    />
+                  </div>
                 )}
 
                 <Button type="submit" size="lg" className="w-full" loading={loading}>
