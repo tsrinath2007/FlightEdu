@@ -66,6 +66,15 @@ export default function DashboardPage() {
       setBannerDismissed(true);
     }
 
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("openSettings") === "true") {
+        setShowSettingsModal(true);
+        // Clear the query parameter so it doesn't reopen on refresh
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+
     // A. Perform local key migration immediately to ensure any existing legacy progress is synced
     const legacyPrefixes = ["flightedu", "focuszen", "voyageiq"];
     const targetPrefix = "gofocusgen";
@@ -663,7 +672,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Promo Code Info Banner for new users */}
-        {!loading && !receivedWelcomeBonus && !bannerDismissed && (
+        {!loading && !receivedWelcomeBonus && (
           <motion.div
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -673,20 +682,7 @@ export default function DashboardPage() {
             {/* Ambient neon pulse behind the card */}
             <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-            {/* Dismiss Button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setBannerDismissed(true);
-                localStorage.setItem("gofocusgen_dismissed_welcome_banner", "true");
-              }}
-              className="absolute top-3.5 right-3.5 text-white/40 hover:text-white/80 hover:bg-white/10 p-1.5 rounded-full transition z-30 flex items-center justify-center cursor-pointer border-none bg-transparent"
-              title="Dismiss warning banner"
-            >
-              <span className="text-xs">✕</span>
-            </button>
-
-            <div className="flex items-start gap-4 relative z-10 pr-6">
+            <div className="flex items-start gap-4 relative z-10">
               <span className="text-4xl sm:text-5xl animate-bounce shrink-0 mt-0.5" style={{ animationDuration: "2.5s" }}>🎁</span>
               <div className="min-w-0 flex-1">
                 <p className="font-display font-black text-violet-200 text-xs sm:text-sm tracking-wider uppercase flex items-center gap-2">

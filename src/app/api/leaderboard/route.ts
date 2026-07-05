@@ -38,6 +38,7 @@ export async function GET(request: Request) {
       totalHours: true,
       currentStreak: true,
       longestStreak: true,
+      receivedWelcomeBonus: true,
     };
 
     let rankings: any[] = [];

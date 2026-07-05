@@ -28,16 +28,35 @@ export default function LeaderboardPage() {
   const [currentUserRank, setCurrentUserRank] = useState<number | null>(null);
   const [currentUser, setCurrentUser] = useState<PublicUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [receivedWelcomeBonus, setReceivedWelcomeBonus] = useState<boolean>(true); // default to true to avoid flashing
 
   // Load active user from localStorage just to ensure we can identify them immediately in case db lag
   const [localUserId, setLocalUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Load from cache first
+    try {
+      const cached = localStorage.getItem("gofocusgen_onboarding");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.receivedWelcomeBonus !== undefined) {
+          setReceivedWelcomeBonus(parsed.receivedWelcomeBonus);
+        }
+      }
+    } catch {}
+
     fetch("/api/user/onboard")
       .then((res) => res.json())
       .then((data) => {
         if (data.onboarded === false && !(typeof window !== "undefined" && window.location.search.includes("simulated=true"))) {
           router.replace("/onboarding");
+          return;
+        }
+        if (data.user) {
+          if (data.user.receivedWelcomeBonus !== undefined) {
+            setReceivedWelcomeBonus(data.user.receivedWelcomeBonus);
+          }
+          localStorage.setItem("gofocusgen_onboarding", JSON.stringify(data.user));
         }
       })
       .catch(() => {});
@@ -67,6 +86,9 @@ export default function LeaderboardPage() {
         setRankings(data.rankings || []);
         setCurrentUserRank(data.currentUserRank);
         setCurrentUser(data.currentUser);
+        if (data.currentUser && data.currentUser.receivedWelcomeBonus !== undefined) {
+          setReceivedWelcomeBonus(data.currentUser.receivedWelcomeBonus);
+        }
       }
     } catch (err) {
       console.error("Failed to load rankings:", err);
@@ -131,6 +153,36 @@ export default function LeaderboardPage() {
       </header>
 
       <div className="relative z-30 mx-auto w-full max-w-md flex-1 px-4 pb-32 flex flex-col">
+        {/* Starter Pack Cockpit Unlock Banner */}
+        {!receivedWelcomeBonus && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="mb-4 overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600/30 via-fuchsia-600/15 to-violet-900/30 border-2 border-violet-500/50 p-5 sm:p-6 shadow-[0_0_25px_rgba(139,92,246,0.4)] text-left backdrop-blur-md relative group cursor-pointer transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_0_35px_rgba(139,92,246,0.5)]"
+            onClick={() => router.push("/dashboard?openSettings=true")}
+          >
+            {/* Ambient neon pulse behind the card */}
+            <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+            <div className="flex items-start gap-4 relative z-10">
+              <span className="text-4xl sm:text-5xl animate-bounce shrink-0 mt-0.5" style={{ animationDuration: "2.5s" }}>🎁</span>
+              <div className="min-w-0 flex-1">
+                <p className="font-display font-black text-violet-200 text-xs sm:text-sm tracking-wider uppercase flex items-center gap-2">
+                  <span>Starter Pack Cockpit Unlock</span>
+                  <span className="size-2 rounded-full bg-violet-400 animate-ping" />
+                </p>
+                <p className="text-white/90 text-xs sm:text-sm font-semibold mt-1.5 leading-relaxed">
+                  Use transponder code <span className="text-amber-400 font-extrabold font-mono tracking-wider bg-amber-400/20 px-2 py-0.5 rounded border border-amber-400/30">WELCOME2026</span> for a free <span className="text-yellow-300 font-black">2500 Focus Coins</span>!
+                </p>
+                <p className="text-[10px] text-violet-300/80 font-mono mt-2.5 font-bold uppercase tracking-wide flex items-center gap-1">
+                  <span>⚙️ Open Dashboard Settings to claim</span>
+                  <span className="transition-transform group-hover:translate-x-1.5 inline-block">→</span>
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Toggle Scope: World / Friends */}
         <div className="mb-4 flex gap-1 rounded-2xl bg-white/5 border border-white/8 p-1 backdrop-blur-md">
           <button

@@ -31,9 +31,24 @@ export async function POST(request: Request) {
     const upperCode = rawCode.toUpperCase();
 
     // Query the database to find the promo code dynamically
-    const promo = await prisma.promoCode.findUnique({
+    let promo = await prisma.promoCode.findUnique({
       where: { code: upperCode }
     });
+
+    // Dynamically initialize WELCOME2026 if it doesn't exist
+    if (!promo && upperCode === "WELCOME2026") {
+      try {
+        promo = await prisma.promoCode.create({
+          data: {
+            code: "WELCOME2026",
+            coins: 2500,
+            isActive: true,
+          }
+        });
+      } catch (dbErr) {
+        console.warn("Could not auto-create WELCOME2026 promo code:", dbErr);
+      }
+    }
 
     if (!promo) {
       return NextResponse.json({ error: "Invalid promo code." }, { status: 400 });
