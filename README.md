@@ -1,5 +1,5 @@
 # ✈️ VoyageIQ & GoFocusGen 
-
+#HI
 > **Study like you're travelling the world.** Translate real-world travel paths into dedicated focus blocks, land at international airports, earn focus coins, and unlock global territories.
 
 VoyageIQ (also branded as **GoFocusGen**) is an immersive, high-fidelity, gamified study-focus cockpit. Designed as a flight simulator experience, it transforms standard Pomodoro timer concepts into deep focus voyages. Pilots select real-world routes (Flights, Trains, Cars, or Buses) across an interactive global map, board multiplayer cabins, check in on autopilot presence alerts, personalize chibi cadets, and archive holographic boarding passes in their pilot closet.
