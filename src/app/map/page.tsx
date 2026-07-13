@@ -626,17 +626,33 @@ export default function InteractiveMapPage() {
 
     mapInstanceRef.current = map;
 
-    // Select Google Maps tiles URL based on selected style
-    // lyrs keys: m = roadmap (Standard Streets), s = satellite (Only), y = hybrid (Sat + Roads), t = terrain (Terrain)
-    let mapUrl = "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"; // Default Hybrid
-    if (mapStyle === "roadmap") mapUrl = "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
-    if (mapStyle === "satellite") mapUrl = "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}";
-    if (mapStyle === "terrain") mapUrl = "https://mt1.google.com/vt/lyrs=t&x={x}&y={y}&z={z}";
-
-    L.tileLayer(mapUrl, {
-      maxZoom: 20,
-      attribution: "&copy; Google Maps",
-    }).addTo(map);
+    // Select map tiles based on style to prevent Google Maps ad-blocker blocks and rate-limiting
+    if (mapStyle === "roadmap") {
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        maxZoom: 20,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      }).addTo(map);
+    } else if (mapStyle === "satellite") {
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 19,
+        attribution: "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
+      }).addTo(map);
+    } else if (mapStyle === "terrain") {
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 19,
+        attribution: "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community",
+      }).addTo(map);
+    } else {
+      // Default / Hybrid
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 19,
+        attribution: "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
+      }).addTo(map);
+      
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 19,
+      }).addTo(map);
+    }
 
     // Plot hubs as custom interactive markers
     allHubs.forEach((city) => {
