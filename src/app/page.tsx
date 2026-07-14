@@ -720,6 +720,15 @@ export default function LandingPortalPage() {
             className="font-semibold text-electric-400 hover:text-electric-300 underline underline-offset-2 transition-colors"
           >
             Srinath
+          </a>{" "}
+          and{" "}
+          <a
+            href="https://www.linkedin.com/in/pranav-teja-016944272/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-electric-400 hover:text-electric-300 underline underline-offset-2 transition-colors"
+          >
+            Pranav
           </a>
         </p>
       </footer>
