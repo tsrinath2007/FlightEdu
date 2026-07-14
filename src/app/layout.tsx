@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://gofocusgen.vercel.app"),
   title: {
     default: "GoFocusGen — Study Like You're Travelling the World",
     template: "%s | GoFocusGen",
@@ -15,6 +16,21 @@ export const metadata: Metadata = {
     title: "GoFocusGen",
     description: "Study Like You're Travelling the World",
     type: "website",
+    url: "https://gofocusgen.vercel.app",
+    images: [
+      {
+        url: "/logo.png",
+        width: 1024,
+        height: 1024,
+        alt: "GoFocusGen Logo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GoFocusGen",
+    description: "Study Like You're Travelling the World",
+    images: ["/logo.png"],
   },
 };
 
