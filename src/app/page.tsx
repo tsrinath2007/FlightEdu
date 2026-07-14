@@ -702,7 +702,7 @@ export default function LandingPortalPage() {
           </a>
           <span>•</span>
           <a
-            href="https://www.linkedin.com/in/tses/"
+            href="https://www.linkedin.com/company/gofocusgen/"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-electric-400 transition-colors font-medium"
