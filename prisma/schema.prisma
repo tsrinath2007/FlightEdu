@@ -34,6 +34,7 @@ model User {
   updatedAt      DateTime  @updatedAt
   dream          String?
   flightLog      String?
+  registrationSource String? @default("web") // "web" | "app"
 
   hostedSessions      Session[]            @relation("HostedSessions")
   sessionParticipants SessionParticipant[]

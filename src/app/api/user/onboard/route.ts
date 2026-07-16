@@ -22,6 +22,7 @@ export async function POST(request: Request) {
       studyDuration: string;
       distractibility: string;
       callDistraction: string;
+      registrationSource?: string;
     };
 
     // Update or create the user details in our database (resilient to missing auth callback sync)
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
           studyDuration: body.studyDuration,
           distractibility: body.distractibility,
           callDistraction: body.callDistraction,
+          registrationSource: body.registrationSource || undefined,
           onboarded: true,
         },
         create: {
@@ -53,6 +55,7 @@ export async function POST(request: Request) {
           studyDuration: body.studyDuration,
           distractibility: body.distractibility,
           callDistraction: body.callDistraction,
+          registrationSource: body.registrationSource || undefined,
           onboarded: true,
           coins: 0,
         },
@@ -106,6 +109,7 @@ export async function GET() {
           streakFreezes: true,
           lastStudyDate: true,
           freezeCooldownStart: true,
+          registrationSource: true,
         },
       });
 
@@ -222,6 +226,7 @@ export async function GET() {
               streakFreezes: true,
               lastStudyDate: true,
               freezeCooldownStart: true,
+              registrationSource: true,
             },
           });
           fullUser = updatedUser;
