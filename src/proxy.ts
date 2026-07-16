@@ -67,9 +67,10 @@ export async function proxy(request: NextRequest) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   let user = null;
+  let supabase = null;
 
   if (supabaseUrl && supabaseAnonKey) {
-    const supabase = createServerClient(
+    supabase = createServerClient(
       supabaseUrl,
       supabaseAnonKey,
       {
@@ -106,6 +107,26 @@ export async function proxy(request: NextRequest) {
       // In local dev, mock a pilot user so the app is accessible offline
       user = { id: "simulated-guest-user-id", email: "guest@gofocusgen.com" };
     }
+  }
+
+  // Handle API routes as a special case to support both cookie-based and Bearer-token-based authentication
+  if (pathname.startsWith("/api/")) {
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "");
+    if (token && supabase) {
+      try {
+        const { data, error } = await supabase.auth.getUser(token);
+        if (!error && data?.user) {
+          user = data.user;
+        }
+      } catch (err) {
+        console.error("Bearer token validation failed:", err);
+      }
+    }
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return response; // skip the redirect-based public-path logic entirely for API routes
   }
 
   const isPublic = PUBLIC_PATHS.some((p) =>
