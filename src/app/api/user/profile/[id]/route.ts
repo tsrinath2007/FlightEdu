@@ -20,6 +20,7 @@ const publicProfileSelection = {
   totalHours: true,
   currentStreak: true,
   longestStreak: true,
+  onboarded: true,
   badges: {
     include: {
       badge: true,
@@ -118,6 +119,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         totalHours: profileUser.totalHours,
         currentStreak: profileUser.currentStreak,
         longestStreak: profileUser.longestStreak,
+        onboarded: profileUser.onboarded,
         age: profileUser.age,
         studyTime: profileUser.studyTime,
         studyDuration: profileUser.studyDuration,
