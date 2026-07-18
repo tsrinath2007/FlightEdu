@@ -35,6 +35,8 @@ model User {
   dream          String?
   flightLog      String?
   registrationSource String? @default("web") // "web" | "app"
+  totalXp        Int       @default(0)
+  dailyGoalMinutes Int     @default(30)
 
   hostedSessions      Session[]            @relation("HostedSessions")
   sessionParticipants SessionParticipant[]

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 
 export async function GET(
   request: Request,
@@ -9,10 +9,9 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const user = await getUser(request);
 
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -67,6 +66,68 @@ export async function GET(
   } catch (error) {
     console.error("Get session error:", error);
     return NextResponse.json({ error: "Failed to fetch session" }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    const user = await getUser(request);
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json() as {
+      status?: "WAITING" | "BOARDING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
+    };
+
+    if (!body.status) {
+      return NextResponse.json({ error: "Status is required" }, { status: 400 });
+    }
+
+    const session = await prisma.session.findUnique({
+      where: { id },
+    });
+
+    if (!session) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    }
+
+    const updateData: any = {
+      status: body.status,
+    };
+
+    if (body.status === "COMPLETED") {
+      updateData.completedAt = new Date();
+    } else if (body.status === "ACTIVE") {
+      updateData.startedAt = new Date();
+    }
+
+    const updatedSession = await prisma.session.update({
+      where: { id },
+      data: updateData,
+    });
+
+    // If status is updated to COMPLETED, increment the user's totalXp by 10 + Math.floor(session.duration / 5)
+    if (body.status === "COMPLETED") {
+      const xpReward = 10 + Math.floor(session.duration / 5);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          totalXp: { increment: xpReward },
+        },
+      });
+    }
+
+    return NextResponse.json({ session: updatedSession });
+  } catch (error) {
+    console.error("Update session error:", error);
+    return NextResponse.json({ error: "Failed to update session" }, { status: 500 });
   }
 }
 
