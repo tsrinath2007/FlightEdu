@@ -37,6 +37,9 @@ model User {
   registrationSource String? @default("web") // "web" | "app"
   totalXp        Int       @default(0)
   dailyGoalMinutes Int     @default(30)
+  firstAppLoginAt DateTime?
+  lastAppLoginAt  DateTime?
+  lastWebLoginAt  DateTime?
 
   hostedSessions      Session[]            @relation("HostedSessions")
   sessionParticipants SessionParticipant[]
