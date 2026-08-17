@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
@@ -709,6 +710,16 @@ export default function LandingPortalPage() {
           >
             LinkedIn 👥
           </a>
+        </div>
+
+        <div className="mt-4 flex items-center justify-center gap-3 text-[10px] text-white/20 font-medium">
+          <Link href="/privacy" className="hover:text-white/40 transition-colors">
+            Privacy Policy
+          </Link>
+          <span>·</span>
+          <Link href="/terms" className="hover:text-white/40 transition-colors">
+            Terms and Conditions
+          </Link>
         </div>
 
         <p className="mt-4 text-[10px] text-white/20">

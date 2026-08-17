@@ -11,7 +11,9 @@ const PUBLIC_PATHS = [
   "/reset-password",
   "/google1ad144e9cc9d7968.html",
   "/sitemap.xml",
-  "/robots.txt"
+  "/robots.txt",
+  "/privacy",
+  "/terms"
 ];
 
 export async function proxy(request: NextRequest) {
