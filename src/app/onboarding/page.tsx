@@ -469,7 +469,7 @@ export default function OnboardingPage() {
   ];
 
   return (
-    <main className="relative flex min-h-screen flex-col justify-between overflow-hidden bg-navy-950 px-4 py-8 md:p-8 noise animate-fade-in">
+    <main className="relative flex min-h-screen flex-col justify-between overflow-x-hidden bg-navy-950 px-4 py-8 md:p-8 noise animate-fade-in">
       {/* Background ambient cosmic glow */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute top-[-30%] left-[20%] size-[600px] rounded-full bg-electric-500/10 blur-[130px]" />

@@ -126,7 +126,7 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col overflow-hidden bg-navy-950 text-white noise">
+    <main className="relative flex min-h-screen flex-col overflow-x-hidden bg-navy-950 text-white noise">
       {/* Deep Space Atmosphere */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#050a17] via-[#0a0f1e] to-[#0d1426]" />
       

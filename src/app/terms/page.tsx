@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <main className="min-h-screen bg-[#0a0f1e] text-[#f0f4ff] font-body relative overflow-hidden noise">
+    <main className="min-h-screen bg-[#0a0f1e] text-[#f0f4ff] font-body relative overflow-x-hidden noise">
       {/* Background Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[500px] bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.05),transparent_70%)] pointer-events-none z-0" />
 

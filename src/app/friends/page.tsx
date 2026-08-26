@@ -294,7 +294,7 @@ export default function FriendsPage() {
   };
 
   return (
-    <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#0a0f1e] text-white">
+    <main className="relative flex min-h-screen flex-col overflow-x-hidden bg-[#0a0f1e] text-white">
       {/* Space glow backgrounds */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f1e] via-[#0d1a35] to-[#0a1628]" />
       <div className="absolute top-[-10%] left-[-10%] size-[60vw] rounded-full bg-electric-500/10 blur-[120px]" />

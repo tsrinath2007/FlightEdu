@@ -43,8 +43,8 @@ export default async function RootLayout({
   const nonce = headersList.get("x-nonce") || "";
 
   return (
-    <html lang="en" className="h-full">
-      <body className="h-full antialiased">
+    <html lang="en" className="min-h-screen">
+      <body className="min-h-screen antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

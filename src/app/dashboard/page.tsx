@@ -436,7 +436,7 @@ export default function DashboardPage() {
   const { weekDays, hasUsedFreezeThisWeek } = getWeeklyStreak(userStreak, userFlights);
 
   return (
-    <main className="relative flex min-h-screen flex-col overflow-hidden bg-navy-950">
+    <main className="relative flex min-h-screen flex-col overflow-x-hidden bg-navy-950">
       {/* Globe background */}
       <GlobeBackground />
 
