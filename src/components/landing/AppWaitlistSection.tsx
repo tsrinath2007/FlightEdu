@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Smartphone, Apple, CheckCircle2, Sparkles, Send, ShieldCheck, Compass, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import PricingSurveySection from "./PricingSurveySection";
 
 interface AppWaitlistSectionProps {
   isStandalone?: boolean;
@@ -127,7 +128,7 @@ export default function AppWaitlistSection({ isStandalone = false }: AppWaitlist
   }
 
   return (
-    <section className={`relative z-10 mx-auto max-w-6xl px-4 ${isStandalone ? "py-12" : "py-16 md:py-24"}`}>
+    <section id="waitlist" className={`relative z-10 mx-auto max-w-6xl px-4 scroll-mt-20 ${isStandalone ? "py-12" : "py-16 md:py-24"}`}>
       {/* Background ambient radar glow */}
       <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center">
         <div className="size-[500px] rounded-full bg-electric-500/10 blur-[130px]" />
@@ -426,6 +427,9 @@ export default function AppWaitlistSection({ isStandalone = false }: AppWaitlist
           </div>
         </motion.div>
       </div>
+
+      {/* Interactive Community Pricing Survey */}
+      <PricingSurveySection userEmail={email} />
     </section>
   );
 }

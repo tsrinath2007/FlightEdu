@@ -207,15 +207,26 @@ model SessionEvent {
 }
 
 model AppWaitlist {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  avatarUrl String?
-  platform  String?  @default("all") // "ios" | "android" | "all"
-  pilotId   String?
-  provider  String?  @default("email") // "google" | "email"
-  googleId  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  avatarUrl    String?
+  platform     String?  @default("all") // "ios" | "android" | "all"
+  pilotId      String?
+  provider     String?  @default("email") // "google" | "email"
+  googleId     String?
+  planDuration String?  // "1_month" | "6_months" | "1_year"
+  willingPrice Int?     // 70, 80, 90, 300, 400, 500, 700, 800, 900, 1000
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
+
+model PricingSurveyVote {
+  id        String   @id @default(cuid())
+  duration  String   // "1_month" | "6_months" | "1_year"
+  price     Int      // e.g. 80, 400, 800
+  email     String?
+  createdAt DateTime @default(now())
+}
+
 
