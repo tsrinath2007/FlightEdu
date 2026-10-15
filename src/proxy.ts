@@ -13,7 +13,9 @@ const PUBLIC_PATHS = [
   "/sitemap.xml",
   "/robots.txt",
   "/privacy",
-  "/terms"
+  "/terms",
+  "/app",
+  "/api/waitlist"
 ];
 
 export async function proxy(request: NextRequest) {

@@ -12,6 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/lounge",
     "/privacy",
     "/terms",
+    "/app",
   ];
 
   return routes.map((route) => ({

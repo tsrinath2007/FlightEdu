@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Logo from "@/components/brand/Logo";
+import AppWaitlistSection from "@/components/landing/AppWaitlistSection";
 import { 
   Plane, Shield, Award, Users, Sparkles, Navigation, Globe, Compass, 
   Flame, Calendar, MessageSquare, Coffee, LogIn, Laptop, BookOpen, Clock, ChevronDown, CheckCircle
@@ -267,7 +268,13 @@ export default function LandingPortalPage() {
         <div className="flex items-center gap-2">
           <Logo layout="horizontal" size="md" />
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 md:gap-4">
+          <Link
+            href="/app"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-300 hover:bg-amber-500/20 transition-colors"
+          >
+            <span>📱</span> Mobile App (Beta)
+          </Link>
           <Button
             variant="ghost"
             onClick={handleGoogleLogin}
@@ -685,6 +692,9 @@ export default function LandingPortalPage() {
         </div>
       </section>
 
+      {/* Mobile App Waitlist Section */}
+      <AppWaitlistSection />
+
       {/* Footer */}
       <footer className="relative z-10 border-t border-white/5 py-8 text-center font-display">
         <p className="text-xs text-white/35">
@@ -713,6 +723,10 @@ export default function LandingPortalPage() {
         </div>
 
         <div className="mt-4 flex items-center justify-center gap-3 text-[10px] text-white/20 font-medium">
+          <Link href="/app" className="hover:text-amber-400/90 transition-colors">
+            Mobile App (Waitlist)
+          </Link>
+          <span>·</span>
           <Link href="/privacy" className="hover:text-white/40 transition-colors">
             Privacy Policy
           </Link>

@@ -206,3 +206,11 @@ model SessionEvent {
   createdAt   DateTime @default(now())
 }
 
+model AppWaitlist {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  platform  String?  @default("all") // "ios" | "android" | "all"
+  pilotId   String?
+  createdAt DateTime @default(now())
+}
+
