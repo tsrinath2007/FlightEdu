@@ -68,6 +68,28 @@ export async function GET(request: Request) {
           },
         });
         onboarded = dbUser?.onboarded ?? false;
+
+        // Sync to AppWaitlist if registering via the mobile app waitlist!
+        if (next && (next.includes("/app") || next.includes("waitlist"))) {
+          const platformParam = searchParams.get("platform") || "all";
+          await prisma.appWaitlist.upsert({
+            where: { email: user.email.trim().toLowerCase() },
+            create: {
+              email: user.email.trim().toLowerCase(),
+              name: user.user_metadata?.name ?? user.user_metadata?.full_name ?? null,
+              avatarUrl: user.user_metadata?.avatar_url ?? null,
+              platform: platformParam,
+              provider: "google",
+              googleId: user.id,
+            },
+            update: {
+              name: user.user_metadata?.name ?? user.user_metadata?.full_name ?? undefined,
+              avatarUrl: user.user_metadata?.avatar_url ?? undefined,
+              provider: "google",
+              googleId: user.id,
+            },
+          });
+        }
       } catch (dbError) {
         console.error("Direct database sync error in auth callback:", dbError);
       }

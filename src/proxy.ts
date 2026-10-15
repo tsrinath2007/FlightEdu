@@ -124,8 +124,15 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  const isPublic = PUBLIC_PATHS.some((p) =>
+    pathname === p || pathname.startsWith(p + "/")
+  );
+
   // Handle API routes as a special case to support both cookie-based and Bearer-token-based authentication
   if (pathname.startsWith("/api/")) {
+    if (isPublic) {
+      return response;
+    }
     const authHeader = request.headers.get("authorization");
     const token = authHeader?.replace("Bearer ", "");
     if (token && supabase) {
@@ -143,10 +150,6 @@ export async function proxy(request: NextRequest) {
     }
     return response; // skip the redirect-based public-path logic entirely for API routes
   }
-
-  const isPublic = PUBLIC_PATHS.some((p) =>
-    pathname === p || pathname.startsWith(p + "/")
-  );
 
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL("/login", request.url));

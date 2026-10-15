@@ -21,7 +21,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, platform = "all", pilotId } = body;
+    const { email, platform = "all", pilotId, name, avatarUrl, provider = "email", googleId } = body;
 
     if (!email || typeof email !== "string" || !email.includes("@")) {
       return NextResponse.json({ error: "Please provide a valid email address." }, { status: 400 });
@@ -34,12 +34,20 @@ export async function POST(request: Request) {
       where: { email: normalizedEmail },
       create: {
         email: normalizedEmail,
+        name: name ? String(name).trim() : null,
+        avatarUrl: avatarUrl ? String(avatarUrl).trim() : null,
         platform: String(platform || "all"),
         pilotId: pilotId ? String(pilotId).trim() : null,
+        provider: String(provider || "email"),
+        googleId: googleId ? String(googleId).trim() : null,
       },
       update: {
+        name: name ? String(name).trim() : undefined,
+        avatarUrl: avatarUrl ? String(avatarUrl).trim() : undefined,
         platform: String(platform || "all"),
-        pilotId: pilotId ? String(pilotId).trim() : null,
+        pilotId: pilotId ? String(pilotId).trim() : undefined,
+        provider: String(provider || "email"),
+        googleId: googleId ? String(googleId).trim() : undefined,
       },
     });
 
