@@ -469,12 +469,12 @@ export default function OnboardingPage() {
   ];
 
   return (
-    <main className="relative flex min-h-screen flex-col justify-between overflow-x-hidden bg-navy-950 px-4 py-8 md:p-8 noise animate-fade-in">
+    <main className="relative flex min-h-screen flex-col justify-between overflow-x-clip bg-navy-950 px-4 py-8 md:p-8 noise animate-fade-in">
       {/* Background ambient cosmic glow */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute top-[-30%] left-[20%] size-[600px] rounded-full bg-electric-500/10 blur-[130px]" />
-        <div className="absolute bottom-[-20%] right-[10%] size-[500px] rounded-full bg-neon-600/10 blur-[120px]" />
-        <div className="absolute top-[40%] right-[-10%] size-[350px] rounded-full bg-gold-500/5 blur-[90px]" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute top-0 left-[20%] size-[600px] rounded-full bg-electric-500/10 blur-[130px]" />
+        <div className="absolute bottom-0 right-[10%] size-[500px] rounded-full bg-neon-600/10 blur-[120px]" />
+        <div className="absolute top-[40%] right-0 size-[350px] rounded-full bg-gold-500/5 blur-[90px]" />
       </div>
 
       {/* Top Header */}

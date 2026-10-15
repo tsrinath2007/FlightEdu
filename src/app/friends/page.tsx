@@ -294,11 +294,13 @@ export default function FriendsPage() {
   };
 
   return (
-    <main className="relative flex min-h-screen flex-col overflow-x-hidden bg-[#0a0f1e] text-white">
+    <main className="relative flex min-h-screen flex-col overflow-x-clip bg-[#0a0f1e] text-white">
       {/* Space glow backgrounds */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f1e] via-[#0d1a35] to-[#0a1628]" />
-      <div className="absolute top-[-10%] left-[-10%] size-[60vw] rounded-full bg-electric-500/10 blur-[120px]" />
-      <div className="absolute bottom-[-10%] right-[-10%] size-[60vw] rounded-full bg-indigo-500/10 blur-[120px]" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f1e] via-[#0d1a35] to-[#0a1628]" />
+        <div className="absolute top-0 left-0 size-[60vw] rounded-full bg-electric-500/10 blur-[120px]" />
+        <div className="absolute bottom-0 right-0 size-[60vw] rounded-full bg-indigo-500/10 blur-[120px]" />
+      </div>
 
       {/* Header */}
       <header className="relative z-20 flex items-center justify-between px-6 pt-6 pb-4">

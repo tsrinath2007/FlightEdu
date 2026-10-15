@@ -157,9 +157,9 @@ export default function JourneyPage() {
   const cannotAffordPrivate = isPrivate && userCoins !== null && userCoins < 300;
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#0a0f1e] text-white">
+    <main className="relative min-h-screen overflow-x-clip bg-[#0a0f1e] text-white">
       {/* Globe Background overlay */}
-      <div className="pointer-events-none absolute inset-0">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f1e] via-[#0d1a35] to-[#0a1628]" />
         <motion.div
           animate={{ rotate: 360 }}

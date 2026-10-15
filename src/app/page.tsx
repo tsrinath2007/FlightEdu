@@ -247,12 +247,12 @@ export default function LandingPortalPage() {
   const demoRoute = PRESET_DEMO_ROUTES[activeDemoRoute];
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-navy-950 px-4 py-8 md:p-8 noise animate-fade-in text-white selection:bg-electric-500">
-      {/* Background ambient cosmic glow */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute top-[-20%] left-[10%] size-[600px] rounded-full bg-electric-500/10 blur-[120px]" />
+    <main className="relative min-h-screen overflow-x-clip bg-navy-950 px-4 py-8 md:p-8 noise animate-fade-in text-white selection:bg-electric-500">
+      {/* Background ambient cosmic glow - contained with overflow-hidden so it does not spill past footer */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-24 left-[10%] size-[600px] rounded-full bg-electric-500/10 blur-[120px]" />
         <div className="absolute top-[30%] right-[5%] size-[400px] rounded-full bg-pink-500/5 blur-[100px]" />
-        <div className="absolute bottom-[-10%] left-[30%] size-[500px] rounded-full bg-electric-600/8 blur-[100px]" />
+        <div className="absolute bottom-0 left-[30%] size-[500px] rounded-full bg-electric-600/8 blur-[100px]" />
       </div>
 
       {/* Redirecting Overlay Block */}

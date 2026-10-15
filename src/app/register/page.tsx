@@ -156,7 +156,7 @@ export default function RegisterPage() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-navy-900 px-4">
-      <div className="pointer-events-none absolute inset-0">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute top-[-10%] right-[15%] size-[500px] rounded-full bg-neon-500/10 blur-[120px]" />
         <div className="absolute bottom-[-10%] left-[10%] size-[400px] rounded-full bg-electric-500/8 blur-[100px]" />
       </div>

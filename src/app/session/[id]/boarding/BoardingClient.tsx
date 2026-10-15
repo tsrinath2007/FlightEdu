@@ -423,7 +423,7 @@ export default function BoardingClient({ id }: { id: string }) {
   }
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#050a17] text-white selection:bg-[#0ea5e9] selection:text-white pb-16">
+    <main className="relative min-h-screen overflow-x-clip bg-[#050a17] text-white selection:bg-[#0ea5e9] selection:text-white pb-16">
       {/* Dynamic background based on selected aircraft */}
       <div
         className="pointer-events-none absolute inset-0 z-0 transition-all duration-700"

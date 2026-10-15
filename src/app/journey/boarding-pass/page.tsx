@@ -417,7 +417,7 @@ export default function BoardingPassGeneratorPage() {
   if (!mounted) return null;
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#050a17] text-white selection:bg-[#0ea5e9] selection:text-white pb-20">
+    <main className="relative min-h-screen overflow-x-clip bg-[#050a17] text-white selection:bg-[#0ea5e9] selection:text-white pb-20">
       {/* Background visual engine */}
       <div
         className="pointer-events-none absolute inset-0 z-0 transition-all duration-700"

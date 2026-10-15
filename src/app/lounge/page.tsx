@@ -149,11 +149,11 @@ export default function LoungePage() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-navy-950 px-4 py-8 md:p-8 noise text-white pb-32">
+    <main className="relative min-h-screen overflow-x-clip bg-navy-950 px-4 py-8 md:p-8 noise text-white pb-32">
       {/* Background ambient gold/amber glow */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute top-[-10%] right-[20%] size-[500px] rounded-full bg-amber-500/5 blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-[10%] size-[400px] rounded-full bg-electric-500/5 blur-[100px]" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute top-0 right-[20%] size-[500px] rounded-full bg-amber-500/5 blur-[120px]" />
+        <div className="absolute bottom-0 left-[10%] size-[400px] rounded-full bg-electric-500/5 blur-[100px]" />
       </div>
 
       {/* Navigation Header */}

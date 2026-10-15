@@ -2074,7 +2074,7 @@ export default function CockpitClient({ id }: { id: string }) {
 
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-navy-950 text-white pb-16">
+    <main className="relative min-h-screen overflow-x-clip bg-navy-950 text-white pb-16">
       {/* Background Grid */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-navy-900/40 via-navy-950 to-black z-0" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,_transparent_1px),_linear-gradient(90deg,_rgba(255,255,255,0.015)_1px,_transparent_1px)] bg-[size:32px_32px] opacity-40 z-0" />

@@ -73,7 +73,7 @@ export default function AppWaitlistSection({ isStandalone = false }: AppWaitlist
   return (
     <section id="waitlist" className={`relative z-10 mx-auto max-w-6xl px-4 scroll-mt-20 ${isStandalone ? "py-12" : "py-16 md:py-24"}`}>
       {/* Background ambient radar glow */}
-      <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center">
+      <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center overflow-hidden">
         <div className="size-[500px] rounded-full bg-electric-500/10 blur-[130px]" />
         <div className="size-[350px] rounded-full bg-amber-500/10 blur-[100px]" />
       </div>
