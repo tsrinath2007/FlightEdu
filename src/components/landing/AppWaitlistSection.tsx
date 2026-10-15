@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Smartphone, Apple, CheckCircle2, Sparkles, Send, ShieldCheck, Compass, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
 import PricingSurveySection from "./PricingSurveySection";
 
 interface AppWaitlistSectionProps {
@@ -13,17 +12,14 @@ interface AppWaitlistSectionProps {
 
 export default function AppWaitlistSection({ isStandalone = false }: AppWaitlistSectionProps) {
   const [email, setEmail] = useState("");
-  const [name, setName] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [platform, setPlatform] = useState<"all" | "ios" | "android">("all");
   const [count, setCount] = useState<number>(124);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [position, setPosition] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // 1. Fetch live count on mount & check if returned from Google OAuth
+  // Fetch live count on mount & check for platform query parameter
   useEffect(() => {
     fetch("/api/waitlist")
       .then((res) => res.json())
@@ -34,71 +30,18 @@ export default function AppWaitlistSection({ isStandalone = false }: AppWaitlist
       })
       .catch(() => {});
 
-    // Check if returned from Google waitlist signup or if already logged in
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
-      const joinedFromGoogle = urlParams.get("joined") === "google";
       const platformFromUrl = urlParams.get("platform") as "all" | "ios" | "android" | null;
       if (platformFromUrl) setPlatform(platformFromUrl);
-
-      const supabase = createClient();
-      if (supabase) {
-        supabase.auth.getUser().then((res: any) => {
-          const user = res?.data?.user;
-          if (user) {
-            const userEmail = user.email || "";
-            const userName = user.user_metadata?.name || user.user_metadata?.full_name || null;
-            const userAvatar = user.user_metadata?.avatar_url || null;
-
-            if (userEmail) setEmail(userEmail);
-            if (userName) setName(userName);
-            if (userAvatar) setAvatarUrl(userAvatar);
-
-            if (joinedFromGoogle) {
-              setSubmitted(true);
-              setPosition(count);
-            }
-          }
-        });
-      }
     }
-  }, [count]);
-
-  // Handle Google OAuth Waitlist Registration
-  async function handleGoogleWaitlist() {
-    setGoogleLoading(true);
-    setError(null);
-    const supabase = createClient();
-    if (!supabase) {
-      setGoogleLoading(false);
-      setError("Takeoff failed: Supabase client not configured.");
-      return;
-    }
-
-    const currentOrigin = typeof window !== "undefined" ? window.location.origin : "https://gofocusgen.vercel.app";
-    const nextPath = isStandalone ? "/app" : "/";
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${currentOrigin}/auth/callback?next=${encodeURIComponent(`${nextPath}?joined=google&platform=${platform}`)}`,
-        queryParams: {
-          prompt: "select_account",
-        },
-      },
-    });
-
-    if (error) {
-      setGoogleLoading(false);
-      setError(error.message);
-    }
-  }
+  }, []);
 
   // Handle Manual Email Waitlist Registration
   async function handleJoinWaitlist(e: React.FormEvent) {
     e.preventDefault();
     if (!email || !email.includes("@")) {
-      setError("Please enter a valid email address.");
+      setError("Please enter a valid email or Gmail address.");
       return;
     }
 
@@ -109,7 +52,7 @@ export default function AppWaitlistSection({ isStandalone = false }: AppWaitlist
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, platform, name, avatarUrl, provider: "email" }),
+        body: JSON.stringify({ email, platform, provider: "email" }),
       });
 
       const data = await res.json();
@@ -194,19 +137,11 @@ export default function AppWaitlistSection({ isStandalone = false }: AppWaitlist
               animate={{ opacity: 1, scale: 1 }}
               className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6 text-center space-y-3"
             >
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={name || "Pilot"}
-                  className="size-14 mx-auto rounded-full border-2 border-emerald-400/60 shadow-lg"
-                />
-              ) : (
-                <div className="size-12 mx-auto rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-xl">
-                  ✈️
-                </div>
-              )}
+              <div className="size-12 mx-auto rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-xl">
+                ✈️
+              </div>
               <h4 className="text-base font-display font-bold text-emerald-400">
-                {name ? `Welcome Aboard, Captain ${name}!` : "You're On The Manifest!"}
+                You&apos;re On The Manifest!
               </h4>
               <p className="text-xs text-white/70 leading-relaxed">
                 Position <strong className="text-white">#{position || count}</strong> reserved for early departure. We will mail you at <strong className="text-electric-300">{email}</strong> as soon as the app drops.
@@ -264,31 +199,16 @@ export default function AppWaitlistSection({ isStandalone = false }: AppWaitlist
                 </div>
               </div>
 
-              {/* 1-Click Continue with Google Button */}
-              <Button
-                type="button"
-                variant="ghost"
-                loading={googleLoading}
-                onClick={handleGoogleWaitlist}
-                className="w-full bg-white text-navy-950 hover:bg-white/90 font-bold py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2.5 cursor-pointer border-none"
-              >
-                <GoogleIcon />
-                <span>Continue with Google</span>
-              </Button>
-
-              <div className="flex items-center gap-3 my-2">
-                <div className="h-px flex-1 bg-white/10" />
-                <span className="text-[11px] text-white/30 uppercase tracking-widest font-mono">or email</span>
-                <div className="h-px flex-1 bg-white/10" />
-              </div>
-
-              {/* Manual Email Form */}
+              {/* Direct Email / Gmail Form */}
               <form onSubmit={handleJoinWaitlist} className="space-y-3">
                 <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-1.5">
+                    Your Email or Gmail
+                  </label>
                   <input
                     type="email"
                     required
-                    placeholder="Enter your email address"
+                    placeholder="Enter your email or Gmail address"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/25 outline-none transition focus:border-electric-500 focus:ring-1 focus:ring-electric-500/30"
@@ -431,16 +351,5 @@ export default function AppWaitlistSection({ isStandalone = false }: AppWaitlist
       {/* Interactive Community Pricing Survey */}
       <PricingSurveySection userEmail={email} />
     </section>
-  );
-}
-
-function GoogleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
-      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
-      <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
-      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
-    </svg>
   );
 }
